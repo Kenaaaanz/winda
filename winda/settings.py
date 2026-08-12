@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from decouple import config
 
 load_dotenv()
 
@@ -176,10 +177,22 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Email (Configure for development)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development
-# For production, use:
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='gichabakenani@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
+# Default sender email
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='gichabakenani@gmail.com')
+
+# Admin email for order notifications
+ADMIN_EMAIL = [
+    email.strip() for email in config('ADMIN_EMAIL', default='windaafricasupport@gmail.com, gichabakenani@gmail.com').split(',')
+    if email.strip()
+]
 # Paystack
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', 'sk_test_e347be9c037493fa1d27822a4474cffbdfc16dab')
 PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', 'pk_test_d572bda942b7e12c9ae9aa6b99b89f491ea1eb0d')
