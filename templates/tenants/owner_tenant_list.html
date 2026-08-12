@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load tenant_filters %}
+
+{% block title %}My Tenants - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <!-- Header -->
+            <div class="flex flex-wrap items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">My Tenants</h1>
+                    <p class="text-gray-600">Manage all tenants across your properties</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'tenants:pending_tenants' %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                        <i class="fas fa-clock mr-2"></i> Pending Applications
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-blue-600">Total Tenants</p>
+                    <p class="text-2xl font-bold text-blue-900">{{ tenants|length }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <p class="text-sm text-green-600">Active Leases</p>
+                    <p class="text-2xl font-bold text-green-900">
+                        {{ tenants|filter_status:'Active Lease'|length }}
+                    </p>
+                </div>
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <p class="text-sm text-yellow-600">Pending Approvals</p>
+                    <p class="text-2xl font-bold text-yellow-900">
+                        {{ tenants|filter_status:'Application Approved'|length }}
+                    </p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-sm text-purple-600">Total Properties</p>
+                    <p class="text-2xl font-bold text-purple-900">{{ tenants|length }}</p>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap gap-3 mb-6">
+                <a href="?status=all" class="px-4 py-2 rounded-lg {% if not request.GET.status or request.GET.status == 'all' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    All
+                </a>
+                <a href="?status=active" class="px-4 py-2 rounded-lg {% if request.GET.status == 'active' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Active Leases
+                </a>
+                <a href="?status=pending" class="px-4 py-2 rounded-lg {% if request.GET.status == 'pending' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Pending Approval
+                </a>
+            </div>
+
+            <!-- Search -->
+            <div class="mb-6">
+                <form method="GET" class="flex gap-2">
+                    <input type="text" name="search" value="{{ request.GET.search|default:'' }}" 
+                           placeholder="Search by name, email, or property..." 
+                           class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-search mr-2"></i> Search
+                    </button>
+                </form>
+            </div>
+
+            <!-- Tenant List -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                                <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+                            </th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tenant</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Joined</th>
+                            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tenant in tenants %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <input type="checkbox" name="tenant_ids" value="{{ tenant.user.id }}" class="tenant-checkbox">
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center space-x-3">
+                                        {% if tenant.user.profile_picture %}
+                                            <img src="{{ tenant.user.profile_picture.url }}" alt="{{ tenant.user.get_full_name }}" class="w-10 h-10 rounded-full object-cover">
+                                        {% else %}
+                                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                <span class="text-blue-600 font-bold">{{ tenant.user.get_full_name|slice:":1"|upper }}</span>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ tenant.user.get_full_name }}</p>
+                                            <p class="text-sm text-gray-600">{{ tenant.user.email }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <p class="font-medium">{{ tenant.property.title }}</p>
+                                    <p class="text-sm text-gray-600">{{ tenant.property.city }}</p>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-block px-3 py-1 text-xs rounded-full 
+                                        {% if tenant.status == 'Active Lease' %}bg-green-100 text-green-700
+                                        {% elif tenant.status == 'Application Approved' %}bg-yellow-100 text-yellow-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ tenant.status }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-sm text-gray-600">
+                                    {{ tenant.joined|date:"M d, Y" }}
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <a href="{% url 'tenants:tenant_detail' tenant.user.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                        View <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-gray-500">
+                                    <i class="fas fa-users text-4xl text-gray-300 mb-2 block"></i>
+                                    No tenants found
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bulk Actions -->
+            {% if tenants %}
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg flex flex-wrap items-center gap-3">
+                    <span class="text-sm text-gray-600">Bulk Actions:</span>
+                    <select id="bulkAction" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                        <option value="">Select action</option>
+                        <option value="send_message">Send Message</option>
+                        <option value="export_data">Export Data</option>
+                    </select>
+                    <button onclick="bulkAction()" class="bg-blue-500 text-white px-4 py-1 rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                        Apply
+                    </button>
+                </div>
+            {% endif %}
+
+            <!-- Pagination -->
+            {% if tenants.has_other_pages %}
+                <div class="flex justify-center mt-6">
+                    <nav class="flex items-center space-x-2">
+                        {% if tenants.has_previous %}
+                            <a href="?page={{ tenants.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in tenants.paginator.page_range %}
+                            {% if tenants.number == num %}
+                                <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                            {% elif num > tenants.number|add:'-3' and num < tenants.number|add:'3' %}
+                                <a href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    {{ num }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if tenants.has_next %}
+                            <a href="?page={{ tenants.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll(master) {
+    const checkboxes = document.querySelectorAll('.tenant-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+}
+
+function bulkAction() {
+    const action = document.getElementById('bulkAction').value;
+    if (!action) {
+        alert('Please select an action');
+        return;
+    }
+    
+    const selected = document.querySelectorAll('.tenant-checkbox:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one tenant');
+        return;
+    }
+    
+    const tenantIds = Array.from(selected).map(cb => cb.value);
+    
+    if (action === 'send_message') {
+        const message = prompt('Enter your message:');
+        if (message) {
+            const subject = prompt('Subject (optional):', 'Message from Property Owner');
+            performBulkAction(action, tenantIds, { message, subject });
+        }
+    } else if (action === 'export_data') {
+        performBulkAction(action, tenantIds, {});
+    }
+}
+
+function performBulkAction(action, tenantIds, data) {
+    const formData = new FormData();
+    formData.append('action', action);
+    tenantIds.forEach(id => formData.append('tenant_ids[]', id));
+    
+    if (data.message) formData.append('message', data.message);
+    if (data.subject) formData.append('subject', data.subject);
+    
+    fetch('/tenants/owner/tenants/bulk-action/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => {
+        if (action === 'export_data') {
+            // Handle file download
+            return response.blob().then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'tenants_data.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert(data.message || 'An error occurred');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    });
+}
+</script>
+{% endblock %}

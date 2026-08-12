@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Chat - {{ room.name }} - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-messages-container {
+        height: 500px;
+        overflow-y: auto;
+    }
+    .message-sent {
+        justify-content: flex-end;
+    }
+    .message-received {
+        justify-content: flex-start;
+    }
+    .message-bubble-sent {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-bottom-right-radius: 0.25rem;
+    }
+    .message-bubble-received {
+        background: #f3f4f6;
+        color: #1a202c;
+        border-bottom-left-radius: 0.25rem;
+    }
+    .message-bubble-system {
+        background: #fef3c7;
+        color: #92400e;
+        border-radius: 0.5rem;
+        text-align: center;
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        max-width: 80%;
+        margin: 0 auto;
+    }
+    .message-bubble-deleted {
+        background: #f3f4f6;
+        color: #9ca3af;
+        font-style: italic;
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        text-align: center;
+        max-width: 70%;
+    }
+    .typing-indicator {
+        display: none;
+        padding: 0.5rem 1rem;
+    }
+    .typing-indicator .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #9ca3af;
+        margin-right: 4px;
+        animation: typing 1.4s infinite both;
+    }
+    .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+        0% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0); }
+    }
+    
+    .message-actions-dropdown {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        min-width: 150px;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        display: none;
+        z-index: 50;
+        padding: 0.5rem 0;
+    }
+    .message-actions-dropdown.show {
+        display: block;
+    }
+    .message-actions-dropdown button {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 1rem;
+        text-align: left;
+        font-size: 0.875rem;
+        color: #374151;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+    .message-actions-dropdown button:hover {
+        background: #f3f4f6;
+    }
+    .message-actions-dropdown button.danger {
+        color: #ef4444;
+    }
+    .message-actions-dropdown button.danger:hover {
+        background: #fef2f2;
+    }
+    .reactions-container {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        margin-top: 0.25rem;
+    }
+    .reaction-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        background: #f3f4f6;
+        padding: 0.1rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+    .reaction-badge:hover {
+        background: #e5e7eb;
+    }
+    .reaction-badge .count {
+        color: #6b7280;
+        font-size: 0.65rem;
+    }
+    .reaction-picker {
+        display: none;
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        background: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem;
+        gap: 0.25rem;
+        z-index: 50;
+    }
+    .reaction-picker.show {
+        display: flex;
+    }
+    .reaction-picker button {
+        font-size: 1.25rem;
+        padding: 0.25rem;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    .reaction-picker button:hover {
+        transform: scale(1.3);
+    }
+    .message-with-reactions {
+        position: relative;
+    }
+    .message-actions-trigger {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .message-with-reactions:hover .message-actions-trigger {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Chat Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    {% if other_participants %}
+                        {% with other=other_participants.first %}
+                            {% if other.profile_picture %}
+                                <img src="{{ other.profile_picture.url }}" alt="{{ other.get_full_name }}" class="w-10 h-10 rounded-full object-cover border-2 border-white">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+                                    <span class="text-blue-600 font-bold">{{ other.get_full_name|slice:":1"|upper }}</span>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <h2 class="text-white font-semibold">{{ other.get_full_name }}</h2>
+                                <p class="text-blue-100 text-sm">
+                                    {% if other.is_owner %}Property Owner{% else %}Tenant{% endif %}
+                                    {% if is_blocked_by_other %}
+                                        <span class="ml-2 text-red-200">(Blocked You)</span>
+                                    {% elif is_blocked %}
+                                        <span class="ml-2 text-yellow-200">(Blocked)</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        {% endwith %}
+                    {% endif %}
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% if room.room_type == 'PROPERTY_INQUIRY' and room.property %}
+                        <a href="{% url 'properties:detail' room.property.id %}" class="text-white hover:text-blue-100 text-sm">
+                            <i class="fas fa-home mr-1"></i> View Property
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'communications:chat_settings' room.id %}" class="text-white hover:text-blue-100">
+                        <i class="fas fa-cog text-xl"></i>
+                    </a>
+                    <a href="{% url 'communications:chat_list' %}" class="text-white hover:text-blue-100">
+                        <i class="fas fa-times text-xl"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages-container p-4" id="chatMessages">
+                {% for message in messages %}
+                    <div class="message-with-reactions mb-3">
+                        {% if message.sender == user %}
+                            <div class="flex message-sent">
+                                <div class="max-w-[70%] relative">
+                                    <div class="px-4 py-2 rounded-lg message-bubble-sent">
+                                        {% if message.is_deleted %}
+                                            <span class="text-gray-300">Message deleted</span>
+                                        {% else %}
+                                            {{ message.content }}
+                                            {% if message.file %}
+                                                <a href="{{ message.file.url }}" target="_blank" class="block mt-1 text-sm underline text-blue-200">
+                                                    <i class="fas fa-paperclip mr-1"></i> {{ message.file_name }}
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-xs text-gray-500 mt-1 block text-right">
+                                        {{ message.created_at|date:"h:i A" }}
+                                        {% if message.read_by.all %}
+                                            <i class="fas fa-check-double text-blue-500 ml-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-check text-gray-400 ml-1"></i>
+                                        {% endif %}
+                                    </span>
+                                    
+                                    <!-- Message Actions -->
+                                    <div class="message-actions-trigger absolute -top-2 -right-6">
+                                        <button onclick="toggleMessageActions('{{ message.id }}')" class="text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div id="actions-{{ message.id }}" class="message-actions-dropdown">
+                                            <button onclick="addReaction('{{ message.id }}', '👍')">👍 Like</button>
+                                            <button onclick="addReaction('{{ message.id }}', '❤️')">❤️ Love</button>
+                                            <button onclick="addReaction('{{ message.id }}', '😂')">😂 Laugh</button>
+                                            <button onclick="addReaction('{{ message.id }}', '😮')">😮 Wow</button>
+                                            <button onclick="addReaction('{{ message.id }}', '😢')">😢 Sad</button>
+                                            <button onclick="addReaction('{{ message.id }}', '😡')">😡 Angry</button>
+                                            <button onclick="deleteMessage('{{ message.id }}', 'for_me')">Delete for me</button>
+                                            {% if message.sender == user %}
+                                                <button onclick="deleteMessage('{{ message.id }}', 'for_everyone')" class="danger">Delete for everyone</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="flex message-received">
+                                <div class="max-w-[70%]">
+                                    <div class="px-4 py-2 rounded-lg message-bubble-received">
+                                        {% if message.is_deleted %}
+                                            <span class="text-gray-400">Message deleted</span>
+                                        {% else %}
+                                            {{ message.content }}
+                                            {% if message.file %}
+                                                <a href="{{ message.file.url }}" target="_blank" class="block mt-1 text-sm underline text-blue-600">
+                                                    <i class="fas fa-paperclip mr-1"></i> {{ message.file_name }}
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                    <span class="text-xs text-gray-500 mt-1 block">
+                                        {{ message.created_at|date:"h:i A" }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Reactions -->
+                        {% if message.reactions %}
+                            <div class="reactions-container {% if message.sender == user %}ml-auto justify-end{% endif %}">
+                                {% for user_id, reaction in message.reactions.items %}
+                                    <span class="reaction-badge">
+                                        {{ reaction }}
+                                        {% with count=message.reactions.values|length %}
+                                            {% if count > 1 %}<span class="count">{{ count }}</span>{% endif %}
+                                        {% endwith %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-comment text-4xl text-gray-300 mb-2 block"></i>
+                        No messages yet. Start the conversation!
+                    </div>
+                {% endfor %}
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="text-sm text-gray-500 ml-2">is typing...</span>
+                </div>
+            </div>
+
+            <!-- Message Input -->
+            <div class="border-t border-gray-200 p-4 bg-gray-50">
+                {% if is_blocked_by_other %}
+                    <div class="text-center text-red-600 py-2">
+                        <i class="fas fa-ban mr-2"></i> You have been blocked by this user.
+                    </div>
+                {% elif is_blocked %}
+                    <div class="text-center text-yellow-600 py-2">
+                        <i class="fas fa-ban mr-2"></i> You have blocked this user. 
+                        <a href="{% url 'communications:chat_settings' room.id %}" class="text-blue-600 hover:underline">Unblock</a>
+                    </div>
+                {% elif is_muted %}
+                    <div class="text-center text-yellow-600 py-2">
+                        <i class="fas fa-volume-mute mr-2"></i> This chat is muted. 
+                        <a href="{% url 'communications:chat_settings' room.id %}" class="text-blue-600 hover:underline">Unmute</a>
+                    </div>
+                {% else %}
+                    <form method="POST" enctype="multipart/form-data" class="flex items-center space-x-2" id="messageForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="send_message">
+                        <input type="text" name="content" placeholder="Type a message..." 
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                               id="messageInput">
+                        <label for="fileInput" class="cursor-pointer text-gray-500 hover:text-blue-500 transition-colors">
+                            <i class="fas fa-paperclip text-xl"></i>
+                        </label>
+                        <input type="file" name="file" id="fileInput" class="hidden">
+                        <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Actions Script -->
+<script>
+const chatSocket = new WebSocket(
+    'ws://' + window.location.host + '/ws/chat/{{ room.id }}/'
+);
+
+const messageInput = document.getElementById('messageInput');
+const chatMessages = document.getElementById('chatMessages');
+const typingIndicator = document.getElementById('typingIndicator');
+
+// Scroll to bottom
+chatMessages.scrollTop = chatMessages.scrollHeight;
+
+// Send message
+messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('messageForm').submit();
+    }
+});
+
+// Typing indicator
+let typingTimeout;
+messageInput.addEventListener('input', function() {
+    chatSocket.send(JSON.stringify({
+        'type': 'typing'
+    }));
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+        chatSocket.send(JSON.stringify({
+            'type': 'typing_stop'
+        }));
+    }, 1000);
+});
+
+// WebSocket handlers
+chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    
+    if (data.type === 'message') {
+        const message = data.data;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `flex ${message.sender.id === '{{ user.id }}' ? 'message-sent' : 'message-received'} mb-3`;
+        messageDiv.innerHTML = `
+            <div class="max-w-[70%]">
+                <div class="px-4 py-2 rounded-lg ${message.sender.id === '{{ user.id }}' ? 'message-bubble-sent' : 'message-bubble-received'}">
+                    ${message.content}
+                </div>
+                <span class="text-xs text-gray-500 mt-1 block ${message.sender.id === '{{ user.id }}' ? 'text-right' : ''}">
+                    ${new Date(message.created_at).toLocaleTimeString()}
+                </span>
+            </div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    } else if (data.type === 'typing') {
+        typingIndicator.style.display = 'block';
+    } else if (data.type === 'typing_stop') {
+        typingIndicator.style.display = 'none';
+    }
+};
+
+// Message actions
+function toggleMessageActions(messageId) {
+    const dropdown = document.getElementById(`actions-${messageId}`);
+    dropdown.classList.toggle('show');
+}
+
+function addReaction(messageId, reaction) {
+    const formData = new FormData();
+    formData.append('action', 'add_reaction');
+    formData.append('message_id', messageId);
+    formData.append('reaction', reaction);
+    
+    fetch(`/communications/{{ room.id }}/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        }
+    });
+}
+
+function deleteMessage(messageId, action) {
+    if (action === 'for_everyone' && !confirm('Delete this message for everyone?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', action);
+    
+    fetch(`/communications/message/${messageId}/delete/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        }
+    });
+}
+
+// Close dropdowns on click outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.message-actions-trigger')) {
+        document.querySelectorAll('.message-actions-dropdown').forEach(el => {
+            el.classList.remove('show');
+        });
+    }
+});
+</script>
+{% endblock %}

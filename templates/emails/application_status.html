@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Status Update - Winda</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .content {
+            background: #f8fafc;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+        }
+        .status-approved {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        .status-rejected {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .status-pending {
+            color: #eab308;
+            font-weight: bold;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #718096;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Application Status Update</h1>
+        <p>Your property application has been reviewed</p>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ user.get_full_name }},</p>
+        
+        <p>Your application for <strong>{{ application.property.title }}</strong> has been reviewed.</p>
+        
+        <div style="background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 1px solid #e2e8f0;">
+            <p><strong>Property:</strong> {{ application.property.title }}</p>
+            <p><strong>Location:</strong> {{ application.property.address }}</p>
+            <p><strong>Status:</strong> 
+                {% if application.status == 'APPROVED' %}
+                    <span class="status-approved">{{ application.get_status_display }}</span>
+                {% elif application.status == 'REJECTED' %}
+                    <span class="status-rejected">{{ application.get_status_display }}</span>
+                {% else %}
+                    <span class="status-pending">{{ application.get_status_display }}</span>
+                {% endif %}
+            </p>
+            {% if application.owner_notes %}
+                <p><strong>Owner's Notes:</strong> {{ application.owner_notes }}</p>
+            {% endif %}
+        </div>
+        
+        {% if application.status == 'APPROVED' %}
+            <p>Congratulations! Your application has been approved. You can now proceed with the next steps:</p>
+            <div style="text-align: center;">
+                <a href="https://winda.co.ke/tenants/application/{{ application.id }}/" class="button">
+                    View Application
+                </a>
+            </div>
+        {% elif application.status == 'REJECTED' %}
+            <p>We're sorry to inform you that your application was not approved. Don't give up - there are many other properties available on Winda.</p>
+            <div style="text-align: center;">
+                <a href="https://winda.co.ke/properties/" class="button">
+                    Browse More Properties
+                </a>
+            </div>
+        {% endif %}
+        
+        <p>Best regards,<br>
+        The Winda Team</p>
+    </div>
+    
+    <div class="footer">
+        <p>&copy; 2024 Winda. All rights reserved.</p>
+        <p>Nairobi, Kenya</p>
+    </div>
+</body>
+</html>

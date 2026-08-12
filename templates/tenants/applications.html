@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Applications - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">My Applications</h1>
+                <a href="{% url 'properties:list' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                    <i class="fas fa-plus mr-2"></i> New Application
+                </a>
+            </div>
+            
+            <!-- Filters -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <a href="?status=all" class="px-4 py-2 rounded-lg {% if not request.GET.status or request.GET.status == 'all' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    All
+                </a>
+                <a href="?status=PENDING" class="px-4 py-2 rounded-lg {% if request.GET.status == 'PENDING' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Pending
+                </a>
+                <a href="?status=UNDER_REVIEW" class="px-4 py-2 rounded-lg {% if request.GET.status == 'UNDER_REVIEW' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Under Review
+                </a>
+                <a href="?status=APPROVED" class="px-4 py-2 rounded-lg {% if request.GET.status == 'APPROVED' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Approved
+                </a>
+                <a href="?status=REJECTED" class="px-4 py-2 rounded-lg {% if request.GET.status == 'REJECTED' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Rejected
+                </a>
+            </div>
+            
+            <!-- Applications List -->
+            <div class="space-y-4">
+                {% for application in applications %}
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex flex-wrap items-center justify-between">
+                            <div class="flex items-center space-x-4">
+                                {% if application.property.main_image %}
+                                    <img src="{{ application.property.main_image.url }}" alt="{{ application.property.title }}" class="w-20 h-20 object-cover rounded-lg">
+                                {% else %}
+                                    <div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-home text-2xl text-gray-400"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <a href="{% url 'properties:detail' application.property.id %}" class="text-lg font-semibold text-gray-900 hover:text-blue-600">
+                                        {{ application.property.title }}
+                                    </a>
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                                        {{ application.property.city }}, {{ application.property.state }}
+                                    </p>
+                                    {% if application.property.is_multi_unit and application.unit %}
+                                        <p class="text-sm text-gray-600">
+                                            <i class="fas fa-door-open mr-1"></i>
+                                            Unit {{ application.unit.unit_number }} ({{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath)
+                                        </p>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-600">
+                                        <i class="fas fa-money-bill-wave text-green-500 mr-1"></i>
+                                        KES {{ application.property.rental_price|intcomma }}/month
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-block px-3 py-1 text-sm rounded-full 
+                                    {% if application.status == 'APPROVED' %}bg-green-100 text-green-700
+                                    {% elif application.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                    {% elif application.status == 'UNDER_REVIEW' %}bg-blue-100 text-blue-700
+                                    {% elif application.status == 'REJECTED' %}bg-red-100 text-red-700
+                                    {% elif application.status == 'CANCELLED' %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ application.get_status_display }}
+                                </span>
+                                <p class="text-xs text-gray-500 mt-1">Applied {{ application.created_at|timesince }} ago</p>
+                                <a href="{% url 'tenants:application_detail' application.id %}" class="text-sm text-blue-600 hover:text-blue-500 mt-1 inline-block">
+                                    View Details <i class="fas fa-arrow-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-file-signature text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Applications</h3>
+                        <p class="text-gray-500">You haven't submitted any property applications yet.</p>
+                        <a href="{% url 'properties:list' %}" class="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            Browse Properties
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if applications.has_other_pages %}
+                <div class="flex justify-center mt-6">
+                    <nav class="flex items-center space-x-2">
+                        {% if applications.has_previous %}
+                            <a href="?page={{ applications.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in applications.paginator.page_range %}
+                            {% if applications.number == num %}
+                                <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                            {% elif num > applications.number|add:'-3' and num < applications.number|add:'3' %}
+                                <a href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    {{ num }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if applications.has_next %}
+                            <a href="?page={{ applications.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

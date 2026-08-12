@@ -1,0 +1,384 @@
+{% load static %}
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Winda - Your Home, Directly{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg border-b border-gray-200 fixed w-full z-50 top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="{% url 'home' %}" class="flex items-center space-x-2">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">W</span>
+                        </div>
+                        <span class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">Winda</span>
+                    </a>
+                </div>
+                
+                <!-- Main Navigation -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="{% url 'properties:list' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                        <i class="fas fa-search"></i> Browse
+                    </a>
+                    {% if user.is_authenticated %}
+                        {% if user.is_owner %}
+                            <a href="{% url 'properties:create' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                                <i class="fas fa-plus-circle"></i> List Property
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+
+                        {% if user.is_owner %}
+                        <a href="{% url 'properties:owner_properties' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <i class="fas fa-home"></i> My Properties
+                        </a>
+
+                        <a href="{% url 'tenants:pending_tenants' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <i class="fas fa-clock"></i> Pending
+                            {% if pending_count > 0 %}
+                                <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-1">{{ pending_count }}</span>
+                            {% endif %}
+                        </a>
+
+                        <a href="{% url 'tenants:tenant_list' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <i class="fas fa-users"></i> Tenants
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" class="w-8 h-8 rounded-full object-cover">
+                            {% else %}
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
+                                    <span class="text-white text-sm font-medium">{{ user.get_full_name|slice:":1"|upper }}</span>
+                                </div>
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'accounts:logout' %}" class="text-gray-700 hover:text-red-600 transition-colors duration-200">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="{% url 'accounts:register' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-user-plus"></i> Sign Up
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="toggleMobileMenu()" class="text-gray-700 hover:text-blue-600 focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <a href="{% url 'properties:list' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Browse Properties</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Dashboard</a>
+                    <a href="{% url 'accounts:logout' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-red-50 hover:text-red-600">Logout</a>
+                {% else %}
+                    <a href="{% url 'accounts:login' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Login</a>
+                    <a href="{% url 'accounts:register' %}" class="block px-3 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- Messages -->
+        {% if messages %}
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                {% for message in messages %}
+                    <div class="rounded-lg p-4 mb-4 {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-300{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-300{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-300{% else %}bg-blue-100 text-blue-800 border border-blue-300{% endif %}">
+                        <div class="flex items-center">
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Floating Chat Button -->
+    {% if user.is_authenticated %}
+        <div class="fixed bottom-6 right-6 z-40">
+            <button onclick="toggleFloatingChat()" 
+                    class="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110">
+                <i class="fas fa-comment-dots text-2xl"></i>
+                {% if unread_total > 0 %}
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold">
+                        {{ unread_total }}
+                    </span>
+                {% endif %}
+            </button>
+            
+            <!-- Quick Chat Popup -->
+            <div id="floatingChatPopup" class="absolute bottom-16 right-0 bg-white rounded-xl shadow-2xl w-80 hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-semibold text-gray-900">Quick Chat</h4>
+                        <button onclick="toggleFloatingChat()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4 max-h-96 overflow-y-auto">
+                    <!-- Recent Conversations -->
+                    <p class="text-sm text-gray-500 mb-3">Recent Conversations</p>
+                    <div id="recentChats">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <a href="{% url 'communications:chat_list' %}" class="block text-center text-blue-600 hover:text-blue-500 text-sm">
+                            <i class="fas fa-comment-dots mr-1"></i> View All Messages
+                        </a>
+                        <a href="{% url 'properties:list' %}" class="block text-center text-gray-600 hover:text-gray-800 text-sm mt-1">
+                            <i class="fas fa-search mr-1"></i> Find Properties to Chat About
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Chat Modal (for starting new conversations) -->
+    <div id="chatModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900" id="chatModalTitle">Start Conversation</h3>
+                <button onclick="closeChatModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-gray-600 mb-4" id="chatModalMessage">Send a message to the property owner.</p>
+            <form id="chatStartForm" method="POST" action="{% url 'communications:start_chat' %}">
+                {% csrf_token %}
+                <input type="hidden" name="property_id" id="chatPropertyId">
+                <input type="hidden" name="user_id" id="chatUserId">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                    <textarea name="initial_message" id="chatInitialMessage" rows="3" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Hi, I'm interested in this property..."></textarea>
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                    <i class="fas fa-paper-plane mr-2"></i> Start Chat
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    // Floating Chat
+    function toggleFloatingChat() {
+        const popup = document.getElementById('floatingChatPopup');
+        popup.classList.toggle('hidden');
+        if (!popup.classList.contains('hidden')) {
+            loadRecentChats();
+        }
+    }
+
+    function loadRecentChats() {
+        fetch('/communications/recent-chats/')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('recentChats');
+                if (data.chats && data.chats.length > 0) {
+                    container.innerHTML = data.chats.map(chat => `
+                        <a href="/communications/${chat.id}/" class="block p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span class="text-blue-600 font-bold text-sm">${chat.other_participant_initials}</span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium truncate">${chat.other_participant_name}</p>
+                                    <p class="text-xs text-gray-500 truncate">${chat.last_message || 'No messages yet'}</p>
+                                </div>
+                                ${chat.unread_count > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">${chat.unread_count}</span>` : ''}
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <p class="text-sm text-gray-500 text-center py-4">No recent conversations</p>
+                        <a href="{% url 'properties:list' %}" class="block text-center text-blue-600 hover:text-blue-500 text-sm">
+                            Start a conversation
+                        </a>
+                    `;
+                }
+            });
+    }
+
+    // Chat Modal functions
+    function startChatFromCard(propertyId, propertyTitle, ownerName) {
+        document.getElementById('chatPropertyId').value = propertyId;
+        document.getElementById('chatUserId').value = '';
+        document.getElementById('chatModalTitle').textContent = `Chat about ${propertyTitle}`;
+        document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
+        document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
+        document.getElementById('chatModal').classList.remove('hidden');
+    }
+
+    function startChatFromDetail(propertyId, propertyTitle, ownerName) {
+        document.getElementById('chatPropertyId').value = propertyId;
+        document.getElementById('chatUserId').value = '';
+        document.getElementById('chatModalTitle').textContent = `Chat about ${propertyTitle}`;
+        document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
+        document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
+        document.getElementById('chatModal').classList.remove('hidden');
+    }
+
+    function closeChatModal() {
+        document.getElementById('chatModal').classList.add('hidden');
+    }
+
+    // Close modal on click outside
+    document.getElementById('chatModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeChatModal();
+        }
+    });
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeChatModal();
+        }
+    });
+
+    // Close floating chat on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const popup = document.getElementById('floatingChatPopup');
+            if (!popup.classList.contains('hidden')) {
+                popup.classList.add('hidden');
+            }
+        }
+    });
+    </script>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">W</span>
+                        </div>
+                        <span class="text-2xl font-bold text-white">Winda</span>
+                    </div>
+                    <p class="text-gray-400">Your window to direct property renting. No agents, just direct connections.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold mb-4">Quick Links</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="{% url 'properties:list' %}" class="hover:text-blue-400 transition-colors">Browse Properties</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold mb-4">For Owners</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="#" class="hover:text-blue-400 transition-colors">How it Works</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors">Pricing</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors">Resources</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="font-semibold mb-4">Contact Us</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fas fa-envelope mr-2"></i> support@winda.co.ke</li>
+                        <li><i class="fas fa-phone mr-2"></i> +254 700 123 456</li>
+                        <li><i class="fas fa-map-marker-alt mr-2"></i> Nairobi, Kenya</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+                <p>&copy; 2024 Winda. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        // Close mobile menu on link click
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            });
+        });
+        
+        // Auto-hide messages after 5 seconds
+        document.querySelectorAll('.alert').forEach(alert => {
+            setTimeout(() => {
+                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.opacity = '0';
+                setTimeout(() => {
+                    alert.remove();
+                }, 500);
+            }, 5000);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

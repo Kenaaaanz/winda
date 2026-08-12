@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Tenant Details - {{ tenant.get_full_name }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    {% if tenant.profile_picture %}
+                        <img src="{{ tenant.profile_picture.url }}" alt="{{ tenant.get_full_name }}" class="w-16 h-16 rounded-full object-cover">
+                    {% else %}
+                        <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span class="text-2xl font-bold text-blue-600">{{ tenant.get_full_name|slice:":1"|upper }}</span>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ tenant.get_full_name }}</h1>
+                        <p class="text-gray-600">{{ tenant.email }}</p>
+                        <p class="text-gray-600">{{ tenant.phone }}</p>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'tenants:tenant_list' %}" class="text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-blue-50 rounded-lg p-4">
+                <p class="text-sm text-blue-600">Total Payments</p>
+                <p class="text-2xl font-bold text-blue-900">{{ payment_stats.count }}</p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4">
+                <p class="text-sm text-green-600">Total Amount</p>
+                <p class="text-2xl font-bold text-green-900">KES {{ payment_stats.total|intcomma }}</p>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-4">
+                <p class="text-sm text-yellow-600">Pending Payments</p>
+                <p class="text-2xl font-bold text-yellow-900">{{ payment_stats.pending }}</p>
+            </div>
+            <div class="bg-red-50 rounded-lg p-4">
+                <p class="text-sm text-red-600">Maintenance Requests</p>
+                <p class="text-2xl font-bold text-red-900">{{ maintenance|length }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content -->
+            <div class="lg:col-span-2">
+                <!-- Lease Information -->
+                {% if lease %}
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Active Lease</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Property</p>
+                                <p class="font-semibold">{{ lease.property.title }}</p>
+                                {% if lease.unit %}
+                                    <p class="text-sm text-gray-600">Unit {{ lease.unit.unit_number }}</p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Monthly Rent</p>
+                                <p class="font-semibold">KES {{ lease.monthly_rent|intcomma }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Start Date</p>
+                                <p class="font-semibold">{{ lease.start_date|date:"M d, Y" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">End Date</p>
+                                <p class="font-semibold">{{ lease.end_date|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Applications -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Applications</h3>
+                    <div class="space-y-3">
+                        {% for app in applications %}
+                            <div class="border border-gray-100 rounded-lg p-3 flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium">{{ app.property.title }}</p>
+                                    {% if app.unit %}
+                                        <p class="text-sm text-gray-600">Unit {{ app.unit.unit_number }}</p>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-600">Applied {{ app.created_at|timesince }} ago</p>
+                                </div>
+                                <span class="px-3 py-1 text-xs rounded-full 
+                                    {% if app.status == 'APPROVED' %}bg-green-100 text-green-700
+                                    {% elif app.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                    {% elif app.status == 'REJECTED' %}bg-red-100 text-red-700
+                                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ app.get_status_display }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Payment History -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Payment History</h3>
+                        <span class="text-sm text-gray-500">{{ payments|length }} payments</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-2 text-sm font-semibold text-gray-600">Date</th>
+                                    <th class="text-left py-2 text-sm font-semibold text-gray-600">Type</th>
+                                    <th class="text-left py-2 text-sm font-semibold text-gray-600">Amount</th>
+                                    <th class="text-left py-2 text-sm font-semibold text-gray-600">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in payments %}
+                                    <tr class="border-b border-gray-100">
+                                        <td class="py-2 text-sm">{{ payment.created_at|date:"M d, Y" }}</td>
+                                        <td class="py-2 text-sm">{{ payment.get_payment_type_display }}</td>
+                                        <td class="py-2 text-sm font-medium">KES {{ payment.amount|intcomma }}</td>
+                                        <td class="py-2">
+                                            <span class="px-2 py-1 text-xs rounded-full 
+                                                {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-700
+                                                {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                                {% else %}bg-red-100 text-red-700{% endif %}">
+                                                {{ payment.get_status_display }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-gray-500">No payments recorded</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Actions -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Actions</h3>
+                    <div class="space-y-3">
+                        <button onclick="sendNotice()" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-envelope mr-2"></i> Send Notice
+                        </button>
+                        {% if has_active_lease %}
+                            <button onclick="terminateLease()" class="w-full bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                                <i class="fas fa-times-circle mr-2"></i> Terminate Lease
+                            </button>
+                        {% endif %}
+                        <button onclick="updateLeaseStatus()" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                            <i class="fas fa-edit mr-2"></i> Update Lease Status
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lease History -->
+                {% if lease_history %}
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Lease History</h3>
+                        <div class="space-y-2">
+                            {% for l in lease_history %}
+                                <div class="border-b border-gray-100 pb-2">
+                                    <p class="text-sm font-medium">{{ l.property.title }}</p>
+                                    {% if l.unit %}
+                                        <p class="text-xs text-gray-500">Unit {{ l.unit.unit_number }}</p>
+                                    {% endif %}
+                                    <p class="text-xs text-gray-500">
+                                        {{ l.start_date|date:"M d, Y" }} - {{ l.end_date|date:"M d, Y" }}
+                                    </p>
+                                    <span class="text-xs px-2 py-1 rounded-full 
+                                        {% if l.status == 'ACTIVE' %}bg-green-100 text-green-700
+                                        {% elif l.status == 'EXPIRED' %}bg-gray-100 text-gray-700
+                                        {% elif l.status == 'TERMINATED' %}bg-red-100 text-red-700
+                                        {% else %}bg-blue-100 text-blue-700{% endif %}">
+                                        {{ l.get_status_display }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function sendNotice() {
+    const noticeType = prompt('Notice type (e.g., Rent Reminder, Maintenance, Policy Update):');
+    if (noticeType) {
+        const message = prompt('Enter the notice message:');
+        if (message) {
+            const formData = new FormData();
+            formData.append('action', 'send_notice');
+            formData.append('notice_type', noticeType);
+            formData.append('message', message);
+            
+            fetch('{% url "tenants:tenant_manage" tenant.id %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Notice sent successfully!');
+                } else {
+                    alert(data.message || 'Failed to send notice');
+                }
+            })
+            .catch(error => {
+                alert('An error occurred. Please try again.');
+            });
+        }
+    }
+}
+
+function terminateLease() {
+    if (confirm('Are you sure you want to terminate this lease? This action cannot be undone.')) {
+        const formData = new FormData();
+        formData.append('action', 'terminate_lease');
+        formData.append('lease_id', '{{ lease.id }}');
+        
+        fetch('{% url "tenants:tenant_manage" tenant.id %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Lease terminated successfully.');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to terminate lease');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+function updateLeaseStatus() {
+    const status = prompt('Enter new lease status (ACTIVE, EXPIRED, TERMINATED, PENDING_SIGNATURE):', 'ACTIVE');
+    if (status && ['ACTIVE', 'EXPIRED', 'TERMINATED', 'PENDING_SIGNATURE'].includes(status.toUpperCase())) {
+        const formData = new FormData();
+        formData.append('action', 'update_lease_status');
+        formData.append('lease_id', '{{ lease.id }}');
+        formData.append('status', status.toUpperCase());
+        
+        fetch('{% url "tenants:tenant_manage" tenant.id %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Lease status updated!');
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to update lease status');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

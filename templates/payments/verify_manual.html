@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Manual Payment Verification - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-4">
+                <h1 class="text-2xl font-bold text-white">Manual Payment Verification</h1>
+                <p class="text-yellow-100">For testing purposes only</p>
+            </div>
+            
+            <div class="p-6">
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 mt-1 mr-3"></i>
+                        <div>
+                            <h4 class="font-semibold text-yellow-800">⚠️ Testing Only</h4>
+                            <p class="text-sm text-yellow-700">This is a manual verification tool for testing purposes. Only use this when Paystack callback is not working.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payment Details -->
+                <div class="space-y-3 mb-6">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Reference</span>
+                        <span class="font-mono text-sm">{{ payment.payment_reference }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Amount</span>
+                        <span class="font-bold text-blue-600">KES {{ payment.amount|intcomma }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Type</span>
+                        <span>{{ payment.get_payment_type_display }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Current Status</span>
+                        <span class="inline-block px-2 py-1 text-xs rounded-full 
+                            {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-700
+                            {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                            {% elif payment.status == 'FAILED' %}bg-red-100 text-red-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ payment.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Created</span>
+                        <span>{{ payment.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                </div>
+                
+                <!-- Warning -->
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-circle text-red-500 mt-1 mr-3"></i>
+                        <div>
+                            <h4 class="font-semibold text-red-800">Warning</h4>
+                            <p class="text-sm text-red-700">Manually verifying a payment will mark it as completed. This action cannot be undone.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="flex space-x-3">
+                        <button type="submit" class="flex-1 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                            <i class="fas fa-check-circle mr-2"></i> Verify Payment
+                        </button>
+                        <a href="{% url 'payments:detail' payment.id %}" class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors text-center">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

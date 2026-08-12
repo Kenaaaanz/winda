@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ notification.title }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-xl font-bold text-white">Notification Details</h1>
+                    <a href="{% url 'notifications:list' %}" class="text-white hover:text-blue-100 transition-colors">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Notification Content -->
+                <div class="mb-4">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="px-3 py-1 text-xs rounded-full 
+                            {% if notification.notification_type == 'APPLICATION' %}bg-blue-100 text-blue-700
+                            {% elif notification.notification_type == 'PAYMENT' %}bg-green-100 text-green-700
+                            {% elif notification.notification_type == 'MAINTENANCE' %}bg-red-100 text-red-700
+                            {% elif notification.notification_type == 'MESSAGE' %}bg-purple-100 text-purple-700
+                            {% elif notification.notification_type == 'LEASE' %}bg-yellow-100 text-yellow-700
+                            {% else %}bg-gray-100 text-gray-700{% endif %}">
+                            {{ notification.get_notification_type_display }}
+                        </span>
+                        {% if notification.is_read %}
+                            <span class="text-xs text-gray-500">Read</span>
+                        {% else %}
+                            <span class="text-xs text-blue-500 font-semibold">Unread</span>
+                        {% endif %}
+                    </div>
+                    
+                    <h2 class="text-2xl font-bold text-gray-900 mb-3">{{ notification.title }}</h2>
+                    <p class="text-gray-700 leading-relaxed">{{ notification.message }}</p>
+                </div>
+
+                <!-- Meta Information -->
+                <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p class="text-gray-500">Received</p>
+                            <p class="font-medium">{{ notification.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Status</p>
+                            <p class="font-medium">
+                                {% if notification.is_read %}
+                                    <span class="text-green-600">Read</span>
+                                {% else %}
+                                    <span class="text-blue-600">Unread</span>
+                                {% endif %}
+                                {% if notification.read_at %}
+                                    <span class="text-gray-500 text-xs block">Read on {{ notification.read_at|date:"M d, Y H:i" }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="border-t border-gray-200 pt-4 mt-4 flex flex-wrap gap-3">
+                    {% if notification.related_object_id %}
+                        {% if notification.related_object_type == 'application' %}
+                            <a href="{% url 'tenants:application_detail' notification.related_object_id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                <i class="fas fa-file-signature mr-2"></i> View Application
+                            </a>
+                        {% elif notification.related_object_type == 'payment' %}
+                            <a href="{% url 'payments:detail' notification.related_object_id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                <i class="fas fa-credit-card mr-2"></i> View Payment
+                            </a>
+                        {% elif notification.related_object_type == 'maintenance' %}
+                            <a href="{% url 'maintenance:detail' notification.related_object_id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                <i class="fas fa-tools mr-2"></i> View Request
+                            </a>
+                        {% elif notification.related_object_type == 'lease' %}
+                            <a href="{% url 'tenants:lease_detail' notification.related_object_id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                <i class="fas fa-file-contract mr-2"></i> View Lease
+                            </a>
+                        {% elif notification.related_object_type == 'chat_message' or notification.related_object_type == 'chat_room' %}
+                            <a href="{% url 'communications:chat_detail' notification.related_object_id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                                <i class="fas fa-comment-dots mr-2"></i> View Chat
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    
+                    {% if not notification.is_read %}
+                        <button onclick="markRead('{{ notification.id }}')" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm">
+                            <i class="fas fa-check mr-2"></i> Mark as Read
+                        </button>
+                    {% endif %}
+                    
+                    <button onclick="archiveNotification('{{ notification.id }}')" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                        <i class="fas fa-archive mr-2"></i> Archive
+                    </button>
+                    
+                    <a href="{% url 'notifications:list' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Notifications
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function markRead(notificationId) {
+    fetch(`/notifications/${notificationId}/mark-read/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        }
+    });
+}
+
+function archiveNotification(notificationId) {
+    if (!confirm('Archive this notification?')) return;
+    
+    fetch(`/notifications/${notificationId}/archive/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = '{% url "notifications:list" %}';
+        }
+    });
+}
+</script>
+{% endblock %}

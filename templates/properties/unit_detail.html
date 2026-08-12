@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Unit {{ unit.unit_number }} - {{ property.title }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Unit {{ unit.unit_number }}</h1>
+                        <p class="text-blue-100">{{ property.title }}</p>
+                    </div>
+                    <span class="px-4 py-2 text-sm font-semibold rounded-lg 
+                        {% if unit.status == 'AVAILABLE' %}bg-green-100 text-green-700
+                        {% elif unit.status == 'RENTED' %}bg-red-100 text-red-700
+                        {% elif unit.status == 'BOOKED' %}bg-yellow-100 text-yellow-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ unit.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Unit Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Unit Information</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Unit Number</dt>
+                                <dd class="font-semibold">{{ unit.unit_number }}</dd>
+                            </div>
+                            {% if unit.floor_number %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Floor</dt>
+                                    <dd>{{ unit.floor_number }}</dd>
+                                </div>
+                            {% endif %}
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Bedrooms</dt>
+                                <dd>{{ unit.bedrooms }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Bathrooms</dt>
+                                <dd>{{ unit.bathrooms }}</dd>
+                            </div>
+                            {% if unit.square_feet %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Square Feet</dt>
+                                    <dd>{{ unit.square_feet }}</dd>
+                                </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Pricing</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Monthly Rent</dt>
+                                <dd class="font-bold text-blue-600 text-lg">KES {{ unit.get_rental_price|intcomma }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Service Charge</dt>
+                                <dd>KES {{ unit.get_service_charge|intcomma }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Security Deposit</dt>
+                                <dd>KES {{ unit.get_security_deposit|intcomma }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Amenities -->
+                {% if unit.amenities %}
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Amenities</h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for amenity in unit.amenities %}
+                                <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">{{ amenity }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Features -->
+                {% if unit.features %}
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Features</h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for feature in unit.features %}
+                                <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">{{ feature }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Actions -->
+                <div class="mt-6 border-t border-gray-200 pt-4 flex flex-wrap gap-3">
+                    <a href="{% url 'properties:detail' property.id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Property
+                    </a>
+                    {% if user.is_authenticated and user.is_tenant and unit.status == 'AVAILABLE' %}
+                        <a href="{% url 'tenants:apply' property.id %}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            <i class="fas fa-paper-plane mr-2"></i> Apply for Unit
+                        </a>
+                    {% endif %}
+                    {% if user.is_authenticated and user.is_owner and property.owner.user == user %}
+                        <a href="{% url 'properties:manage_units' property.id %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                            <i class="fas fa-edit mr-2"></i> Manage Units
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

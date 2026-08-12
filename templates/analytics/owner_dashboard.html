@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Analytics Dashboard - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+            <div class="flex space-x-2">
+                <button onclick="exportData()" class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <i class="fas fa-download mr-2"></i> Export
+                </button>
+                <select class="bg-white text-gray-700 px-4 py-2 rounded-lg shadow-sm border-0 focus:ring-2 focus:ring-blue-500">
+                    <option value="30">Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                    <option value="365">Last year</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Occupancy Rate</p>
+                        <p class="text-2xl font-bold">{{ occupancy_rate|floatformat:1 }}%</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-building text-blue-500 text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-500 rounded-full h-2" style="width: {{ occupancy_rate }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">{{ available }} available / {{ total_properties }} total</p>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Monthly Revenue</p>
+                        <p class="text-2xl font-bold">KES {{ monthly_revenue|intcomma }}</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-money-bill-wave text-green-500 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-green-600 mt-2">
+                    <i class="fas fa-arrow-up mr-1"></i> {{ total_revenue|intcomma }} total revenue
+                </p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Applications</p>
+                        <p class="text-2xl font-bold">{{ total_applications }}</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-file-signature text-purple-500 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-yellow-600 mt-2">
+                    <i class="fas fa-clock mr-1"></i> {{ pending_applications }} pending
+                </p>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Maintenance</p>
+                        <p class="text-2xl font-bold">{{ pending_maintenance }}</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-tools text-red-500 text-xl"></i>
+                    </div>
+                </div>
+                <p class="text-xs text-red-600 mt-2">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Pending requests
+                </p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Revenue Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Revenue Trends</h3>
+                <canvas id="revenueChart" height="200"></canvas>
+            </div>
+            
+            <!-- Property Performance -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Property Performance</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Views</span>
+                        <span class="font-semibold">{{ monthly_views|length }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Inquiries</span>
+                        <span class="font-semibold">{{ total_applications }}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-600">Conversion Rate</span>
+                        <span class="font-semibold">
+                            {% if total_applications > 0 %}
+                                {{ occupied|divisibleby:total_applications|floatformat:1 }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Monthly Revenue',
+                data: [12000, 19000, 15000, 22000, 18000, 25000],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+
+function exportData() {
+    window.location.href = '{% url "analytics:export" %}';
+}
+</script>
+{% endblock %}

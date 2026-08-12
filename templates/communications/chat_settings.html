@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Chat Settings - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-bold text-white">Chat Settings</h1>
+                    <a href="{% url 'communications:chat_detail' room.id %}" class="text-white hover:text-blue-100">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Chat Information -->
+                <div class="border-b border-gray-200 pb-4 mb-4">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Chat Information</h3>
+                    <div class="flex items-center space-x-3">
+                        {% if other_participant.profile_picture %}
+                            <img src="{{ other_participant.profile_picture.url }}" alt="{{ other_participant.get_full_name }}" class="w-12 h-12 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span class="text-blue-600 font-bold text-xl">{{ other_participant.get_full_name|slice:":1"|upper }}</span>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <p class="font-semibold text-gray-900">{{ other_participant.get_full_name }}</p>
+                            <p class="text-sm text-gray-600">{{ other_participant.email }}</p>
+                            <p class="text-xs text-gray-500">
+                                {% if other_participant.is_owner %}Property Owner{% else %}Tenant{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Controls -->
+                <div class="space-y-4">
+                    <form method="POST" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        {% csrf_token %}
+                        <div>
+                            <h4 class="font-medium text-gray-900">Mute Notifications</h4>
+                            <p class="text-sm text-gray-500">Stop receiving notifications from this chat</p>
+                        </div>
+                        <input type="hidden" name="action" value="mute">
+                        <button type="submit" class="px-4 py-2 rounded-lg {% if is_muted %}bg-yellow-500 text-white hover:bg-yellow-600{% else %}bg-gray-200 text-gray-700 hover:bg-gray-300{% endif %} transition-colors">
+                            {% if is_muted %}
+                                <i class="fas fa-volume-up mr-2"></i> Unmute
+                            {% else %}
+                                <i class="fas fa-volume-mute mr-2"></i> Mute
+                            {% endif %}
+                        </button>
+                    </form>
+
+                    {% if not is_blocked %}
+                        <form method="POST" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            {% csrf_token %}
+                            <div>
+                                <h4 class="font-medium text-red-600">Block User</h4>
+                                <p class="text-sm text-gray-500">You won't receive messages from this user</p>
+                            </div>
+                            <input type="hidden" name="action" value="block">
+                            <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                                <i class="fas fa-ban mr-2"></i> Block User
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            {% csrf_token %}
+                            <div>
+                                <h4 class="font-medium text-green-600">Unblock User</h4>
+                                <p class="text-sm text-gray-500">You will receive messages from this user again</p>
+                            </div>
+                            <input type="hidden" name="action" value="unblock">
+                            <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-user-check mr-2"></i> Unblock User
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <form method="POST" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        {% csrf_token %}
+                        <div>
+                            <h4 class="font-medium text-orange-600">Clear Chat History</h4>
+                            <p class="text-sm text-gray-500">Delete all messages in this chat for you</p>
+                        </div>
+                        <input type="hidden" name="action" value="clear_chat">
+                        <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors" onclick="return confirm('Clear all messages in this chat?')">
+                            <i class="fas fa-eraser mr-2"></i> Clear Chat
+                        </button>
+                    </form>
+
+                    <form method="POST" class="flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
+                        {% csrf_token %}
+                        <div>
+                            <h4 class="font-medium text-red-600">Leave Chat</h4>
+                            <p class="text-sm text-gray-500">You will no longer be part of this conversation</p>
+                        </div>
+                        <input type="hidden" name="action" value="leave_chat">
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors" onclick="return confirm('Are you sure you want to leave this chat?')">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Leave Chat
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Chat Stats -->
+                <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                            <p class="text-gray-500">Total Messages</p>
+                            <p class="font-medium">{{ message_count }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500">Created</p>
+                            <p class="font-medium">{{ room.created_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

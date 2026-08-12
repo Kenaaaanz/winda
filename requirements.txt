@@ -1,0 +1,42 @@
+# requirements-windows.txt - Without GDAL
+
+Django==5.2
+djangorestframework
+django-cors-headers
+django-allauth
+django-ckeditor
+django-crispy-forms
+crispy-bootstrap5
+django-embed-video
+django-import-export
+django-redis
+django-celery-beat
+django-celery-results
+django-cleanup
+django-storages
+pillow
+psycopg2-binary
+python-dotenv
+celery
+redis
+paystackapi
+django-phone-field
+django-simple-history
+django-sendgrid-v5
+twilio
+django-ratelimit
+django-activity-stream
+channels
+channels-redis
+django-allauth
+django-guardian
+django-rest-knox
+sentry-sdk
+whitenoise
+gunicorn
+
+# Windows-specific packages
+# pywin32==306  # For Windows services
+
+# Note: Remove django.contrib.gis dependencies
+# We'll use fallback for location handling

@@ -1,0 +1,699 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Images - {{ property.title }} - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .image-item {
+        position: relative;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 3px solid transparent;
+        transition: all 0.3s ease;
+        background: #f3f4f6;
+        min-height: 200px;
+        cursor: default;
+    }
+    .image-item:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .image-item.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    }
+    .image-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+    .image-item .badges {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .image-item .badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .badge-main {
+        background: #3b82f6;
+        color: white;
+    }
+    .badge-thumbnail {
+        background: #10b981;
+        color: white;
+    }
+    .badge-order {
+        background: rgba(0,0,0,0.7);
+        color: white;
+    }
+    .image-item .actions {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+        padding: 0.75rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .image-item:hover .actions {
+        opacity: 1;
+    }
+    .image-item .actions button {
+        background: white;
+        border: none;
+        padding: 0.3rem 0.6rem;
+        border-radius: 0.25rem;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+    }
+    .image-item .actions button:hover {
+        transform: scale(1.1);
+    }
+    .image-item .actions .btn-main {
+        color: #3b82f6;
+    }
+    .image-item .actions .btn-main.active {
+        background: #3b82f6;
+        color: white;
+    }
+    .image-item .actions .btn-thumb {
+        color: #10b981;
+    }
+    .image-item .actions .btn-thumb.active {
+        background: #10b981;
+        color: white;
+    }
+    .image-item .actions .btn-edit {
+        color: #f59e0b;
+    }
+    .image-item .actions .btn-delete {
+        color: #ef4444;
+    }
+    .image-item .caption {
+        position: absolute;
+        bottom: 3.5rem;
+        left: 0;
+        right: 0;
+        padding: 0.5rem;
+        text-align: center;
+        color: white;
+        font-size: 0.75rem;
+        background: rgba(0,0,0,0.6);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+    }
+    .image-item:hover .caption {
+        opacity: 1;
+    }
+    .drop-zone {
+        border: 2px dashed #d1d5db;
+        border-radius: 0.5rem;
+        padding: 2.5rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: #f9fafb;
+    }
+    .drop-zone:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+    .drop-zone.dragover {
+        border-color: #3b82f6;
+        background: #dbeafe;
+    }
+    .drop-zone .icon {
+        font-size: 3rem;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    .sortable-item {
+        cursor: grab;
+    }
+    .sortable-item:active {
+        cursor: grabbing;
+    }
+    .sortable-item.dragging {
+        opacity: 0.4;
+    }
+    .sortable-item .drag-handle {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        color: white;
+        background: rgba(0,0,0,0.5);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .sortable-item:hover .drag-handle {
+        opacity: 1;
+    }
+    .upload-progress {
+        display: none;
+        margin-top: 1rem;
+    }
+    .upload-progress .progress-bar {
+        width: 100%;
+        background: #e5e7eb;
+        border-radius: 9999px;
+        height: 0.5rem;
+        overflow: hidden;
+    }
+    .upload-progress .progress-bar .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        transition: width 0.3s ease;
+        width: 0%;
+    }
+    .upload-progress .progress-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+        text-align: center;
+    }
+    .toast {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        color: white;
+        z-index: 9999;
+        transform: translateX(120%);
+        transition: transform 0.3s ease;
+        max-width: 400px;
+    }
+    .toast.show {
+        transform: translateX(0);
+    }
+    .toast.success {
+        background: #10b981;
+    }
+    .toast.error {
+        background: #ef4444;
+    }
+    .toast.info {
+        background: #3b82f6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Toast Notification -->
+        <div id="toast" class="toast"></div>
+
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Manage Images</h1>
+                    <p class="text-gray-600">{{ property.title }}</p>
+                    <p class="text-sm text-gray-500 mt-1">{{ property.city }}, {{ property.state }}</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'properties:detail' property.id %}" class="text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Property
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Thumbnail & Main Image -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-semibold text-gray-900">Main Image</h3>
+                    <span class="text-xs text-gray-500">Displayed on property page</span>
+                </div>
+                {% if property.main_image %}
+                    <img src="{{ property.main_image.url }}" alt="Main image" class="w-full h-48 object-cover rounded-lg">
+                {% else %}
+                    <div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span class="text-gray-500">No main image set</span>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-semibold text-gray-900">Thumbnail</h3>
+                    <span class="text-xs text-gray-500">Displayed in listings</span>
+                </div>
+                {% if property.thumbnail_url %}
+                    <img src="{{ property.thumbnail_url }}" alt="Thumbnail" class="w-full h-48 object-cover rounded-lg">
+                {% else %}
+                    <div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span class="text-gray-500">No thumbnail set</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Upload Zone -->
+        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4">Upload New Images</h3>
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-cloud-upload-alt icon"></i>
+                    <p class="text-gray-600 font-medium">Drag and drop images here, or click to select</p>
+                    <p class="text-sm text-gray-500 mt-1">PNG, JPG, GIF up to 10MB each</p>
+                </div>
+            </div>
+            <div class="upload-progress" id="uploadProgress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+                <p class="progress-text" id="progressText">Uploading 0%</p>
+            </div>
+        </div>
+
+        <!-- Image Gallery -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">Image Gallery</h3>
+                    <p class="text-sm text-gray-500">{{ images|length }} images total</p>
+                </div>
+                <div class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Drag to reorder
+                </div>
+            </div>
+
+            {% if images %}
+                <div class="image-grid" id="imageGrid">
+                    {% for image in images %}
+                        <div class="image-item sortable-item {% if image.is_main %}selected{% endif %}" 
+                             data-id="{{ image.id }}" data-order="{{ image.order }}">
+                            <img src="{{ image.image.url }}" alt="{{ image.caption|default:'Property image' }}">
+                            
+                            <div class="badges">
+                                {% if image.is_main %}
+                                    <span class="badge badge-main"><i class="fas fa-star mr-1"></i> Main</span>
+                                {% endif %}
+                                {% if property.thumbnail and property.thumbnail.url == image.image.url %}
+                                    <span class="badge badge-thumbnail"><i class="fas fa-image mr-1"></i> Thumb</span>
+                                {% endif %}
+                                <span class="badge badge-order">#{{ image.order|add:1 }}</span>
+                            </div>
+                            
+                            {% if image.caption %}
+                                <div class="caption">{{ image.caption }}</div>
+                            {% endif %}
+                            
+                            <div class="drag-handle">
+                                <i class="fas fa-grip-lines"></i>
+                            </div>
+                            
+                            <div class="actions">
+                                <button onclick="setMain('{{ image.id }}')" class="btn-main {% if image.is_main %}active{% endif %}" title="Set as main image">
+                                    <i class="fas fa-star"></i> Main
+                                </button>
+                                <button onclick="setThumbnail('{{ image.id }}')" class="btn-thumb {% if property.thumbnail and property.thumbnail.url == image.image.url %}active{% endif %}" title="Set as thumbnail">
+                                    <i class="fas fa-image"></i> Thumb
+                                </button>
+                                <button onclick="editCaption('{{ image.id }}')" class="btn-edit" title="Edit caption">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteImage('{{ image.id }}')" class="btn-delete" title="Delete image">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-images text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Images</h3>
+                    <p class="text-gray-500">Upload images to showcase your property</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Tips -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-lightbulb text-blue-500 mt-1 mr-3"></i>
+                <div>
+                    <h4 class="font-semibold text-blue-800">Tips for great property photos</h4>
+                    <ul class="text-sm text-blue-700 mt-1 space-y-1">
+                        <li>• Use high-quality, well-lit images</li>
+                        <li>• Show all rooms including kitchen and bathrooms</li>
+                        <li>• Include exterior shots of the property</li>
+                        <li>• Set the best image as your main image</li>
+                        <li>• Add captions to describe each image</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include SortableJS from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+// CSRF Token Helper
+function getCookie(name) {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith(name + '='));
+    return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : null;
+}
+
+function getCSRFToken() {
+    const tokenInput = document.getElementById('csrfToken');
+    if (tokenInput && tokenInput.value) {
+        return tokenInput.value;
+    }
+    const tokenFromCookie = getCookie('csrftoken');
+    if (tokenFromCookie) {
+        return tokenFromCookie;
+    }
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+// Toast Notification
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast ' + type;
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Get property ID from URL
+function getPropertyId() {
+    return '{{ property.id }}';
+}
+
+// Drag and drop upload
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            uploadFiles(files);
+        }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            uploadFiles(e.target.files);
+            fileInput.value = '';
+        }
+    });
+});
+
+function uploadFiles(files) {
+    const formData = new FormData();
+    for (let file of files) {
+        formData.append('images', file);
+    }
+
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    progressDiv.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Uploading 0%';
+
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 5;
+        if (progress <= 90) {
+            progressBar.style.width = progress + '%';
+            progressText.textContent = 'Uploading ' + progress + '%';
+        }
+    }, 200);
+
+    fetch(`/properties/{{ property.id }}/images/upload/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(interval);
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+        showToast(data.message || 'Images uploaded successfully!', 'success');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    })
+    .catch(error => {
+        clearInterval(interval);
+        progressText.textContent = 'Upload failed. Please try again.';
+        progressBar.style.width = '100%';
+        progressBar.style.background = '#ef4444';
+        showToast('Upload failed. Please try again.', 'error');
+        setTimeout(() => {
+            progressDiv.style.display = 'none';
+            progressBar.style.background = '';
+        }, 3000);
+    });
+}
+
+// Sortable for reordering
+const imageGrid = document.getElementById('imageGrid');
+if (imageGrid) {
+    Sortable.create(imageGrid, {
+        animation: 150,
+        handle: '.drag-handle',
+        ghostClass: 'dragging',
+        onEnd: function(evt) {
+            const items = imageGrid.querySelectorAll('.image-item');
+            const orderData = [];
+            items.forEach((item, index) => {
+                orderData.push({
+                    id: item.dataset.id,
+                    order: index
+                });
+            });
+            
+            fetch(`/properties/{{ property.id }}/images/reorder/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken(),
+                },
+                body: JSON.stringify({ order_data: orderData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update order badges
+                    items.forEach((item, index) => {
+                        const badge = item.querySelector('.badge-order');
+                        if (badge) {
+                            badge.textContent = '#' + (index + 1);
+                        }
+                    });
+                    showToast('Images reordered successfully!', 'success');
+                } else {
+                    showToast(data.message || 'Failed to reorder images', 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Failed to reorder images', 'error');
+            });
+        }
+    });
+}
+
+// Image management functions
+function setMain(imageId) {
+    console.log('Setting main image:', imageId);
+    
+    const formData = new FormData();
+    formData.append('image_id', imageId);
+    
+    fetch(`/properties/{{ property.id }}/images/set-main/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);
+        if (data.status === 'success') {
+            showToast('Main image updated successfully!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            showToast(data.message || 'Failed to set main image', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred. Please try again.', 'error');
+    });
+}
+
+function setThumbnail(imageId) {
+    console.log('Setting thumbnail:', imageId);
+    
+    const formData = new FormData();
+    formData.append('image_id', imageId);
+    
+    fetch(`/properties/{{ property.id }}/images/set-thumbnail/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response:', data);
+        if (data.status === 'success') {
+            showToast('Thumbnail updated successfully!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            showToast(data.message || 'Failed to set thumbnail', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred. Please try again.', 'error');
+    });
+}
+
+function editCaption(imageId) {
+    console.log('Editing caption for:', imageId);
+    
+    const currentCaption = prompt('Enter caption for this image:', '');
+    if (currentCaption !== null) {
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        formData.append('caption', currentCaption);
+        
+        fetch(`/properties/{{ property.id }}/images/caption/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response:', data);
+            if (data.status === 'success') {
+                showToast('Caption updated successfully!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else {
+                showToast(data.message || 'Failed to update caption', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', 'error');
+        });
+    }
+}
+
+function deleteImage(imageId) {
+    console.log('Deleting image:', imageId);
+    
+    if (confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
+        const formData = new FormData();
+        formData.append('image_id', imageId);
+        
+        fetch(`/properties/{{ property.id }}/images/delete/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response:', data);
+            if (data.status === 'success') {
+                showToast('Image deleted successfully!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else {
+                showToast(data.message || 'Failed to delete image', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred. Please try again.', 'error');
+        });
+    }
+}
+
+// Debug: Log all image IDs on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const items = document.querySelectorAll('.image-item');
+    console.log('Found', items.length, 'images');
+    items.forEach(item => {
+        console.log('Image ID:', item.dataset.id, 'Order:', item.dataset.order);
+    });
+});
+</script>
+{% endblock %}

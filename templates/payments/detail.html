@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Payment Details - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Payment Details</h1>
+                        <p class="text-blue-100">Reference: {{ payment.payment_reference }}</p>
+                    </div>
+                    <span class="px-4 py-2 text-sm font-semibold rounded-lg 
+                        {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-700
+                        {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                        {% elif payment.status == 'FAILED' %}bg-red-100 text-red-700
+                        {% elif payment.status == 'REFUNDED' %}bg-gray-100 text-gray-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ payment.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Payment Info -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Payment Information</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Amount</dt>
+                                <dd class="font-semibold text-lg text-blue-600">KES {{ payment.amount|intcomma }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Type</dt>
+                                <dd>{{ payment.get_payment_type_display }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Method</dt>
+                                <dd>{{ payment.get_payment_method_display }}</dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Status</dt>
+                                <dd>
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                        {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-700
+                                        {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                        {% elif payment.status == 'FAILED' %}bg-red-100 text-red-700
+                                        {% elif payment.status == 'REFUNDED' %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ payment.get_status_display }}
+                                    </span>
+                                </dd>
+                            </div>
+                            {% if payment.description %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Description</dt>
+                                    <dd class="text-right">{{ payment.description }}</dd>
+                                </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Timeline</h3>
+                        <dl class="space-y-2">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Created</dt>
+                                <dd>{{ payment.created_at|date:"M d, Y H:i" }}</dd>
+                            </div>
+                            {% if payment.due_date %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Due Date</dt>
+                                    <dd>{{ payment.due_date|date:"M d, Y H:i" }}</dd>
+                                </div>
+                            {% endif %}
+                            {% if payment.paid_at %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Paid At</dt>
+                                    <dd>{{ payment.paid_at|date:"M d, Y H:i" }}</dd>
+                                </div>
+                            {% endif %}
+                            {% if payment.failure_reason %}
+                                <div class="flex justify-between">
+                                    <dt class="text-gray-600">Failure Reason</dt>
+                                    <dd class="text-red-600">{{ payment.failure_reason }}</dd>
+                                </div>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Related Items -->
+                <div class="border-t border-gray-200 pt-4">
+                    <h3 class="text-sm font-medium text-gray-500 mb-3">Related Items</h3>
+                    <div class="space-y-2">
+                        {% if payment.property %}
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Property</span>
+                                <a href="{% url 'properties:detail' payment.property.id %}" class="text-blue-600 hover:text-blue-500">
+                                    {{ payment.property.title }}
+                                </a>
+                            </div>
+                        {% endif %}
+                        {% if payment.lease %}
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Lease</span>
+                                <a href="{% url 'tenants:lease_detail' payment.lease.id %}" class="text-blue-600 hover:text-blue-500">
+                                    Lease #{{ payment.lease.id|slice:":8" }}
+                                </a>
+                            </div>
+                        {% endif %}
+                        {% if payment.payer %}
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Paid By</span>
+                                <span>{{ payment.payer.get_full_name }}</span>
+                            </div>
+                        {% endif %}
+                        {% if payment.recipient %}
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Paid To</span>
+                                <span>{{ payment.recipient.get_full_name }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Invoice -->
+                {% if payment.invoice %}
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-3">Invoice</h3>
+                        <a href="{% url 'payments:invoice_detail' payment.invoice.id %}" class="text-blue-600 hover:text-blue-500">
+                            <i class="fas fa-file-invoice mr-1"></i> View Invoice #{{ payment.invoice.invoice_number }}
+                        </a>
+                    </div>
+                {% endif %}
+                
+                <!-- Add this in the actions section -->
+                {% if payment.status == 'PENDING' and is_owner %}
+                    <div class="mt-6 border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-3">Owner Actions</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="syncSinglePayment()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                <i class="fas fa-sync mr-2"></i> Sync with Paystack
+                            </button>
+                            <button onclick="approvePayment()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-check-circle mr-2"></i> Approve Payment
+                            </button>
+                            <button onclick="rejectPayment()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                                <i class="fas fa-times-circle mr-2"></i> Reject Payment
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Sync to check payment status with Paystack, or manually approve if payment was made offline.
+                        </p>
+                    </div>
+                {% endif %}
+
+                <script>
+                function syncSinglePayment() {
+                    if (confirm('Sync this payment with Paystack to check its actual status?')) {
+                        fetch('{% url "payments:sync_paystack" payment.id %}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                            },
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                alert(data.message);
+                                window.location.reload();
+                            } else if (data.status === 'warning') {
+                                alert(data.message);
+                            } else {
+                                alert(data.message || 'Failed to sync payment');
+                            }
+                        })
+                        .catch(error => {
+                            alert('An error occurred. Please try again.');
+                        });
+                    }
+                }
+                </script>
+                
+                <!-- Tenant Actions -->
+                <div class="mt-6 border-t border-gray-200 pt-4 flex flex-wrap gap-3">
+                    {% if payment.status == 'COMPLETED' and payment.invoice %}
+                        <a href="{% url 'payments:invoice_detail' payment.invoice.id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-download mr-2"></i> View Receipt
+                        </a>
+                    {% endif %}
+                    
+                    {% if payment.status == 'PENDING' or payment.status == 'FAILED' %}
+                        <button onclick="retryPayment()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                            <i class="fas fa-redo mr-2"></i> Retry Payment
+                        </button>
+                    {% endif %}
+                    
+                    {% if debug and payment.status == 'PENDING' %}
+                        <a href="{% url 'payments:verify_manual' payment.id %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                            <i class="fas fa-tools mr-2"></i> Manual Verify (Test)
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'payments:list' %}" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Payments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function approvePayment() {
+    if (confirm('Are you sure you want to approve this payment? This will mark it as completed.')) {
+        fetch('{% url "payments:approve_manual" payment.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to approve payment');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+function rejectPayment() {
+    if (confirm('Are you sure you want to reject this payment? This action cannot be undone.')) {
+        fetch('{% url "payments:reject_manual" payment.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to reject payment');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+function syncPayment() {
+    if (confirm('Sync this payment with Paystack to check its actual status?')) {
+        fetch('{% url "payments:sync_paystack" payment.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else if (data.status === 'warning') {
+                alert(data.message);
+            } else {
+                alert(data.message || 'Failed to sync payment');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+function retryPayment() {
+    if (confirm('Would you like to retry this payment?')) {
+        fetch('{% url "payments:retry" payment.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.payment_link) {
+                window.location.href = data.payment_link;
+            } else {
+                alert(data.message || 'Failed to retry payment');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

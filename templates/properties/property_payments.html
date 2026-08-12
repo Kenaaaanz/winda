@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ property.title }} - Payments - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ property.title }}</h1>
+                <p class="text-gray-600">Payment history and management</p>
+            </div>
+            <a href="{% url 'properties:property_dashboard' property.id %}" class="text-gray-600 hover:text-gray-800">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-green-500">
+                <p class="text-sm text-gray-600">Total Rent Collected</p>
+                <p class="text-2xl font-bold text-green-600">KES {{ total_rent|intcomma }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-yellow-500">
+                <p class="text-sm text-gray-600">Pending Payments</p>
+                <p class="text-2xl font-bold text-yellow-600">KES {{ pending_amount|intcomma }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
+                <p class="text-sm text-gray-600">Total Transactions</p>
+                <p class="text-2xl font-bold">{{ payments|length }}</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <form method="GET" class="flex flex-wrap gap-3 items-center">
+                <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="all">All Status</option>
+                    {% for status in property.payments.model.PAYMENT_STATUS %}
+                        <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>
+                            {{ status.1 }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    <i class="fas fa-filter mr-2"></i> Filter
+                </button>
+                <a href="{% url 'properties:property_payments' property.id %}" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </form>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Tenant</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Type</th>
+                            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Amount</th>
+                            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for payment in payments %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4 text-sm">{{ payment.paid_at|date:"M d, Y"|default:payment.created_at|date:"M d, Y" }}</td>
+                                <td class="py-3 px-4 text-sm">{{ payment.payer.get_full_name }}</td>
+                                <td class="py-3 px-4 text-sm">
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                        {% if payment.payment_type == 'RENT' %}bg-blue-100 text-blue-700
+                                        {% elif payment.payment_type == 'DEPOSIT' %}bg-green-100 text-green-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ payment.get_payment_type_display }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-right font-semibold">KES {{ payment.amount|intcomma }}</td>
+                                <td class="py-3 px-4 text-center">
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                        {% if payment.status == 'COMPLETED' %}bg-green-100 text-green-700
+                                        {% elif payment.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                        {% elif payment.status == 'FAILED' %}bg-red-100 text-red-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ payment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-center">
+                                    <a href="{% url 'payments:detail' payment.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="py-8 text-center text-gray-500">
+                                    <i class="fas fa-credit-card text-4xl text-gray-300 mb-2 block"></i>
+                                    No payments found
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if payments.has_other_pages %}
+                <div class="px-4 py-3 border-t border-gray-200">
+                    <div class="flex justify-center">
+                        <nav class="flex items-center space-x-2">
+                            {% if payments.has_previous %}
+                                <a href="?page={{ payments.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            {% endif %}
+                            
+                            {% for num in payments.paginator.page_range %}
+                                {% if payments.number == num %}
+                                    <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                                {% elif num > payments.number|add:'-3' and num < payments.number|add:'3' %}
+                                    <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                       class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                        {{ num }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if payments.has_next %}
+                                <a href="?page={{ payments.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

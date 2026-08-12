@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ request_obj.title }} - Maintenance - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">{{ request_obj.title }}</h1>
+                        <p class="text-blue-100">Maintenance Request #{{ request_obj.id|slice:":8" }}</p>
+                    </div>
+                    <span class="px-4 py-2 text-sm font-semibold rounded-lg 
+                        {% if request_obj.status == 'RESOLVED' or request_obj.status == 'CLOSED' %}bg-green-100 text-green-700
+                        {% elif request_obj.status == 'PENDING' or request_obj.status == 'IN_REVIEW' %}bg-yellow-100 text-yellow-700
+                        {% elif request_obj.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ request_obj.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Details Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Property</h3>
+                        <p class="font-semibold">{{ request_obj.property.title }}</p>
+                        <p class="text-sm text-gray-600">{{ request_obj.property.address }}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Category</h3>
+                        <p class="font-semibold">{{ request_obj.get_category_display }}</p>
+                        <p class="text-sm text-gray-600">Priority: {{ request_obj.get_priority_display }}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Reported By</h3>
+                        <p class="font-semibold">{{ request_obj.tenant.get_full_name }}</p>
+                        <p class="text-sm text-gray-600">{{ request_obj.tenant.email }}</p>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Timeline</h3>
+                        <p class="text-sm text-gray-600">Reported: {{ request_obj.created_at|date:"M d, Y H:i" }}</p>
+                        {% if request_obj.assigned_at %}
+                            <p class="text-sm text-gray-600">Assigned: {{ request_obj.assigned_at|date:"M d, Y H:i" }}</p>
+                        {% endif %}
+                        {% if request_obj.resolved_at %}
+                            <p class="text-sm text-gray-600">Resolved: {{ request_obj.resolved_at|date:"M d, Y H:i" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div class="mb-6 border-t border-gray-200 pt-4">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Description</h3>
+                    <p class="text-gray-700">{{ request_obj.description }}</p>
+                </div>
+                
+                <!-- Images -->
+                {% if request_obj.images %}
+                    <div class="mb-6">
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Attached Images</h3>
+                        <div class="grid grid-cols-3 gap-2">
+                            {% for image in request_obj.images %}
+                                <img src="{{ image }}" alt="Maintenance image" class="w-full h-24 object-cover rounded-lg">
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Resolution Notes -->
+                {% if request_obj.resolution_notes %}
+                    <div class="mb-6 border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-2">Resolution Notes</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-gray-700">{{ request_obj.resolution_notes }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Owner Actions -->
+                {% if is_owner and request_obj.status != 'CLOSED' and request_obj.status != 'RESOLVED' %}
+                    <div class="border-t border-gray-200 pt-4">
+                        <h3 class="text-sm font-medium text-gray-500 mb-3">Update Status</h3>
+                        <form method="POST" class="flex flex-wrap gap-2">
+                            {% csrf_token %}
+                            <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="IN_REVIEW">In Review</option>
+                                <option value="ASSIGNED">Assigned</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="RESOLVED">Resolved</option>
+                                <option value="CLOSED">Closed</option>
+                            </select>
+                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                                Update Status
+                            </button>
+                            <a href="{% url 'maintenance:assign' request_obj.id %}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                <i class="fas fa-user-plus mr-2"></i> Assign
+                            </a>
+                        </form>
+                    </div>
+                {% endif %}
+                
+                <!-- Back Button -->
+                <div class="mt-6 border-t border-gray-200 pt-4">
+                    <a href="{% url 'maintenance:list' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Requests
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

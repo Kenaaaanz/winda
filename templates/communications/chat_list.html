@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Messages - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Messages</h1>
+                        <p class="text-blue-100">Chat with property owners and tenants</p>
+                    </div>
+                    <div class="flex space-x-3">
+                        <a href="{% url 'communications:blocked_users' %}" class="text-white hover:text-blue-100 text-sm">
+                            <i class="fas fa-user-slash mr-1"></i> Blocked
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="px-4 pt-4 flex flex-wrap gap-2">
+                <a href="?filter=all" class="px-3 py-1 text-sm rounded-full {% if not request.GET.filter or request.GET.filter == 'all' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    All
+                </a>
+                <a href="?filter=unread" class="px-3 py-1 text-sm rounded-full {% if request.GET.filter == 'unread' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Unread
+                    {% if unread_total > 0 %}
+                        <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-1">{{ unread_total }}</span>
+                    {% endif %}
+                </a>
+                <a href="?filter=muted" class="px-3 py-1 text-sm rounded-full {% if request.GET.filter == 'muted' %}bg-blue-500 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+                    Muted
+                </a>
+            </div>
+
+            <div class="p-4">
+                {% for room in chat_rooms %}
+                    <a href="{% url 'communications:chat_detail' room.id %}" class="block">
+                        <div class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg transition-colors border-b border-gray-100">
+                            <!-- Avatar -->
+                            <div class="relative">
+                                {% if room.other_participant %}
+                                    {% if room.other_participant.profile_picture %}
+                                        <img src="{{ room.other_participant.profile_picture.url }}" alt="{{ room.other_participant.get_full_name }}" class="w-12 h-12 rounded-full object-cover">
+                                    {% else %}
+                                        <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
+                                            <span class="text-white font-bold text-lg">{{ room.other_participant.get_full_name|slice:":1"|upper }}</span>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                                {% if room.unread_count > 0 %}
+                                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Message Preview -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-start">
+                                    <p class="font-semibold text-gray-900 truncate">
+                                        {% if room.other_participant %}
+                                            {{ room.other_participant.get_full_name }}
+                                        {% endif %}
+                                    </p>
+                                    <span class="text-xs text-gray-500 whitespace-nowrap ml-2">
+                                        {% if room.get_last_message %}
+                                            {{ room.get_last_message.created_at|timesince }} ago
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600 truncate">
+                                    {% if room.get_last_message %}
+                                        {% if room.get_last_message.sender == user %}
+                                            <span class="text-gray-400">You: </span>
+                                        {% endif %}
+                                        {{ room.get_last_message.content|truncatechars:50 }}
+                                    {% else %}
+                                        No messages yet
+                                    {% endif %}
+                                </p>
+                                {% if room.property %}
+                                    <p class="text-xs text-blue-600 truncate">
+                                        <i class="fas fa-home mr-1"></i> {{ room.property.title }}
+                                    </p>
+                                {% endif %}
+                                {% if room.is_muted %}
+                                    <span class="text-xs text-gray-400">
+                                        <i class="fas fa-volume-mute mr-1"></i> Muted
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Unread badge -->
+                            {% if room.unread_count > 0 %}
+                                <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                                    {{ room.unread_count }}
+                                </span>
+                            {% endif %}
+
+                            <!-- Settings -->
+                            <a href="{% url 'communications:chat_settings' room.id %}" class="text-gray-400 hover:text-gray-600" onclick="event.stopPropagation();">
+                                <i class="fas fa-cog"></i>
+                            </a>
+                        </div>
+                    </a>
+                {% empty %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-comment-dots text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Messages</h3>
+                        <p class="text-gray-500">Start a conversation with a property owner or tenant</p>
+                        <a href="{% url 'properties:list' %}" class="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            Browse Properties
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if chat_rooms.has_other_pages %}
+                <div class="flex justify-center py-4 border-t border-gray-200">
+                    <nav class="flex items-center space-x-2">
+                        {% if chat_rooms.has_previous %}
+                            <a href="?page={{ chat_rooms.previous_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in chat_rooms.paginator.page_range %}
+                            {% if chat_rooms.number == num %}
+                                <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                            {% elif num > chat_rooms.number|add:'-3' and num < chat_rooms.number|add:'3' %}
+                                <a href="?page={{ num }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    {{ num }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if chat_rooms.has_next %}
+                            <a href="?page={{ chat_rooms.next_page_number }}{% if request.GET.filter %}&filter={{ request.GET.filter }}{% endif %}" 
+                               class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

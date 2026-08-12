@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Property - {{ property.title }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Delete Property</h2>
+                <p class="text-gray-600 mb-6">
+                    Are you sure you want to delete "<strong>{{ property.title }}</strong>"?
+                    This action cannot be undone.
+                </p>
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                        This will permanently remove:
+                    </p>
+                    <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                        <li>• All property information and details</li>
+                        <li>• All images and documents</li>
+                        <li>• All associated applications</li>
+                        <li>• All chat history related to this property</li>
+                    </ul>
+                </div>
+                
+                <div class="flex justify-center space-x-3">
+                    <a href="{% url 'properties:detail' property.id %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </a>
+                    <form method="POST" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-trash mr-2"></i> Delete Property
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

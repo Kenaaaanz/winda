@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}My Favorites - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">My Favorite Properties</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for favorite in favorites %}
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                        <a href="{% url 'properties:detail' favorite.property.id %}" class="block">
+                            <div class="relative">
+                                {% if favorite.property.main_image %}
+                                    <img src="{{ favorite.property.main_image.url }}" alt="{{ favorite.property.title }}" class="w-full h-48 object-cover">
+                                {% else %}
+                                    <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                        <i class="fas fa-home text-6xl text-gray-400"></i>
+                                    </div>
+                                {% endif %}
+                                <button onclick="toggleFavorite('{{ favorite.property.id }}')" class="absolute top-2 right-2 bg-white rounded-full p-2 shadow-lg hover:shadow-xl transition-shadow">
+                                    <i class="fas fa-heart text-red-500"></i>
+                                </button>
+                            </div>
+                            <div class="p-4">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-1 truncate">{{ favorite.property.title }}</h3>
+                                <p class="text-gray-600 text-sm mb-2">
+                                    <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                                    {{ favorite.property.city }}, {{ favorite.property.state }}
+                                </p>
+                                <p class="text-2xl font-bold text-blue-600">
+                                    KES {{ favorite.property.rental_price|intcomma }}
+                                    <span class="text-sm font-normal text-gray-500">/ month</span>
+                                </p>
+                            </div>
+                        </a>
+                    </div>
+                {% empty %}
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-heart text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Favorites</h3>
+                        <p class="text-gray-500">Start saving your favorite properties</p>
+                        <a href="{% url 'properties:list' %}" class="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            Browse Properties
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if favorites.has_other_pages %}
+                <div class="flex justify-center mt-6">
+                    <nav class="flex items-center space-x-2">
+                        {% if favorites.has_previous %}
+                            <a href="?page={{ favorites.previous_page_number }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        {% for num in favorites.paginator.page_range %}
+                            {% if favorites.number == num %}
+                                <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                            {% elif num > favorites.number|add:'-3' and num < favorites.number|add:'3' %}
+                                <a href="?page={{ num }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    {{ num }}
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if favorites.has_next %}
+                            <a href="?page={{ favorites.next_page_number }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFavorite(propertyId) {
+    fetch(`/properties/${propertyId}/favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        },
+    }).then(response => {
+        if (response.ok) {
+            window.location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

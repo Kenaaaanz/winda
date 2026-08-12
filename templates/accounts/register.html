@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Account - Winda{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="flex justify-center">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                    <span class="text-white font-bold text-3xl">W</span>
+                </div>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Create your account
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Already have an account? 
+                <a href="{% url 'accounts:login' %}" class="font-medium text-blue-600 hover:text-blue-500">
+                    Sign in
+                </a>
+            </p>
+        </div>
+        
+        <form class="mt-8 space-y-6" method="POST">
+            {% csrf_token %}
+            
+            {% if form.errors %}
+                <div class="rounded-md bg-red-50 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Please fix the following errors:</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <div class="rounded-md shadow-sm -space-y-px">
+                <div>
+                    <label for="id_first_name" class="sr-only">First Name</label>
+                    <input id="id_first_name" name="first_name" type="text" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="First Name" value="{{ form.first_name.value|default:'' }}">
+                </div>
+                <div>
+                    <label for="id_last_name" class="sr-only">Last Name</label>
+                    <input id="id_last_name" name="last_name" type="text" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Last Name" value="{{ form.last_name.value|default:'' }}">
+                </div>
+                <div>
+                    <label for="id_email" class="sr-only">Email address</label>
+                    <input id="id_email" name="email" type="email" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Email address" value="{{ form.email.value|default:'' }}">
+                </div>
+                <div>
+                    <label for="id_phone" class="sr-only">Phone Number</label>
+                    <input id="id_phone" name="phone" type="tel" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Phone Number" value="{{ form.phone.value|default:'' }}">
+                </div>
+                <div>
+                    <label for="id_user_type" class="sr-only">I am a</label>
+                    <select id="id_user_type" name="user_type" required 
+                            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm">
+                        <option value="">Select your role</option>
+                        <option value="HOUSE_OWNER" {% if form.user_type.value == 'HOUSE_OWNER' %}selected{% endif %}>House Owner</option>
+                        <option value="TENANT" {% if form.user_type.value == 'TENANT' %}selected{% endif %}>Tenant</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="id_password1" class="sr-only">Password</label>
+                    <input id="id_password1" name="password1" type="password" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Password">
+                </div>
+                <div>
+                    <label for="id_password2" class="sr-only">Confirm Password</label>
+                    <input id="id_password2" name="password2" type="password" required 
+                           class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                           placeholder="Confirm Password">
+                </div>
+            </div>
+
+            <div class="flex items-center">
+                <input id="terms" name="terms" type="checkbox" required 
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="terms" class="ml-2 block text-sm text-gray-900">
+                    I agree to the 
+                    <a href="#" class="font-medium text-blue-600 hover:text-blue-500">Terms of Service</a> 
+                    and 
+                    <a href="#" class="font-medium text-blue-600 hover:text-blue-500">Privacy Policy</a>
+                </label>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-user-plus text-blue-300 group-hover:text-blue-200"></i>
+                    </span>
+                    Create Account
+                </button>
+            </div>
+        </form>
+        
+        <div class="mt-6">
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-2 gap-3">
+                <a href="#" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+                    <i class="fab fa-google text-red-500 mr-2"></i>
+                    Google
+                </a>
+                <a href="#" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+                    <i class="fab fa-facebook text-blue-600 mr-2"></i>
+                    Facebook
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

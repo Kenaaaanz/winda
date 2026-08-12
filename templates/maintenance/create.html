@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Report Maintenance - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <h1 class="text-2xl font-bold text-white">Report Maintenance Issue</h1>
+                <p class="text-blue-100">Let your property owner know about the issue</p>
+            </div>
+            
+            <div class="p-6">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-4">
+                        {{ form.property|as_crispy_field }}
+                        {{ form.title|as_crispy_field }}
+                        {{ form.category|as_crispy_field }}
+                        {{ form.priority|as_crispy_field }}
+                        {{ form.description|as_crispy_field }}
+                        
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Upload Images</h3>
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                <input type="file" name="images" multiple accept="image/*" class="hidden" id="image-upload">
+                                <label for="image-upload" class="cursor-pointer">
+                                    <i class="fas fa-camera text-3xl text-gray-400 mb-2 block"></i>
+                                    <p class="text-gray-600">Click to upload images</p>
+                                    <p class="text-sm text-gray-500">Upload photos of the issue (optional)</p>
+                                </label>
+                            </div>
+                            <div id="image-preview" class="grid grid-cols-3 gap-2 mt-2"></div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Preferred Schedule</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Preferred Date</label>
+                                    <input type="date" name="preferred_date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Preferred Time</label>
+                                    <div class="flex space-x-2">
+                                        <input type="time" name="preferred_time_start" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="From">
+                                        <input type="time" name="preferred_time_end" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="To">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex items-center space-x-4">
+                        <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-paper-plane mr-2"></i> Submit Request
+                        </button>
+                        <a href="{% url 'maintenance:list' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Image preview
+document.getElementById('image-upload').addEventListener('change', function(e) {
+    const preview = document.getElementById('image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg">`;
+            preview.appendChild(div);
+        }
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

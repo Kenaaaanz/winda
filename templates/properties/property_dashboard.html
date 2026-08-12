@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ property.title }} - Dashboard - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Breadcrumb -->
+        <nav class="flex mb-4 text-sm">
+            <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-blue-600">Dashboard</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <a href="{% url 'properties:owner_properties' %}" class="text-gray-500 hover:text-blue-600">My Properties</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <span class="text-gray-900">{{ property.title|truncatechars:30 }}</span>
+        </nav>
+
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    {% if property.main_image %}
+                        <img src="{{ property.main_image.url }}" alt="{{ property.title }}" class="w-20 h-20 object-cover rounded-lg">
+                    {% endif %}
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">{{ property.title }}</h1>
+                        <p class="text-gray-600">
+                            <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                            {{ property.address }}, {{ property.city }}
+                        </p>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="inline-block px-3 py-1 text-sm rounded-full 
+                                {% if property.availability_status == 'AVAILABLE' %}bg-green-100 text-green-700
+                                {% elif property.availability_status == 'RENTED' %}bg-blue-100 text-blue-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ property.get_availability_status_display }}
+                            </span>
+                            <span class="inline-block px-3 py-1 text-sm rounded-full 
+                                {% if property.verification_status == 'VERIFIED' %}bg-green-100 text-green-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ property.get_verification_status_display }}
+                            </span>
+                            <span class="text-2xl font-bold text-blue-600">
+                                KES {{ property.rental_price|intcomma }}
+                                <span class="text-sm font-normal text-gray-500">/ month</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <a href="{% url 'properties:edit' property.id %}" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition-colors">
+                        <i class="fas fa-edit mr-2"></i> Edit
+                    </a>
+                    <a href="{% url 'properties:detail' property.id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-eye mr-2"></i> View
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <p class="text-sm text-gray-600">Views</p>
+                <p class="text-2xl font-bold">{{ view_count }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <p class="text-sm text-gray-600">Favorites</p>
+                <p class="text-2xl font-bold">{{ favorite_count }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <p class="text-sm text-gray-600">Inquiries</p>
+                <p class="text-2xl font-bold">{{ inquiry_count }}</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-sm p-4 text-center">
+                <p class="text-sm text-gray-600">Total Revenue</p>
+                <p class="text-2xl font-bold text-green-600">KES {{ total_revenue|intcomma }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Quick Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-500">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-600">Pending Applications</p>
+                                <p class="text-2xl font-bold">{{ pending_applications_count }}</p>
+                            </div>
+                            <a href="{% url 'properties:property_tenants' property.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                View All <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-red-500">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-600">Pending Maintenance</p>
+                                <p class="text-2xl font-bold">{{ pending_maintenance_count }}</p>
+                            </div>
+                            <a href="{% url 'properties:property_maintenance' property.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                View All <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Applications -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">Recent Applications</h3>
+                        <a href="{% url 'properties:property_tenants' property.id %}" class="text-sm text-blue-600 hover:text-blue-500">
+                            View All
+                        </a>
+                    </div>
+                    <div class="space-y-3">
+                        {% for app in applications %}
+                            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                                <div>
+                                    <p class="font-medium">{{ app.tenant.get_full_name }}</p>
+                                    <p class="text-sm text-gray-600">{{ app.created_at|timesince }} ago</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                        {% if app.status == 'APPROVED' %}bg-green-100 text-green-700
+                                        {% elif app.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                        {% else %}bg-red-100 text-red-700{% endif %}">
+                                        {{ app.get_status_display }}
+                                    </span>
+                                    <a href="{% url 'tenants:application_detail' app.id %}" class="block text-xs text-blue-600 hover:text-blue-500 mt-1">
+                                        Review <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <p class="text-gray-500 text-center py-4">No applications yet</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Recent Activity</h3>
+                    <div class="space-y-3">
+                        {% for activity in recent_activity %}
+                            <div class="flex items-start space-x-3 border-b border-gray-100 pb-3">
+                                <div class="bg-{{ activity.color }}-100 p-2 rounded-full">
+                                    <i class="fas fa-{{ activity.icon }} text-{{ activity.color }}-500"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm text-gray-800">{{ activity.description }}</p>
+                                    <p class="text-xs text-gray-500">{{ activity.timestamp|timesince }} ago</p>
+                                </div>
+                                <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                    {% if activity.status == 'APPROVED' or activity.status == 'COMPLETED' or activity.status == 'RESOLVED' %}bg-green-100 text-green-700
+                                    {% elif activity.status == 'PENDING' or activity.status == 'IN_PROGRESS' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ activity.status }}
+                                </span>
+                            </div>
+                        {% empty %}
+                            <p class="text-gray-500 text-center py-4">No recent activity</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                    <div class="space-y-2">
+                        <a href="{% url 'properties:edit' property.id %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-edit text-blue-500 mr-3"></i>
+                            <span>Edit Property</span>
+                        </a>
+                        <a href="{% url 'properties:property_tenants' property.id %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-users text-green-500 mr-3"></i>
+                            <span>Manage Tenants</span>
+                        </a>
+                        <a href="{% url 'properties:property_payments' property.id %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-credit-card text-purple-500 mr-3"></i>
+                            <span>View Payments</span>
+                        </a>
+                        <a href="{% url 'properties:property_maintenance' property.id %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-tools text-red-500 mr-3"></i>
+                            <span>Maintenance Requests</span>
+                        </a>
+                        <a href="{% url 'communications:start_chat_property' property.id %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-comment-dots text-blue-500 mr-3"></i>
+                            <span>Chat with Applicants</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Property Details -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Property Details</h3>
+                    <dl class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Type</dt>
+                            <dd class="font-medium">{{ property.get_property_type_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Furnishing</dt>
+                            <dd class="font-medium">{{ property.get_furnishing_status_display }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Bedrooms</dt>
+                            <dd class="font-medium">{{ property.bedrooms }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Bathrooms</dt>
+                            <dd class="font-medium">{{ property.bathrooms }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Parking Spaces</dt>
+                            <dd class="font-medium">{{ property.parking_spaces }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Security Deposit</dt>
+                            <dd class="font-medium">KES {{ property.security_deposit|intcomma }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-gray-600">Service Charge</dt>
+                            <dd class="font-medium">KES {{ property.service_charge|intcomma }}</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <!-- Amenities -->
+                {% if property.amenities %}
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Amenities</h3>
+                        <div class="flex flex-wrap gap-2">
+                            {% for amenity in property.amenities %}
+                                <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
+                                    {{ amenity }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Blocked Users - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Blocked Users</h1>
+                    <p class="text-gray-600">Manage users you have blocked</p>
+                </div>
+                <a href="{% url 'communications:chat_list' %}" class="text-blue-600 hover:text-blue-500">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Chats
+                </a>
+            </div>
+
+            {% if blocked_users %}
+                <div class="space-y-3">
+                    {% for block in blocked_users %}
+                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                            <div class="flex items-center space-x-3">
+                                {% if block.blocked.profile_picture %}
+                                    <img src="{{ block.blocked.profile_picture.url }}" alt="{{ block.blocked.get_full_name }}" class="w-12 h-12 rounded-full object-cover">
+                                {% else %}
+                                    <div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+                                        <span class="text-gray-500 font-bold text-xl">{{ block.blocked.get_full_name|slice:":1"|upper }}</span>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <p class="font-semibold text-gray-900">{{ block.blocked.get_full_name }}</p>
+                                    <p class="text-sm text-gray-600">{{ block.blocked.email }}</p>
+                                    <p class="text-xs text-gray-500">Blocked {{ block.created_at|timesince }} ago</p>
+                                </div>
+                            </div>
+                            <form method="POST" class="inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ block.blocked.id }}">
+                                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                                    <i class="fas fa-user-check mr-2"></i> Unblock
+                                </button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if blocked_users.has_other_pages %}
+                    <div class="flex justify-center mt-6">
+                        <nav class="flex items-center space-x-2">
+                            {% if blocked_users.has_previous %}
+                                <a href="?page={{ blocked_users.previous_page_number }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            {% endif %}
+                            
+                            {% for num in blocked_users.paginator.page_range %}
+                                {% if blocked_users.number == num %}
+                                    <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                                {% elif num > blocked_users.number|add:'-3' and num < blocked_users.number|add:'3' %}
+                                    <a href="?page={{ num }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                        {{ num }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if blocked_users.has_next %}
+                                <a href="?page={{ blocked_users.next_page_number }}" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-user-slash text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Blocked Users</h3>
+                    <p class="text-gray-500">You haven't blocked any users yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

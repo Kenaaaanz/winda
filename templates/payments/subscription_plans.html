@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Subscription Plans - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
+            <p class="text-gray-600 text-lg">Select the perfect plan for your property management needs</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {% for plan in plans %}
+                <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 {% if forloop.counter == 2 %}ring-2 ring-blue-500 transform scale-105{% endif %}">
+                    {% if forloop.counter == 2 %}
+                        <div class="bg-blue-500 text-white text-center py-2 text-sm font-semibold">
+                            Most Popular
+                        </div>
+                    {% endif %}
+                    
+                    <div class="p-6">
+                        <h3 class="text-2xl font-bold text-gray-900">{{ plan.name }}</h3>
+                        <p class="text-gray-600 mt-2">{{ plan.description }}</p>
+                        
+                        <div class="mt-6">
+                            <span class="text-4xl font-bold text-gray-900">KES {{ plan.price_monthly|intcomma }}</span>
+                            <span class="text-gray-600">/month</span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="text-sm text-gray-500">or KES {{ plan.price_yearly|intcomma }}/year</span>
+                            <span class="text-green-500 text-sm font-semibold ml-2">Save 20%</span>
+                        </div>
+                        <div class="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+                            <p class="font-semibold">Platform fee: {{ plan.platform_fee_percent }}%</p>
+                            <p>{% if plan.monthly_charge == 0 %}No monthly charges{% else %}Monthly charge: KES {{ plan.monthly_charge|intcomma }}{% endif %}</p>
+                        </div>
+                        
+                        <ul class="mt-6 space-y-3">
+                            <li class="flex items-center">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                <span class="text-sm">Up to {{ plan.max_properties }} properties</span>
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                <span class="text-sm">Up to {{ plan.max_tenants }} tenants</span>
+                            </li>
+                            {% if plan.featured_listings %}
+                                <li class="flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    <span class="text-sm">Featured listings</span>
+                                </li>
+                            {% endif %}
+                            {% if plan.priority_support %}
+                                <li class="flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    <span class="text-sm">Priority support</span>
+                                </li>
+                            {% endif %}
+                            {% if plan.advanced_analytics %}
+                                <li class="flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    <span class="text-sm">Advanced analytics</span>
+                                </li>
+                            {% endif %}
+                            {% if plan.api_access %}
+                                <li class="flex items-center">
+                                    <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                    <span class="text-sm">API access</span>
+                                </li>
+                            {% endif %}
+                            <li class="flex items-center">
+                                <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                                <span class="text-sm">{{ plan.storage_limit_gb }}GB storage</span>
+                            </li>
+                        </ul>
+                        
+                        <form method="POST" action="{% url 'payments:subscription_plans' %}" class="mt-8">
+                            {% csrf_token %}
+                            <input type="hidden" name="plan_id" value="{{ plan.id }}">
+                            <div class="mb-4">
+                                <select name="period" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly (Save 20%)</option>
+                                </select>
+                            </div>
+                            <button type="submit" 
+                                    class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                                {% if user.owner_profile.subscription_plan == plan.plan_type and user.owner_profile.is_subscription_active %}
+                                    Renew Plan
+                                {% else %}
+                                    Get Started
+                                {% endif %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Compare Table -->
+        <div class="mt-16 bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-6">Compare Plans</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4">Feature</th>
+                                {% for plan in plans %}
+                                    <th class="text-center py-3 px-4">{{ plan.name }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-gray-600">Properties</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">{{ plan.max_properties }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-gray-600">Tenants</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">{{ plan.max_tenants }}</td>
+                                {% endfor %}
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-gray-600">Featured Listings</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">
+                                        {% if plan.featured_listings %}
+                                            <i class="fas fa-check-circle text-green-500"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-red-500"></i>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-gray-600">Priority Support</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">
+                                        {% if plan.priority_support %}
+                                            <i class="fas fa-check-circle text-green-500"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-red-500"></i>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            <tr class="border-b border-gray-100">
+                                <td class="py-3 px-4 text-gray-600">Advanced Analytics</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">
+                                        {% if plan.advanced_analytics %}
+                                            <i class="fas fa-check-circle text-green-500"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-red-500"></i>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                            <tr>
+                                <td class="py-3 px-4 text-gray-600">Storage</td>
+                                {% for plan in plans %}
+                                    <td class="text-center py-3 px-4">{{ plan.storage_limit_gb }}GB</td>
+                                {% endfor %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

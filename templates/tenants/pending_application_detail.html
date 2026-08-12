@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Review Application - {{ application.tenant.get_full_name }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Review Application</h1>
+                    <p class="text-gray-600">{{ application.property.title }}</p>
+                    {% if application.unit %}
+                        <p class="text-sm text-blue-600">
+                            <i class="fas fa-door-open mr-1"></i>
+                            Unit {{ application.unit.unit_number }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'tenants:pending_tenants' %}" class="text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Pending
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content -->
+            <div class="lg:col-span-2">
+                <!-- Applicant Information -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Applicant Information</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Full Name</p>
+                            <p class="font-semibold">{{ application.tenant.get_full_name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Email</p>
+                            <p class="font-semibold">{{ application.tenant.email }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Phone</p>
+                            <p class="font-semibold">{{ application.tenant.phone|default:"Not provided" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Member Since</p>
+                            <p class="font-semibold">{{ application.tenant.date_joined|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Employment Status</p>
+                            <p class="font-semibold">{{ application.employment_status|default:"Not specified" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Monthly Income</p>
+                            <p class="font-semibold">KES {{ application.monthly_income|intcomma|default:"Not specified" }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tenant Profile Details -->
+                {% if tenant_profile %}
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Additional Information</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Employer</p>
+                                <p class="font-semibold">{{ tenant_profile.employer_name|default:"Not specified" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Job Title</p>
+                                <p class="font-semibold">{{ tenant_profile.job_title|default:"Not specified" }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-gray-500">Previous Rental Address</p>
+                                <p class="font-semibold">{{ tenant_profile.previous_rental_address|default:"Not specified" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Guarantor Name</p>
+                                <p class="font-semibold">{{ tenant_profile.guarantor_name|default:"Not specified" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Guarantor Phone</p>
+                                <p class="font-semibold">{{ tenant_profile.guarantor_phone|default:"Not specified" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Guarantor Relationship</p>
+                                <p class="font-semibold">{{ tenant_profile.guarantor_relationship|default:"Not specified" }}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-gray-500">Reference</p>
+                                <p class="font-semibold">
+                                    {% if tenant_profile.reference_name %}
+                                        {{ tenant_profile.reference_name }} 
+                                        ({{ tenant_profile.reference_phone|default:"No phone" }})
+                                    {% else %}
+                                        Not specified
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Application Details -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Application Details</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Applied On</p>
+                            <p class="font-semibold">{{ application.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Intended Move-in Date</p>
+                            <p class="font-semibold">{{ application.intended_move_in_date|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Preferred Lease Duration</p>
+                            <p class="font-semibold">{{ application.preferred_lease_duration }} months</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-block px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                        {% if application.unit %}
+                            <div>
+                                <p class="text-sm text-gray-500">Selected Unit</p>
+                                <p class="font-semibold">Unit {{ application.unit.unit_number }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Unit Rent</p>
+                                <p class="font-semibold text-blue-600">KES {{ application.unit.get_rental_price|intcomma }}/month</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Unit Details (if multi-unit) -->
+                {% if application.unit and application.property.is_multi_unit %}
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Unit Details</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-sm text-gray-500">Unit Number</p>
+                                <p class="font-semibold">{{ application.unit.unit_number }}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-sm text-gray-500">Floor</p>
+                                <p class="font-semibold">{{ application.unit.floor_number|default:"N/A" }}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-sm text-gray-500">Bedrooms</p>
+                                <p class="font-semibold">{{ application.unit.bedrooms }}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-sm text-gray-500">Bathrooms</p>
+                                <p class="font-semibold">{{ application.unit.bathrooms }}</p>
+                            </div>
+                            {% if application.unit.square_feet %}
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-sm text-gray-500">Square Feet</p>
+                                    <p class="font-semibold">{{ application.unit.square_feet }}</p>
+                                </div>
+                            {% endif %}
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-sm text-gray-500">Unit Status</p>
+                                <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                    {% if application.unit.status == 'AVAILABLE' %}bg-green-100 text-green-700
+                                    {% elif application.unit.status == 'RENTED' %}bg-red-100 text-red-700
+                                    {% elif application.unit.status == 'BOOKED' %}bg-yellow-100 text-yellow-700
+                                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ application.unit.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        {% if application.unit.amenities %}
+                            <div class="mt-4">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Unit Amenities</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for amenity in application.unit.amenities %}
+                                        <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">{{ amenity }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if application.unit.features %}
+                            <div class="mt-3">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Unit Features</h4>
+                                <div class="flex flex-wrap gap-2">
+                                    {% for feature in application.unit.features %}
+                                        <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">{{ feature }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <!-- Documents -->
+                {% if application.application_documents %}
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h3 class="text-lg font-semibold mb-4">Uploaded Documents</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {% for doc in application.application_documents %}
+                                <a href="{{ doc.url }}" target="_blank" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                    <span class="text-sm truncate">{{ doc.name }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Similar Applications -->
+                {% if similar_applications %}
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Other Applicants for This Property</h3>
+                        <div class="space-y-3">
+                            {% for app in similar_applications %}
+                                <div class="border border-gray-100 rounded-lg p-3 flex justify-between items-center">
+                                    <div>
+                                        <p class="font-medium">{{ app.tenant.get_full_name }}</p>
+                                        <p class="text-sm text-gray-600">Applied {{ app.created_at|timesince }} ago</p>
+                                        {% if app.unit %}
+                                            <p class="text-xs text-gray-500">Unit {{ app.unit.unit_number }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <a href="{% url 'tenants:pending_application_detail' app.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                        View <i class="fas fa-arrow-right ml-1"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar - Actions -->
+            <div class="space-y-6">
+                <!-- Review Actions -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Review Application</h3>
+                    <form id="reviewForm" class="space-y-4">
+                        {% csrf_token %}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
+                            <div class="space-y-2">
+                                <button type="button" onclick="submitReview('approve')" 
+                                        class="w-full bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                                    <i class="fas fa-check-circle mr-2"></i> Approve Application
+                                </button>
+                                <button type="button" onclick="submitReview('reject')" 
+                                        class="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition-colors">
+                                    <i class="fas fa-times-circle mr-2"></i> Reject Application
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                            <textarea id="reviewNotes" rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="Add any notes about this decision..."></textarea>
+                        </div>
+                        
+                        {% if application.unit %}
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p class="text-sm text-blue-800">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    This application is for <strong>Unit {{ application.unit.unit_number }}</strong>
+                                    ({{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath)
+                                </p>
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <!-- Property Details -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Property Details</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <p class="text-sm text-gray-500">Property</p>
+                            <p class="font-semibold">{{ property.title }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Location</p>
+                            <p class="font-semibold">{{ property.city }}, {{ property.state }}</p>
+                        </div>
+                        {% if property.is_multi_unit %}
+                            <div>
+                                <p class="text-sm text-gray-500">Type</p>
+                                <p class="font-semibold text-blue-600">
+                                    <i class="fas fa-building mr-1"></i> Multi-Unit Building
+                                </p>
+                                <p class="text-sm text-gray-600">
+                                    {{ property.units.count }} total units • 
+                                    {{ property.units.filter.is_available.count }} available
+                                </p>
+                            </div>
+                        {% else %}
+                            <div>
+                                <p class="text-sm text-gray-500">Monthly Rent</p>
+                                <p class="font-semibold text-blue-600">KES {{ property.rental_price|intcomma }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Security Deposit</p>
+                                <p class="font-semibold">KES {{ property.security_deposit|intcomma }}</p>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-block px-2 py-1 text-xs rounded-full 
+                                {% if property.availability_status == 'AVAILABLE' %}bg-green-100 text-green-700
+                                {% elif property.availability_status == 'BOOKED' %}bg-yellow-100 text-yellow-700
+                                {% elif property.availability_status == 'RENTED' %}bg-red-100 text-red-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ property.get_availability_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="{% url 'properties:detail' property.id %}" target="_blank" class="mt-4 inline-block text-blue-600 hover:text-blue-500 text-sm">
+                        View Property <i class="fas fa-external-link-alt ml-1"></i>
+                    </a>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Quick Stats</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Property Views</span>
+                            <span class="font-semibold">{{ property.view_count }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Total Applicants</span>
+                            <span class="font-semibold">{{ property.applications.count }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Favorites</span>
+                            <span class="font-semibold">{{ property.favorites.count }}</span>
+                        </div>
+                        {% if property.is_multi_unit %}
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Total Units</span>
+                                <span class="font-semibold">{{ property.units.count }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm text-gray-600">Available Units</span>
+                                <span class="font-semibold text-green-600">{{ property.units.filter.is_available.count }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Unit Availability -->
+                {% if property.is_multi_unit %}
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h3 class="text-lg font-semibold mb-4">Unit Availability</h3>
+                        <div class="max-h-48 overflow-y-auto space-y-2">
+                            {% for unit in property.units.all|dictsort:"unit_number"|slice:":5" %}
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="font-medium">Unit {{ unit.unit_number }}</span>
+                                    <span class="px-2 py-1 text-xs rounded-full 
+                                        {% if unit.status == 'AVAILABLE' %}bg-green-100 text-green-700
+                                        {% elif unit.status == 'RENTED' %}bg-red-100 text-red-700
+                                        {% elif unit.status == 'BOOKED' %}bg-yellow-100 text-yellow-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ unit.get_status_display }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                            {% if property.units.count > 5 %}
+                                <p class="text-xs text-gray-500 text-center">+ {{ property.units.count|add:"-5" }} more units</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function submitReview(action) {
+    const notes = document.getElementById('reviewNotes').value;
+    const confirmMessage = action === 'approve' 
+        ? 'Are you sure you want to APPROVE this application?'
+        : 'Are you sure you want to REJECT this application?';
+    
+    if (confirm(confirmMessage)) {
+        const formData = new FormData();
+        formData.append('action', action);
+        formData.append('notes', notes);
+        
+        fetch('/tenants/owner/tenants/pending/{{ application.id }}/review/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = "{% url 'tenants:pending_tenants' %}";
+                }
+            } else {
+                alert(data.message || 'An error occurred');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'a' && e.ctrlKey) {
+        e.preventDefault();
+        submitReview('approve');
+    } else if (e.key === 'r' && e.ctrlKey) {
+        e.preventDefault();
+        submitReview('reject');
+    }
+});
+</script>
+{% endblock %}

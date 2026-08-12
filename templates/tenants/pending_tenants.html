@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load tenant_filters %}
+
+
+{% block title %}Pending Applications - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <!-- Header -->
+            <div class="flex flex-wrap items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Pending Applications</h1>
+                    <p class="text-gray-600">Review and manage tenant applications for your properties</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'tenants:tenant_list' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-users mr-2"></i> All Tenants
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <p class="text-sm text-yellow-600">Total Pending</p>
+                    <p class="text-2xl font-bold text-yellow-900">{{ total_pending }}</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-blue-600">Properties with Pending</p>
+                    <p class="text-2xl font-bold text-blue-900">{{ property_stats|length }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4">
+                    <p class="text-sm text-green-600">Today's Applications</p>
+                    <p class="text-2xl font-bold text-green-900">
+                        {% with today_apps=applications|filter_today %}
+                            {{ today_apps|length }}
+                        {% endwith %}
+                    </p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <p class="text-sm text-purple-600">Average Wait Time</p>
+                    <p class="text-2xl font-bold text-purple-900">
+                        {% if applications %}
+                            {{ applications|avg_wait_time }}
+                        {% else %}
+                            0
+                        {% endif %}
+                        days
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Property Stats -->
+            {% if property_stats %}
+                <div class="mb-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-2">Pending by Property</h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for stat in property_stats %}
+                            <a href="?property={{ stat.property__id }}" 
+                               class="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-blue-100 hover:text-blue-600 transition-colors {% if property_filter == stat.property__id|stringformat:'s' %}bg-blue-500 text-white hover:bg-blue-600{% endif %}">
+                                {{ stat.property__title }} ({{ stat.count }})
+                            </a>
+                        {% endfor %}
+                        {% if property_filter %}
+                            <a href="?" class="px-3 py-1 bg-red-100 text-red-600 rounded-full text-sm hover:bg-red-200 transition-colors">
+                                <i class="fas fa-times mr-1"></i> Clear
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Applications List -->
+            {% if applications %}
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                                    <input type="checkbox" id="selectAll" onchange="toggleAll(this)">
+                                </th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Applicant</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Property</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Unit</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Applied</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Move-in Date</th>
+                                <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for application in applications %}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">
+                                        <input type="checkbox" name="application_ids" value="{{ application.id }}" class="app-checkbox">
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center space-x-3">
+                                            {% if application.tenant.profile_picture %}
+                                                <img src="{{ application.tenant.profile_picture.url }}" alt="{{ application.tenant.get_full_name }}" class="w-10 h-10 rounded-full object-cover">
+                                            {% else %}
+                                                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                    <span class="text-blue-600 font-bold">{{ application.tenant.get_full_name|slice:":1"|upper }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <p class="font-semibold text-gray-900">{{ application.tenant.get_full_name }}</p>
+                                                <p class="text-sm text-gray-600">{{ application.tenant.email }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <p class="font-medium">{{ application.property.title }}</p>
+                                        <p class="text-sm text-gray-600">{{ application.property.city }}</p>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        {% if application.property.is_multi_unit %}
+                                            <select name="unit" class="text-sm border border-gray-300 rounded px-2 py-1">
+                                                <option value="">Select unit</option>
+                                                {% for unit in application.property.units.all %}
+                                                    <option value="{{ unit.id }}" {% if unit.is_available %}class="text-green-600"{% endif %}>
+                                                        Unit {{ unit.unit_number }} - {{ unit.bedrooms }}br/{{ unit.bathrooms }}ba
+                                                        {% if unit.is_available %}(Available){% else %}({{ unit.get_status_display }}){% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            <span class="text-sm text-gray-500">Single unit</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 text-sm text-gray-600">
+                                        {{ application.created_at|date:"M d, Y" }}
+                                        <span class="text-xs text-gray-400 block">{{ application.created_at|timesince }} ago</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-sm text-gray-600">
+                                        {{ application.intended_move_in_date|date:"M d, Y" }}
+                                        {% if application.intended_move_in_date < today %}
+                                            <span class="text-xs text-red-500 block">Past due</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-3 px-4 text-right">
+                                        <a href="{% url 'tenants:pending_application_detail' application.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                                            Review <i class="fas fa-arrow-right ml-1"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bulk Actions -->
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg flex flex-wrap items-center gap-3">
+                    <span class="text-sm text-gray-600">Bulk Actions:</span>
+                    <select id="bulkAction" class="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                        <option value="">Select action</option>
+                        <option value="approve">Approve Selected</option>
+                        <option value="reject">Reject Selected</option>
+                    </select>
+                    <button onclick="bulkReview()" class="bg-blue-500 text-white px-4 py-1 rounded-lg text-sm hover:bg-blue-600 transition-colors">
+                        Apply
+                    </button>
+                </div>
+
+                <!-- Pagination -->
+                {% if applications.has_other_pages %}
+                    <div class="flex justify-center mt-6">
+                        <nav class="flex items-center space-x-2">
+                            {% if applications.has_previous %}
+                                <a href="?page={{ applications.previous_page_number }}{% if property_filter %}&property={{ property_filter }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            {% endif %}
+                            
+                            {% for num in applications.paginator.page_range %}
+                                {% if applications.number == num %}
+                                    <span class="px-4 py-2 rounded-lg bg-blue-500 text-white">{{ num }}</span>
+                                {% elif num > applications.number|add:'-3' and num < applications.number|add:'3' %}
+                                    <a href="?page={{ num }}{% if property_filter %}&property={{ property_filter }}{% endif %}" 
+                                       class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                        {{ num }}
+                                    </a>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if applications.has_next %}
+                                <a href="?page={{ applications.next_page_number }}{% if property_filter %}&property={{ property_filter }}{% endif %}" 
+                                   class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            {% endif %}
+                        </nav>
+                    </div>
+                {% endif %}
+                
+            {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-check-circle text-6xl text-green-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-600 mb-2">No Pending Applications</h3>
+                    <p class="text-gray-500">You have no pending applications to review. Great job!</p>
+                    <a href="{% url 'tenants:tenant_list' %}" class="mt-4 inline-block bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        View All Tenants
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll(master) {
+    const checkboxes = document.querySelectorAll('.app-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+}
+
+function bulkReview() {
+    const action = document.getElementById('bulkAction').value;
+    if (!action) {
+        alert('Please select an action');
+        return;
+    }
+    
+    const selected = document.querySelectorAll('.app-checkbox:checked');
+    if (selected.length === 0) {
+        alert('Please select at least one application');
+        return;
+    }
+    
+    const applicationIds = Array.from(selected).map(cb => cb.value);
+    const notes = prompt('Add any notes for this action (optional):', '');
+    
+    if (notes !== null) {
+        const formData = new FormData();
+        formData.append('action', action);
+        formData.append('notes', notes);
+        applicationIds.forEach(id => formData.append('application_ids[]', id));
+        
+        fetch('/tenants/owner/tenants/bulk-review/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert(data.message || 'An error occurred');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
+    }
+}
+</script>
+{% endblock %}

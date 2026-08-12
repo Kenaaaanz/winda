@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Property - {{ property.title }} - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-yellow-500 to-yellow-600 px-6 py-8">
+                <h1 class="text-2xl font-bold text-white">Edit Property</h1>
+                <p class="text-yellow-100 mt-1">{{ property.title }}</p>
+            </div>
+            
+            <form method="post" enctype="multipart/form-data" class="p-6">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <p class="text-red-600 font-semibold">Please fix the following errors:</p>
+                        <ul class="list-disc list-inside text-red-600 text-sm">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <!-- Basic Information -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                            <input type="text" name="title" value="{{ form.title.value|default:property.title }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Property Type *</label>
+                            <select name="property_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">Select type</option>
+                                <option value="APARTMENT" {% if form.property_type.value == 'APARTMENT' or property.property_type == 'APARTMENT' %}selected{% endif %}>Apartment</option>
+                                <option value="BUNGALOW" {% if form.property_type.value == 'BUNGALOW' or property.property_type == 'BUNGALOW' %}selected{% endif %}>Bungalow</option>
+                                <option value="MAISONETTE" {% if form.property_type.value == 'MAISONETTE' or property.property_type == 'MAISONETTE' %}selected{% endif %}>Maisonette</option>
+                                <option value="DUPLEX" {% if form.property_type.value == 'DUPLEX' or property.property_type == 'DUPLEX' %}selected{% endif %}>Duplex</option>
+                                <option value="PENTHOUSE" {% if form.property_type.value == 'PENTHOUSE' or property.property_type == 'PENTHOUSE' %}selected{% endif %}>Penthouse</option>
+                                <option value="STUDIO" {% if form.property_type.value == 'STUDIO' or property.property_type == 'STUDIO' %}selected{% endif %}>Studio</option>
+                                <option value="TOWNHOUSE" {% if form.property_type.value == 'TOWNHOUSE' or property.property_type == 'TOWNHOUSE' %}selected{% endif %}>Townhouse</option>
+                                <option value="COMMERCIAL" {% if form.property_type.value == 'COMMERCIAL' or property.property_type == 'COMMERCIAL' %}selected{% endif %}>Commercial</option>
+                                <option value="LAND" {% if form.property_type.value == 'LAND' or property.property_type == 'LAND' %}selected{% endif %}>Land</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Furnishing Status</label>
+                            <select name="furnishing_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="UNFURNISHED" {% if form.furnishing_status.value == 'UNFURNISHED' or property.furnishing_status == 'UNFURNISHED' %}selected{% endif %}>Unfurnished</option>
+                                <option value="SEMI_FURNISHED" {% if form.furnishing_status.value == 'SEMI_FURNISHED' or property.furnishing_status == 'SEMI_FURNISHED' %}selected{% endif %}>Semi-Furnished</option>
+                                <option value="FURNISHED" {% if form.furnishing_status.value == 'FURNISHED' or property.furnishing_status == 'FURNISHED' %}selected{% endif %}>Furnished</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                        <textarea name="description" rows="5" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+                                  required>{{ form.description.value|default:property.description }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Location</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Address *</label>
+                            <input type="text" name="address" value="{{ form.address.value|default:property.address }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">City *</label>
+                            <input type="text" name="city" value="{{ form.city.value|default:property.city }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">State/County</label>
+                            <input type="text" name="state" value="{{ form.state.value|default:property.state }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                            <input type="text" name="postal_code" value="{{ form.postal_code.value|default:property.postal_code }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Pricing (KES)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Rent *</label>
+                            <input type="number" name="rental_price" value="{{ form.rental_price.value|default:property.rental_price }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Service Charge</label>
+                            <input type="number" name="service_charge" value="{{ form.service_charge.value|default:property.service_charge }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Security Deposit</label>
+                            <input type="number" name="security_deposit" value="{{ form.security_deposit.value|default:property.security_deposit }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="negotiation_allowed" {% if form.negotiation_allowed.value or property.negotiation_allowed %}checked{% endif %} 
+                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Allow price negotiation</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Property Details -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Property Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bedrooms *</label>
+                            <input type="number" name="bedrooms" value="{{ form.bedrooms.value|default:property.bedrooms }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bathrooms *</label>
+                            <input type="number" name="bathrooms" value="{{ form.bathrooms.value|default:property.bathrooms }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Parking Spaces</label>
+                            <input type="number" name="parking_spaces" value="{{ form.parking_spaces.value|default:property.parking_spaces }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Square Feet</label>
+                            <input type="number" name="square_feet" value="{{ form.square_feet.value|default:property.square_feet }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Floor Number</label>
+                            <input type="number" name="floor_number" value="{{ form.floor_number.value|default:property.floor_number }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Total Floors</label>
+                            <input type="number" name="total_floors" value="{{ form.total_floors.value|default:property.total_floors }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Total Units *</label>
+                            <input type="number" name="total_units" value="{{ form.total_units.value|default:property.total_units }}" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                            <p class="mt-1 text-xs text-gray-500">{{ property.available_units }} currently available.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amenities -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        {% for amenity in amenities %}
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="amenities" value="{{ amenity }}" 
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                       {% if amenity in property.amenities or amenity in form.amenities.value %}checked{% endif %}>
+                                <span>{{ amenity }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Features -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Features</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {% for feature in features %}
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="features" value="{{ feature }}" 
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                       {% if feature in property.features or feature in form.features.value %}checked{% endif %}>
+                                <span>{{ feature }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Property Status</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Availability Status</label>
+                            <select name="availability_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="AVAILABLE" {% if property.availability_status == 'AVAILABLE' %}selected{% endif %}>Available</option>
+                                <option value="RENTED" {% if property.availability_status == 'RENTED' %}selected{% endif %}>Rented</option>
+                                <option value="UNDER_MAINTENANCE" {% if property.availability_status == 'UNDER_MAINTENANCE' %}selected{% endif %}>Under Maintenance</option>
+                                <option value="BOOKED" {% if property.availability_status == 'BOOKED' %}selected{% endif %}>Booked</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Verification Status</label>
+                            <select name="verification_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="PENDING" {% if property.verification_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                <option value="IN_REVIEW" {% if property.verification_status == 'IN_REVIEW' %}selected{% endif %}>In Review</option>
+                                <option value="VERIFIED" {% if property.verification_status == 'VERIFIED' %}selected{% endif %}>Verified</option>
+                                <option value="REJECTED" {% if property.verification_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images -->
+                <div class="mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Property Images</h3>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input type="file" name="images" multiple accept="image/*" class="hidden" id="image-upload">
+                        <label for="image-upload" class="cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-600">Click to upload new images</p>
+                            <p class="text-sm text-gray-500">You can select multiple images</p>
+                        </label>
+                    </div>
+                    <div id="image-preview" class="grid grid-cols-4 gap-2 mt-2"></div>
+                </div>
+
+                <!-- Submit -->
+                <div class="flex items-center space-x-4">
+                    <button type="submit" class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-save mr-2"></i> Update Property
+                    </button>
+                    <a href="{% url 'properties:detail' property.id %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                        Cancel
+                    </a>
+                    <a href="{% url 'properties:delete' property.id %}" class="text-red-600 hover:text-red-800 transition-colors ml-auto">
+                        <i class="fas fa-trash mr-1"></i> Delete
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Image preview
+document.getElementById('image-upload').addEventListener('change', function(e) {
+    const preview = document.getElementById('image-preview');
+    preview.innerHTML = '';
+    for (const file of this.files) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const div = document.createElement('div');
+            div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg">`;
+            preview.appendChild(div);
+        }
+        reader.readAsDataURL(file);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Preferences - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+                <h1 class="text-2xl font-bold text-white">Notification Preferences</h1>
+                <p class="text-blue-100">Choose how you want to receive notifications</p>
+            </div>
+
+            <div class="p-6">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-6">
+                        <!-- Email Preferences -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Email Notifications</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Application Updates</span>
+                                        <p class="text-sm text-gray-500">Get notified when applications are reviewed</p>
+                                    </div>
+                                    <input type="checkbox" name="email_application_updates" 
+                                           {% if form.email_application_updates.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Payment Notifications</span>
+                                        <p class="text-sm text-gray-500">Get notified about payments and invoices</p>
+                                    </div>
+                                    <input type="checkbox" name="email_payment_notifications" 
+                                           {% if form.email_payment_notifications.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Maintenance Updates</span>
+                                        <p class="text-sm text-gray-500">Get notified about maintenance requests</p>
+                                    </div>
+                                    <input type="checkbox" name="email_maintenance_updates" 
+                                           {% if form.email_maintenance_updates.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Messages</span>
+                                        <p class="text-sm text-gray-500">Get notified about new messages</p>
+                                    </div>
+                                    <input type="checkbox" name="email_messages" 
+                                           {% if form.email_messages.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Marketing Emails</span>
+                                        <p class="text-sm text-gray-500">Receive promotional offers and updates</p>
+                                    </div>
+                                    <input type="checkbox" name="email_marketing" 
+                                           {% if form.email_marketing.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- SMS Preferences -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">SMS Notifications</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Application Updates</span>
+                                        <p class="text-sm text-gray-500">Get SMS alerts for application updates</p>
+                                    </div>
+                                    <input type="checkbox" name="sms_application_updates" 
+                                           {% if form.sms_application_updates.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Payment Notifications</span>
+                                        <p class="text-sm text-gray-500">Get SMS alerts for payment confirmations</p>
+                                    </div>
+                                    <input type="checkbox" name="sms_payment_notifications" 
+                                           {% if form.sms_payment_notifications.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Maintenance Updates</span>
+                                        <p class="text-sm text-gray-500">Get SMS alerts for maintenance updates</p>
+                                    </div>
+                                    <input type="checkbox" name="sms_maintenance_updates" 
+                                           {% if form.sms_maintenance_updates.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Push Preferences -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Push Notifications</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Application Updates</span>
+                                        <p class="text-sm text-gray-500">Get push notifications for application updates</p>
+                                    </div>
+                                    <input type="checkbox" name="push_application_updates" 
+                                           {% if form.push_application_updates.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Payment Notifications</span>
+                                        <p class="text-sm text-gray-500">Get push notifications for payment confirmations</p>
+                                    </div>
+                                    <input type="checkbox" name="push_payment_notifications" 
+                                           {% if form.push_payment_notifications.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Messages</span>
+                                        <p class="text-sm text-gray-500">Get push notifications for new messages</p>
+                                    </div>
+                                    <input type="checkbox" name="push_messages" 
+                                           {% if form.push_messages.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Digest Preferences -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Digest Settings</h3>
+                            <div class="space-y-2">
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Daily Digest</span>
+                                        <p class="text-sm text-gray-500">Receive a daily summary of activities</p>
+                                    </div>
+                                    <input type="checkbox" name="daily_digest" 
+                                           {% if form.daily_digest.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                                
+                                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <div>
+                                        <span class="font-medium">Weekly Digest</span>
+                                        <p class="text-sm text-gray-500">Receive a weekly summary of all activities</p>
+                                    </div>
+                                    <input type="checkbox" name="weekly_digest" 
+                                           {% if form.weekly_digest.value %}checked{% endif %}
+                                           class="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="border-t border-gray-200 pt-4 flex items-center space-x-4">
+                            <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                                <i class="fas fa-save mr-2"></i> Save Preferences
+                            </button>
+                            <a href="{% url 'notifications:list' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

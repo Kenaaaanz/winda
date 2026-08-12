@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load humanize %}
+
+{% block title %}Create Lease - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
+                <h1 class="text-2xl font-bold text-white">Create Lease Agreement</h1>
+                <p class="text-green-100">For {{ application.tenant.get_full_name }}</p>
+                <p class="text-green-200 text-sm">{{ application.property.title }}</p>
+                {% if application.unit %}
+                    <p class="text-green-200 text-sm">Unit {{ application.unit.unit_number }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="p-6">
+                <!-- Pricing Summary -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-blue-800 mb-2">Pricing Summary</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                            <span class="text-gray-600">Monthly Rent:</span>
+                            <span class="font-bold text-blue-600">
+                                KES {{ application.unit.get_rental_price|intcomma|default:application.property.rental_price|intcomma }}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-gray-600">Security Deposit:</span>
+                            <span class="font-bold text-blue-600">
+                                KES {{ application.unit.get_security_deposit|intcomma|default:application.property.security_deposit|intcomma }}
+                            </span>
+                        </div>
+                        {% if application.unit %}
+                            <div>
+                                <span class="text-gray-600">Unit:</span>
+                                <span class="font-medium">Unit {{ application.unit.unit_number }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Unit Type:</span>
+                                <span class="font-medium">{{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="space-y-4">
+                        {{ form.start_date|as_crispy_field }}
+                        {{ form.end_date|as_crispy_field }}
+                        {{ form.termination_notice_period|as_crispy_field }}
+                        {{ form.late_payment_penalty|as_crispy_field }}
+                        {{ form.lease_agreement|as_crispy_field }}
+                    </div>
+                    
+                    <div class="mt-6 flex space-x-3">
+                        <button type="submit" class="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-file-contract mr-2"></i> Create Lease
+                        </button>
+                        <a href="{% url 'tenants:application_detail' application.id %}" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

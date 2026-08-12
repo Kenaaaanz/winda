@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Make Payment - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8">
+                <h1 class="text-2xl font-bold text-white">Make Payment</h1>
+                <p class="text-blue-100 mt-1">Securely pay for your property or subscription</p>
+            </div>
+            
+            <div class="p-6">
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                            <p class="text-red-600 font-semibold">Please fix the following errors:</p>
+                            <ul class="list-disc list-inside text-red-600 text-sm">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="space-y-4">
+                        <!-- Payment Type -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Payment Type *</label>
+                            <select name="payment_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">Select payment type</option>
+                                <option value="RENT" {% if form.payment_type.value == 'RENT' %}selected{% endif %}>Rent</option>
+                                <option value="DEPOSIT" {% if form.payment_type.value == 'DEPOSIT' %}selected{% endif %}>Security Deposit</option>
+                                <option value="SERVICE_CHARGE" {% if form.payment_type.value == 'SERVICE_CHARGE' %}selected{% endif %}>Service Charge</option>
+                                <option value="SUBSCRIPTION" {% if form.payment_type.value == 'SUBSCRIPTION' %}selected{% endif %}>Subscription</option>
+                                <option value="PENALTY" {% if form.payment_type.value == 'PENALTY' %}selected{% endif %}>Penalty</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Property -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Property (optional)</label>
+                            <select name="property" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select property</option>
+                                {% for property in form.fields.property.queryset %}
+                                    <option value="{{ property.id }}" {% if form.property.value == property.id %}selected{% endif %}>
+                                        {{ property.title }} - KES {{ property.rental_price|intcomma }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Amount -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Amount (KES) *</label>
+                            <input type="number" name="amount" value="{{ form.amount.value|default:'' }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+                                   step="100" min="0" required>
+                            <p class="text-xs text-gray-500 mt-1">Enter the amount in Kenyan Shillings (KES)</p>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea name="description" rows="3" 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="Brief description of the payment">{{ form.description.value|default:'' }}</textarea>
+                        </div>
+                        
+                        <!-- Due Date -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                            <input type="date" name="due_date" value="{{ form.due_date.value|date:'Y-m-d'|default:'' }}" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Summary -->
+                    <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h3 class="font-semibold text-gray-900 mb-2">Payment Summary</h3>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Amount:</span>
+                            <span class="font-semibold" id="displayAmount">KES 0</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600">Payment Type:</span>
+                            <span class="font-semibold" id="displayType">Not selected</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span class="text-gray-600">Processing Fee:</span>
+                            <span class="font-semibold text-green-600">Free</span>
+                        </div>
+                        <hr class="my-2">
+                        <div class="flex justify-between font-semibold">
+                            <span>Total:</span>
+                            <span id="displayTotal">KES 0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit -->
+                    <div class="mt-6">
+                        <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-credit-card mr-2"></i> Proceed to Payment
+                        </button>
+                        <p class="text-xs text-gray-500 text-center mt-3">
+                            <i class="fas fa-lock text-green-500 mr-1"></i>
+                            Secure payment powered by Paystack. Your payment information is encrypted.
+                        </p>
+                    </div>
+                </form>
+                
+                <div class="mt-6 text-center">
+                    <a href="{% url 'payments:list' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                        <i class="fas fa-arrow-left mr-1"></i> Back to Payment History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update summary when form fields change
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.querySelector('input[name="amount"]');
+    const paymentTypeSelect = document.querySelector('select[name="payment_type"]');
+    const displayAmount = document.getElementById('displayAmount');
+    const displayType = document.getElementById('displayType');
+    const displayTotal = document.getElementById('displayTotal');
+    
+    function updateSummary() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const paymentType = paymentTypeSelect.options[paymentTypeSelect.selectedIndex]?.text || 'Not selected';
+        
+        displayAmount.textContent = 'KES ' + amount.toLocaleString();
+        displayType.textContent = paymentType;
+        displayTotal.textContent = 'KES ' + amount.toLocaleString();
+    }
+    
+    amountInput.addEventListener('input', updateSummary);
+    paymentTypeSelect.addEventListener('change', updateSummary);
+    updateSummary();
+});
+</script>
+{% endblock %}
