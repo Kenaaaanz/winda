@@ -34,6 +34,7 @@ django-rest-knox
 sentry-sdk
 whitenoise
 gunicorn
+dj-database-url
 
 # Windows-specific packages
 # pywin32==306  # For Windows services
