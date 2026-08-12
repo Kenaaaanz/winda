@@ -35,6 +35,7 @@ sentry-sdk
 whitenoise
 gunicorn
 dj-database-url
+drf-yasg
 
 # Windows-specific packages
 # pywin32==306  # For Windows services
