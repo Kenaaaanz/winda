@@ -36,6 +36,8 @@ whitenoise
 gunicorn
 dj-database-url
 drf-yasg
+django-ckeditor-5
+
 
 # Windows-specific packages
 # pywin32==306  # For Windows services
