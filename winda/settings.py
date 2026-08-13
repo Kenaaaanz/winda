@@ -1,5 +1,3 @@
-# winda/settings.py
-
 import os
 from pathlib import Path
 import dj_database_url
@@ -11,7 +9,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
-DEBUG = True #os.getenv('DEBUG', 'True') == 'True'
+DEBUG = True  # os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '.onrender.com']
 
 # Application definition
@@ -31,7 +29,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'crispy_forms',
-    'crispy_bootstrap5',  # Changed from crispy_tailwind
+    'crispy_bootstrap5',
     'channels',
     'import_export',
     'storages',
@@ -113,15 +111,15 @@ else:
 
 # Cache
 CACHES = {
-     'default': {
-         'BACKEND': 'django_redis.cache.RedisCache',
-         'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
-         'OPTIONS': {
-             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-         },
-         'KEY_PREFIX': 'winda_cache'
-     }
- }
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'winda_cache'
+    }
+}
 
 # Rate limiting settings
 RATELIMIT_ENABLE = True
@@ -176,7 +174,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# Email (Configure for development)
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
@@ -193,6 +190,7 @@ ADMIN_EMAIL = [
     email.strip() for email in config('ADMIN_EMAIL', default='windaafricasupport@gmail.com, gichabakenani@gmail.com').split(',')
     if email.strip()
 ]
+
 # Paystack
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', 'sk_test_e347be9c037493fa1d27822a4474cffbdfc16dab')
 PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', 'pk_test_d572bda942b7e12c9ae9aa6b99b89f491ea1eb0d')
@@ -203,16 +201,56 @@ RATELIMIT_USE_CACHE = 'default'
 
 # Login/Logout URLs
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/accounts/dashboard/'  # This redirects to dashboard after login
+LOGIN_REDIRECT_URL = '/accounts/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
 
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_USERNAME_REQUIRED = False
+# ========================================
+# DJANGO-ALLAUTH CONFIGURATION (Updated)
+# ========================================
 
+# Account Settings - Updated for django-allauth 0.60.0+
+# The deprecated settings have been replaced with these new ones
+
+# 1. ACCOUNT_EMAIL_REQUIRED is deprecated, use ACCOUNT_SIGNUP_FIELDS
+# 2. ACCOUNT_USERNAME_REQUIRED is deprecated, use ACCOUNT_SIGNUP_FIELDS
+# 3. ACCOUNT_AUTHENTICATION_METHOD is deprecated, use ACCOUNT_LOGIN_METHODS
+
+# Email verification settings
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Winda] '
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+
+# Updated: Define which fields are required during signup
+# This replaces ACCOUNT_EMAIL_REQUIRED and ACCOUNT_USERNAME_REQUIRED
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+
+# Updated: Define login methods
+# This replaces ACCOUNT_AUTHENTICATION_METHOD
+# Options: 'username', 'email', 'username_email'
+ACCOUNT_LOGIN_METHODS = {'email'}
+
+# Other allauth settings
+ACCOUNT_USERNAME_REQUIRED = False  # Keep this for backward compatibility with older code
+ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Keep this for backward compatibility with older code
+ACCOUNT_EMAIL_REQUIRED = True  # Keep this for backward compatibility with older code
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+
+# Social account settings
+SOCIALACCOUNT_PROVIDERS = {}
+
+# Signup form class (if you have custom signup)
+# ACCOUNT_SIGNUP_FORM_CLASS = 'your_app.forms.CustomSignupForm'
+
+
+# ========================================
 # REST Framework
+# ========================================
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
