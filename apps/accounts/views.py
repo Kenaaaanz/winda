@@ -25,7 +25,10 @@ from .forms import (
 )
 from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required
+from apps.emails.utils import EmailService
 
+
+from apps.emails.utils import EmailService
 
 def register(request):
     """User registration view"""
@@ -37,20 +40,17 @@ def register(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.is_active = False  # Deactivate until email confirmation
-            user.username = form.cleaned_data['email']  # Use email as username
+            user.username = form.cleaned_data['email']
             user.save()
             
             # Send activation email
             current_site = get_current_site(request)
-            mail_subject = 'Activate your Winda account'
-            message = render_to_string('accounts/activation_email.html', {
-                'user': user,
-                'domain': current_site.domain,
-                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-                'token': account_activation_token.make_token(user),
-                'protocol': 'https' if request.is_secure() else 'http'
-            })
-            send_mail(mail_subject, message, 'noreply@winda.co.ke', [user.email])
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = account_activation_token.make_token(user)
+            activation_link = f"{request.scheme}://{current_site.domain}{reverse('accounts:activate', kwargs={'uidb64': uid, 'token': token})}"
+            
+            # Use EmailService to send activation email
+            EmailService.send_activation_email(user, activation_link)
             
             messages.success(request, 'Please confirm your email address to complete registration.')
             return redirect('accounts:login')

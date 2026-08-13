@@ -11,7 +11,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = True #os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '.onrender.com']
 
 # Application definition

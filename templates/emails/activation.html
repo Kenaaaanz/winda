@@ -1,0 +1,30 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Activate Your Account - Winda{% endblock %}
+
+{% block header %}Activate Your Account{% endblock %}
+{% block header_sub %}Please verify your email address to get started{% endblock %}
+
+{% block content %}
+<p>Hello {{ full_name }},</p>
+
+<p>Thank you for registering with <strong>Winda</strong>! To complete your registration and start using our platform, please click the button below to activate your account.</p>
+
+<div style="text-align: center;">
+    <a href="{{ activation_link }}" class="button">Activate My Account</a>
+</div>
+
+<p>If the button doesn't work, copy and paste this link into your browser:</p>
+<p style="word-break: break-all; background: #edf2f7; padding: 10px; border-radius: 5px; font-size: 12px;">
+    {{ activation_link }}
+</p>
+
+<p>This activation link will expire in <strong>24 hours</strong>.</p>
+
+<p>If you did not create an account with Winda, please ignore this email.</p>
+
+<p>Need help? Contact us at <a href="mailto:support@winda.co.ke">support@winda.co.ke</a></p>
+
+<p>Best regards,<br>
+<strong>The Winda Team</strong></p>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Welcome to Winda!{% endblock %}
+
+{% block header %}Welcome to Winda! 🏠{% endblock %}
+{% block header_sub %}Your journey to finding the perfect home starts here{% endblock %}
+
+{% block content %}
+<p>Hello {{ full_name }},</p>
+
+<p>Welcome to <strong>Winda</strong> - your trusted platform for direct property renting in Kenya!</p>
+
+<p>We're excited to have you join our community of property owners and tenants. With Winda, you can:</p>
+
+<ul>
+    <li>✅ Browse thousands of verified properties directly from owners</li>
+    <li>✅ Apply for properties with just a few clicks</li>
+    <li>✅ Make secure payments through Paystack</li>
+    <li>✅ Communicate directly with property owners</li>
+    <li>✅ Track your applications and payments</li>
+</ul>
+
+<div style="text-align: center;">
+    <a href="http://localhost:8000" class="button">Get Started</a>
+</div>
+
+<p>If you have any questions, feel free to reply to this email or contact our support team at <a href="mailto:support@winda.co.ke">support@winda.co.ke</a>.</p>
+
+<p>Happy house hunting! 🏡</p>
+
+<p>Best regards,<br>
+<strong>The Winda Team</strong></p>
+{% endblock %}
