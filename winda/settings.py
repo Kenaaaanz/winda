@@ -210,46 +210,32 @@ LOGOUT_REDIRECT_URL = '/'
 
 
 # ========================================
-# DJANGO-ALLAUTH CONFIGURATION (Updated)
+# DJANGO-ALLAUTH CONFIGURATION (CLEAN VERSION)
 # ========================================
-
-# Account Settings - Updated for django-allauth 0.60.0+
-# The deprecated settings have been replaced with these new ones
-
-# 1. ACCOUNT_EMAIL_REQUIRED is deprecated, use ACCOUNT_SIGNUP_FIELDS
-# 2. ACCOUNT_USERNAME_REQUIRED is deprecated, use ACCOUNT_SIGNUP_FIELDS
-# 3. ACCOUNT_AUTHENTICATION_METHOD is deprecated, use ACCOUNT_LOGIN_METHODS
 
 # Email verification settings
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Winda] '
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
+ACCOUNT_UNIQUE_EMAIL = True
 
-# Updated: Define which fields are required during signup
-# This replaces ACCOUNT_EMAIL_REQUIRED and ACCOUNT_USERNAME_REQUIRED
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-
-# Updated: Define login methods
-# This replaces ACCOUNT_AUTHENTICATION_METHOD
-# Options: 'username', 'email', 'username_email'
+# Login methods - Use only email (no username)
 ACCOUNT_LOGIN_METHODS = {'email'}
 
-# Other allauth settings
-ACCOUNT_USERNAME_REQUIRED = False  # Keep this for backward compatibility with older code
-ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Keep this for backward compatibility with older code
-ACCOUNT_EMAIL_REQUIRED = True  # Keep this for backward compatibility with older code
-ACCOUNT_UNIQUE_EMAIL = True
+# Signup fields - Only email and password (no username)
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
+
+# User model settings
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True
 
-# Social account settings
+# Session settings
+ACCOUNT_LOGOUT_ON_GET = False
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_USERNAME_MIN_LENGTH = 0
+
+# Social account settings (if using)
 SOCIALACCOUNT_PROVIDERS = {}
-
-# Signup form class (if you have custom signup)
-# ACCOUNT_SIGNUP_FORM_CLASS = 'your_app.forms.CustomSignupForm'
-
 
 # ========================================
 # REST Framework
