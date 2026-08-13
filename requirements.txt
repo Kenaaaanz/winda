@@ -28,7 +28,7 @@ django-ratelimit
 django-activity-stream
 channels
 channels-redis
-django-allauth
+django-allauth==65.19.0
 django-guardian
 django-rest-knox
 sentry-sdk
