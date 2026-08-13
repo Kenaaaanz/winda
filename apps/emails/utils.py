@@ -40,8 +40,10 @@ class EmailService:
             
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            # Print for debugging
+            print(f"Email error: {str(e)}")
             return False
-    
+            
     @staticmethod
     def send_welcome_email(user):
         """Send welcome email to new user"""
@@ -58,12 +60,13 @@ class EmailService:
     def send_activation_email(user, activation_link):
         """Send account activation email"""
         subject = "Activate Your Winda Account"
-        template_name = 'emails/activation.html'
+        template_name = 'emails/activation_email.html'
         context = {
             'user': user,
             'full_name': user.get_full_name(),
             'activation_link': activation_link,
             'support_email': 'support@winda.co.ke',
+            'site_name': 'Winda',
         }
         return EmailService.send_email(subject, user.email, template_name, context)
     

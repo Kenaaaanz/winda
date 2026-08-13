@@ -67,4 +67,7 @@ urlpatterns = [
     path('bank-account/update/', views.update_bank_account, name='update_bank_account'),
     path('bank-account/delete/', views.delete_bank_account, name='delete_bank_account'),
 
+    #resend activation email
+    path('resend-activation/', views.resend_activation_email, name='resend_activation'),
+
 ]

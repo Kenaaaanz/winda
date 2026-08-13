@@ -191,6 +191,10 @@ ADMIN_EMAIL = [
     if email.strip()
 ]
 
+# Site URL for email links
+SITE_URL = config('SITE_URL', default='https://winda-angz.onrender.com')
+
+
 # Paystack
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', 'sk_test_e347be9c037493fa1d27822a4474cffbdfc16dab')
 PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', 'pk_test_d572bda942b7e12c9ae9aa6b99b89f491ea1eb0d')

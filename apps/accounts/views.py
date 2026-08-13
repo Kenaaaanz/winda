@@ -650,3 +650,25 @@ def update_business(request):
         return redirect('accounts:profile')
     
     return redirect('accounts:profile')
+
+@login_required
+def resend_activation_email(request):
+    """Resend activation email to user"""
+    user = request.user
+    
+    if user.is_active:
+        messages.info(request, 'Your account is already activated.')
+        return redirect('dashboard')
+    
+    try:
+        current_site = get_current_site(request)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = account_activation_token.make_token(user)
+        activation_link = f"{request.scheme}://{current_site.domain}{reverse('accounts:activate', kwargs={'uidb64': uid, 'token': token})}"
+        
+        EmailService.send_activation_email(user, activation_link)
+        messages.success(request, 'Activation email sent! Please check your inbox.')
+    except Exception as e:
+        messages.error(request, f'Failed to send activation email. Error: {str(e)}')
+    
+    return redirect('dashboard')

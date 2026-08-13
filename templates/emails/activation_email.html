@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Your Winda Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+        .content {
+            background: #f8fafc;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white !important;
+            padding: 14px 35px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 12px;
+            color: #718096;
+            text-align: center;
+        }
+        .highlight {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Winda</h1>
+        <p>Your Home, Directly</p>
+    </div>
+    
+    <div class="content">
+        <h2>Hello {{ full_name }}!</h2>
+        
+        <p>Thank you for signing up with <strong>Winda</strong> - your trusted platform for direct property renting in Kenya!</p>
+        
+        <p>To complete your registration and start using our platform, please click the button below to activate your account:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ activation_link }}" class="button">Activate My Account</a>
+        </div>
+        
+        <div class="highlight">
+            <p style="margin: 0; font-size: 14px;">
+                <strong>📌 Note:</strong> This activation link will expire in <strong>24 hours</strong>.
+            </p>
+        </div>
+        
+        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background: #edf2f7; padding: 10px; border-radius: 5px; font-size: 12px;">
+            {{ activation_link }}
+        </p>
+        
+        <p>If you did not create an account with Winda, please ignore this email.</p>
+        
+        <p>Need help? Contact us at <a href="mailto:{{ support_email }}">{{ support_email }}</a></p>
+        
+        <p>Best regards,<br>
+        <strong>The Winda Team</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>&copy; 2024 Winda. All rights reserved.</p>
+        <p>Nairobi, Kenya</p>
+    </div>
+</body>
+</html>
