@@ -9,7 +9,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
-DEBUG = True  # os.getenv('DEBUG', 'True') == 'True'
+DEBUG = True
 ALLOWED_HOSTS = ['testserver', 'localhost', '127.0.0.1', '.onrender.com']
 
 # Application definition
@@ -88,11 +88,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'winda.wsgi.application'
 ASGI_APPLICATION = 'winda.asgi.application'
 
-# Database - Using standard PostgreSQL without PostGIS
+# Database
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
-    # Production - PostgreSQL on Render
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -101,7 +100,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Local development - SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -120,10 +118,6 @@ CACHES = {
         'KEY_PREFIX': 'winda_cache'
     }
 }
-
-# Rate limiting settings
-RATELIMIT_ENABLE = True
-RATELIMIT_USE_CACHE = 'default'
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -144,7 +138,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Authentication
+# ========================================
+# CUSTOM USER MODEL
+# ========================================
 AUTH_USER_MODEL = 'accounts.User'
 
 # Internationalization
@@ -162,11 +158,11 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Crispy Forms - Updated for Bootstrap5
+# Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-# Celery (Optional - can be disabled for development)
+# Celery
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -175,29 +171,17 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Email Configuration
-EMAIL_BACKEND ='django.core.mail.backends.console.EmailBackend' #'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='windaafricasupport@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='kpdi btxe ouuh imae')
-
-# Default sender email
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='windaafricasupport@gmail.com')
 
-# Admin email for order notifications
-ADMIN_EMAIL = [
-    email.strip() for email in config('ADMIN_EMAIL', default='windaafricasupport@gmail.com, gichabakenani@gmail.com').split(',')
-    if email.strip()
-]
-
-# Site URL for email links
-SITE_URL = config('SITE_URL', default='https://winda-angz.onrender.com')
-
-
 # Paystack
-PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', 'sk_test_e347be9c037493fa1d27822a4474cffbdfc16dab')
-PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', 'pk_test_d572bda942b7e12c9ae9aa6b99b89f491ea1eb0d')
+PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', '')
+PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', '')
 
 # Rate Limiting
 RATELIMIT_ENABLE = True
@@ -208,34 +192,37 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/accounts/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
-
 # ========================================
-# DJANGO-ALLAUTH CONFIGURATION (CLEAN VERSION)
+# DJANGO-ALLAUTH CONFIGURATION
 # ========================================
 
-# Email verification settings
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+# Use custom adapter
+ACCOUNT_ADAPTER = 'apps.accounts.adapters.CustomAccountAdapter'
+
+# Email verification
+ACCOUNT_EMAIL_VERIFICATION = 'optional'  # Use 'optional' for now
 ACCOUNT_EMAIL_SUBJECT_PREFIX = '[Winda] '
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 ACCOUNT_UNIQUE_EMAIL = True
 
-# Login methods - Use only email (no username)
+# Login methods
 ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
 
-# Signup fields - Only email and password (no username)
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-
-# User model settings
+# User model settings - IMPORTANT
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 # Session settings
 ACCOUNT_LOGOUT_ON_GET = False
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_USERNAME_MIN_LENGTH = 0
 
-# Social account settings (if using)
+# Social account
 SOCIALACCOUNT_PROVIDERS = {}
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
+SOCIALACCOUNT_EMAIL_REQUIRED = False
 
 # ========================================
 # REST Framework
@@ -255,14 +242,12 @@ REST_FRAMEWORK = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Security Settings (for development)
+# Security Settings
 if DEBUG:
-    # Disable HTTPS in development
     SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
 else:
-    # Production settings
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
