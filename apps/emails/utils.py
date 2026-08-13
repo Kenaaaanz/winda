@@ -3,14 +3,16 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 import logging
+from .tasks import send_email_task
+
 
 logger = logging.getLogger(__name__)
 
 class EmailService:
-    """Service class for sending emails"""
+    """Service class for sending emails asynchronously"""
     
     @staticmethod
-    def send_email(subject, to_email, template_name, context=None, from_email=None):
+    def send_email(subject, to_email, template_name, context=None, from_email=None, async_mode=True):
         """
         Send an email using HTML template
         """
@@ -19,12 +21,38 @@ class EmailService:
         
         from_email = from_email or settings.DEFAULT_FROM_EMAIL
         
+        if async_mode:
+            # Send asynchronously using Celery
+            try:
+                send_email_task.delay(subject, to_email, template_name, context, from_email)
+                logger.info(f"Email task queued for {to_email}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to queue email task for {to_email}: {str(e)}")
+                # Fall back to sync sending
+                return EmailService.send_email_sync(subject, to_email, template_name, context, from_email)
+        else:
+            # Send synchronously
+            return EmailService.send_email_sync(subject, to_email, template_name, context, from_email)
+    
+    @staticmethod
+    def send_email_sync(subject, to_email, template_name, context=None, from_email=None):
+        """
+        Send email synchronously (fallback)
+        """
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
+        
+        if context is None:
+            context = {}
+        
+        from_email = from_email or settings.DEFAULT_FROM_EMAIL
+        
         try:
-            # Render HTML content
             html_content = render_to_string(template_name, context)
             text_content = strip_tags(html_content)
             
-            # Create email
             email = EmailMultiAlternatives(
                 subject=subject,
                 body=text_content,
@@ -32,29 +60,12 @@ class EmailService:
                 to=[to_email]
             )
             email.attach_alternative(html_content, "text/html")
-            
-            # Send email
             email.send()
             logger.info(f"Email sent successfully to {to_email}")
             return True
-            
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}")
-            # Print for debugging
-            print(f"Email error: {str(e)}")
             return False
-            
-    @staticmethod
-    def send_welcome_email(user):
-        """Send welcome email to new user"""
-        subject = f"Welcome to Winda, {user.get_full_name()}!"
-        template_name = 'emails/welcome.html'
-        context = {
-            'user': user,
-            'full_name': user.get_full_name(),
-            'login_url': 'http://localhost:8000/accounts/login/',
-        }
-        return EmailService.send_email(subject, user.email, template_name, context)
     
     @staticmethod
     def send_activation_email(user, activation_link):
@@ -67,6 +78,19 @@ class EmailService:
             'activation_link': activation_link,
             'support_email': 'support@winda.co.ke',
             'site_name': 'Winda',
+        }
+        # Use async mode to prevent timeout
+        return EmailService.send_email(subject, user.email, template_name, context, async_mode=True)
+            
+    @staticmethod
+    def send_welcome_email(user):
+        """Send welcome email to new user"""
+        subject = f"Welcome to Winda, {user.get_full_name()}!"
+        template_name = 'emails/welcome.html'
+        context = {
+            'user': user,
+            'full_name': user.get_full_name(),
+            'login_url': 'http://localhost:8000/accounts/login/',
         }
         return EmailService.send_email(subject, user.email, template_name, context)
     
