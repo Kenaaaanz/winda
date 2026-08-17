@@ -907,12 +907,8 @@ def set_main_image(request, pk, image_id):
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     
     try:
-        # Try to get by UUID first, then by integer ID
-        try:
-            image = property_obj.property_images.get(id=image_id, is_active=True)
-        except (ValueError, TypeError):
-            # If image_id is not a valid UUID, try as integer
-            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        # Get the image by ID
+        image = get_object_or_404(PropertyImage, id=image_id, property=property_obj, is_active=True)
         
         # Reset all images to not main
         property_obj.property_images.filter(is_active=True).update(is_main=False)
@@ -921,12 +917,12 @@ def set_main_image(request, pk, image_id):
         image.is_main = True
         image.save()
         
-        # Also update property's main_image field
-        property_obj.main_image = image.image
+        # Update property's main_image field with the URL
+        property_obj.main_image = image.image_url  # Changed from image.image
         property_obj.save(update_fields=['main_image'])
         
         return JsonResponse({'status': 'success', 'message': 'Main image updated successfully'})
-    except (PropertyImage.DoesNotExist, ValueError, TypeError):
+    except PropertyImage.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -940,21 +936,18 @@ def set_thumbnail(request, pk, image_id):
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     
     try:
-        # Try to get by UUID first, then by integer ID
-        try:
-            image = property_obj.property_images.get(id=image_id, is_active=True)
-        except (ValueError, TypeError):
-            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        # Get the image by ID
+        image = get_object_or_404(PropertyImage, id=image_id, property=property_obj, is_active=True)
         
-        property_obj.thumbnail = image.image
+        # Set the thumbnail to the image URL
+        property_obj.thumbnail = image.image_url  # Changed from image.image
         property_obj.save(update_fields=['thumbnail'])
         
         return JsonResponse({'status': 'success', 'message': 'Thumbnail updated successfully'})
-    except (PropertyImage.DoesNotExist, ValueError, TypeError):
+    except PropertyImage.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
 
 @login_required
 @owner_required
@@ -965,20 +958,16 @@ def update_image_caption(request, pk, image_id):
     caption = request.POST.get('caption', '')
     
     try:
-        # Try to get by UUID first, then by integer ID
-        try:
-            image = property_obj.property_images.get(id=image_id, is_active=True)
-        except (ValueError, TypeError):
-            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        image = get_object_or_404(PropertyImage, id=image_id, property=property_obj, is_active=True)
         
         image.caption = caption
         image.save(update_fields=['caption'])
         return JsonResponse({'status': 'success', 'message': 'Caption updated successfully'})
-    except (PropertyImage.DoesNotExist, ValueError, TypeError):
+    except PropertyImage.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-        
+            
 @login_required
 @owner_required
 @require_http_methods(["POST"])
@@ -1022,36 +1011,28 @@ def delete_property_image(request, pk):
         return JsonResponse({'status': 'error', 'message': 'Image ID required'}, status=400)
     
     try:
-        image = property_obj.property_images.get(id=image_id, is_active=True)
-        
-        # Delete from Cloudinary
-        if image.cloudinary_public_id:
-            try:
-                from apps.common.utils.cloudinary_utils import CloudinaryService
-                CloudinaryService.delete_image(image.cloudinary_public_id)
-            except:
-                pass
+        image = get_object_or_404(PropertyImage, id=image_id, property=property_obj, is_active=True)
         
         # Check if this is the main image
-        if image.is_main or (property_obj.main_image and property_obj.main_image == image.image):
+        if image.is_main or (property_obj.main_image and property_obj.main_image == image.image_url):
             # Set a new main image if available
             other_images = property_obj.property_images.filter(is_active=True).exclude(id=image_id)
             if other_images.exists():
                 new_main = other_images.first()
                 new_main.is_main = True
                 new_main.save()
-                property_obj.main_image = new_main.image
+                property_obj.main_image = new_main.image_url  # Changed from image.image
                 property_obj.save(update_fields=['main_image'])
             else:
                 property_obj.main_image = None
                 property_obj.save(update_fields=['main_image'])
         
         # Check if this is the thumbnail
-        if property_obj.thumbnail and property_obj.thumbnail == image.image:
+        if property_obj.thumbnail and property_obj.thumbnail == image.image_url:
             # Set new thumbnail if available
             other_images = property_obj.property_images.filter(is_active=True).exclude(id=image_id)
             if other_images.exists():
-                property_obj.thumbnail = other_images.first().image
+                property_obj.thumbnail = other_images.first().image_url  # Changed from image.image
             elif property_obj.main_image:
                 property_obj.thumbnail = property_obj.main_image
             else:
@@ -1068,7 +1049,6 @@ def delete_property_image(request, pk):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     
-
 # ==================== FAVORITE VIEWS ====================
 
 @login_required

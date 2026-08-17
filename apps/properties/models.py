@@ -369,7 +369,7 @@ class Unit(models.Model):
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='property_images')
-    image_url = models.URLField(max_length=500, blank=True, null=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True)  # Store Cloudinary URL directly
     is_main = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     caption = models.CharField(max_length=200, blank=True)
@@ -393,26 +393,27 @@ class PropertyImage(models.Model):
     
     def delete(self, *args, **kwargs):
         """Delete image from Cloudinary when record is deleted"""
-        # Extract public_id from URL and delete
         if self.image_url:
             try:
                 from apps.common.utils.cloudinary_utils import CloudinaryService
                 # Extract public_id from URL
                 # URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.jpg
                 parts = self.image_url.split('/')
-                # Get the part after 'upload/' and before the version
                 for i, part in enumerate(parts):
                     if part == 'upload':
-                        # The public_id is after the version number (v1234567890)
-                        # or directly after 'upload/'
-                        public_id_parts = parts[i+2:] if len(parts) > i+2 and parts[i+1].startswith('v') else parts[i+1:]
-                        public_id = '/'.join(public_id_parts).split('.')[0]  # Remove extension
+                        # The public_id is after the version number or directly after 'upload/'
+                        if i + 1 < len(parts) and parts[i+1].startswith('v'):
+                            public_id_parts = parts[i+2:]
+                        else:
+                            public_id_parts = parts[i+1:]
+                        public_id = '/'.join(public_id_parts).split('.')[0]
                         CloudinaryService.delete_image(public_id)
                         break
             except Exception as e:
                 print(f"Error deleting from Cloudinary: {e}")
         super().delete(*args, **kwargs)
-    
+
+            
     
 class PropertyDocument(models.Model):
     DOCUMENT_TYPES = (
