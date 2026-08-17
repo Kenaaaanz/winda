@@ -217,7 +217,7 @@ def property_create(request):
                 property_obj.amenities = amenities if amenities else []
                 property_obj.features = features if features else []
                 
-                # Handle main image - use the helper function
+                # Handle main image - use URL field
                 main_image = request.FILES.get('main_image')
                 if main_image:
                     result = upload_property_image_to_cloudinary(
@@ -226,8 +226,7 @@ def property_create(request):
                         'main'
                     )
                     if result:
-                        property_obj.main_image = result['url']
-                        property_obj.main_image_public_id = result['public_id']
+                        property_obj.main_image = result['url']  # Store URL directly
                 
                 # Handle multi-unit
                 is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
@@ -243,7 +242,7 @@ def property_create(request):
                 # Save property first to get an ID
                 property_obj.save()
                 
-                # Handle gallery images - use the helper function
+                # Handle gallery images - use URL field
                 images = request.FILES.getlist('images')
                 for idx, image in enumerate(images):
                     result = upload_property_image_to_cloudinary(
@@ -254,8 +253,7 @@ def property_create(request):
                     if result:
                         PropertyImage.objects.create(
                             property=property_obj,
-                            image=result['url'],
-                            cloudinary_public_id=result['public_id'],
+                            image_url=result['url'],  # Store URL directly
                             is_main=(idx == 0 and not property_obj.main_image),
                             order=idx
                         )
@@ -287,6 +285,7 @@ def property_create(request):
         'amenities': amenities_list,
         'features': features_list,
     })
+
 
 @login_required
 @owner_required
@@ -843,7 +842,7 @@ def upload_property_images(request, pk):
     
     for idx, img in enumerate(images):
         try:
-            # Use the helper function
+            # Upload to Cloudinary
             result = upload_property_image_to_cloudinary(
                 img,
                 property_obj.id,
@@ -855,8 +854,7 @@ def upload_property_images(request, pk):
                 
                 property_image = PropertyImage.objects.create(
                     property=property_obj,
-                    image=result['url'],
-                    cloudinary_public_id=result['public_id'],
+                    image_url=result['url'],  # Store URL directly
                     is_main=(idx == 0 and not property_obj.main_image),
                     order=order_value,
                     is_active=True
@@ -865,15 +863,12 @@ def upload_property_images(request, pk):
                 # If this is the first image and no main image exists, set as main
                 if idx == 0 and not property_obj.main_image:
                     property_obj.main_image = result['url']
-                    property_obj.main_image_public_id = result['public_id']
-                    property_obj.save(update_fields=['main_image', 'main_image_public_id'])
+                    property_obj.save(update_fields=['main_image'])
                 
-                from apps.common.utils.cloudinary_utils import CloudinaryService
                 uploaded.append({
                     'id': str(property_image.id),
                     'url': result['url'],
-                    'thumbnail': CloudinaryService.get_thumbnail_url(result['public_id'], 200, 150),
-                    'public_id': result['public_id']
+                    'thumbnail': result['url'],
                 })
         except Exception as e:
             errors.append(f"Image {idx+1}: {str(e)}")
@@ -886,9 +881,8 @@ def upload_property_images(request, pk):
         if first_image:
             first_image.is_main = True
             first_image.save()
-            property_obj.main_image = first_image.image
-            property_obj.main_image_public_id = first_image.cloudinary_public_id
-            property_obj.save(update_fields=['main_image', 'main_image_public_id'])
+            property_obj.main_image = first_image.image_url
+            property_obj.save(update_fields=['main_image'])
     
     if uploaded:
         return JsonResponse({
@@ -903,7 +897,8 @@ def upload_property_images(request, pk):
             'message': 'No images were uploaded successfully',
             'errors': errors
         }, status=400)
-    
+
+        
 @login_required
 @owner_required
 @require_http_methods(["POST"])

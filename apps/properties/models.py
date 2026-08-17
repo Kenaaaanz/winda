@@ -84,8 +84,11 @@ class Property(models.Model):
     # Media
     main_image = models.ImageField(upload_to='properties/', null=True, blank=True)
     thumbnail = models.ImageField(upload_to='properties/thumbnails/', null=True, blank=True)
-    main_image_public_id = models.CharField(max_length=500, blank=True, null=True)
-    thumbnail_public_id = models.CharField(max_length=500, blank=True, null=True)
+
+    # Media - Store Cloudinary URLs directly
+    main_image = models.URLField(max_length=500, blank=True, null=True)  
+    thumbnail = models.URLField(max_length=500, blank=True, null=True)   
+
     images = models.JSONField(default=list, blank=True)
     video_url = models.URLField(blank=True, null=True)
     virtual_tour_url = models.URLField(blank=True, null=True)
@@ -140,74 +143,42 @@ class Property(models.Model):
         return self.rental_price + self.service_charge
     
     def get_main_image_url(self):
-        """Get optimized main image URL from Cloudinary"""
-        if self.main_image_public_id:
-            try:
-                from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_optimized_url(self.main_image_public_id, 800, 600)
-            except:
-                return self.main_image.url if self.main_image else None
-        return self.main_image.url if self.main_image else None
+        """Get main image URL"""
+        return self.main_image if self.main_image else None
     
     def get_thumbnail_url(self):
-        """Get optimized thumbnail URL from Cloudinary"""
-        if self.thumbnail_public_id:
-            try:
-                from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_thumbnail_url(self.thumbnail_public_id, 400, 300)
-            except:
-                return self.thumbnail.url if self.thumbnail else None
-        elif self.main_image_public_id:
-            return self.get_main_image_url()
-        return self.thumbnail.url if self.thumbnail else None
-
-
+        """Get thumbnail URL"""
+        if self.thumbnail:
+            return self.thumbnail
+        elif self.main_image:
+            return self.main_image
+        return None
     
     def get_all_images(self):
-        """Get all property images with optimized URLs"""
+        """Get all property images including main and gallery"""
         images = []
         
         if self.main_image:
-            from apps.common.utils.cloudinary_utils import CloudinaryService
-            try:
-                public_id = self.main_image.name
-                images.append({
-                    'url': CloudinaryService.get_optimized_url(public_id, width=1200, height=800),
-                    'thumbnail': CloudinaryService.get_thumbnail_url(public_id, width=300, height=200),
-                    'is_main': True,
-                    'public_id': public_id
-                })
-            except:
-                images.append({
-                    'url': self.main_image.url,
-                    'thumbnail': self.main_image.url,
-                    'is_main': True
-                })
+            images.append({
+                'url': self.main_image,
+                'thumbnail': self.main_image,
+                'is_main': True,
+            })
         
-        # Get gallery images from property_images relation
-        for img in self.property_images.filter(is_active=True).order_by('order'):
-            try:
-                public_id = img.image.name
-                images.append({
-                    'url': CloudinaryService.get_optimized_url(public_id, width=1200, height=800),
-                    'thumbnail': CloudinaryService.get_thumbnail_url(public_id, width=300, height=200),
-                    'id': str(img.id),
-                    'is_main': img.is_main,
-                    'caption': img.caption,
-                    'order': img.order,
-                    'public_id': public_id
-                })
-            except:
-                images.append({
-                    'url': img.image.url,
-                    'thumbnail': img.image.url,
-                    'id': str(img.id),
-                    'is_main': img.is_main,
-                    'caption': img.caption,
-                    'order': img.order
-                })
+        # Get gallery images
+        gallery_images = self.property_images.filter(is_active=True).order_by('order')
+        for img in gallery_images:
+            images.append({
+                'url': img.image_url,
+                'thumbnail': img.image_url,
+                'id': str(img.id),
+                'is_main': img.is_main,
+                'caption': img.caption,
+                'order': img.order,
+            })
         
         return images
+
         
     def get_absolute_url(self):
         from django.urls import reverse
@@ -398,51 +369,48 @@ class Unit(models.Model):
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='property_images')
-    image = models.ImageField(upload_to='properties/images/')
+    image_url = models.URLField(max_length=500, blank=True, null=True)
     is_main = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     caption = models.CharField(max_length=200, blank=True)
     order = models.PositiveIntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    cloudinary_public_id = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta:
         db_table = 'property_images'
         ordering = ['order']
-        
     
     def __str__(self):
         return f"Image for {self.property.title}"
-
     
     def get_optimized_url(self):
-        """Get optimized image URL from Cloudinary"""
-        if self.cloudinary_public_id:
-            try:
-                from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_optimized_url(self.cloudinary_public_id, 800, 600)
-            except:
-                return self.image.url if self.image else None
-        return self.image.url if self.image else None    
-        
+        """Get optimized image URL"""
+        return self.image_url if self.image_url else None
+    
     def get_thumbnail_url(self):
-        """Get thumbnail URL from Cloudinary"""
-        if self.cloudinary_public_id:
-            try:
-                from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_thumbnail_url(self.cloudinary_public_id, 200, 150)
-            except:
-                return self.image.url if self.image else None
-        return self.image.url if self.image else None
+        """Get thumbnail URL"""
+        return self.image_url if self.image_url else None
     
     def delete(self, *args, **kwargs):
         """Delete image from Cloudinary when record is deleted"""
-        if self.cloudinary_public_id:
+        # Extract public_id from URL and delete
+        if self.image_url:
             try:
                 from apps.common.utils.cloudinary_utils import CloudinaryService
-                CloudinaryService.delete_image(self.cloudinary_public_id)
-            except:
-                pass
+                # Extract public_id from URL
+                # URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.jpg
+                parts = self.image_url.split('/')
+                # Get the part after 'upload/' and before the version
+                for i, part in enumerate(parts):
+                    if part == 'upload':
+                        # The public_id is after the version number (v1234567890)
+                        # or directly after 'upload/'
+                        public_id_parts = parts[i+2:] if len(parts) > i+2 and parts[i+1].startswith('v') else parts[i+1:]
+                        public_id = '/'.join(public_id_parts).split('.')[0]  # Remove extension
+                        CloudinaryService.delete_image(public_id)
+                        break
+            except Exception as e:
+                print(f"Error deleting from Cloudinary: {e}")
         super().delete(*args, **kwargs)
     
     

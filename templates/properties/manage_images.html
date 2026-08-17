@@ -270,7 +270,7 @@
                     <span class="text-xs text-gray-500">Displayed on property page</span>
                 </div>
                 {% if property.main_image %}
-                    <img src="{{ property.get_main_image_url }}" alt="Main image" class="w-full h-48 object-cover rounded-lg">
+                    <img src="{{ property.main_image }}" alt="Main image" class="w-full h-48 object-cover rounded-lg">
                 {% else %}
                     <div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
                         <span class="text-gray-500">No main image set</span>
@@ -283,7 +283,7 @@
                     <span class="text-xs text-gray-500">Displayed in listings</span>
                 </div>
                 {% if property.thumbnail %}
-                    <img src="{{ property.get_thumbnail_url }}" alt="Thumbnail" class="w-full h-48 object-cover rounded-lg">
+                    <img src="{{ property.thumbnail }}" alt="Thumbnail" class="w-full h-48 object-cover rounded-lg">
                 {% else %}
                     <div class="w-full h-48 bg-gray-200 rounded-lg flex items-center justify-center">
                         <span class="text-gray-500">No thumbnail set</span>
@@ -333,14 +333,13 @@
                     {% for image in images %}
                         <div class="image-item sortable-item {% if image.is_main %}selected{% endif %}" 
                              data-id="{{ image.id }}" data-order="{{ image.order }}">
-                            <!-- Use Cloudinary optimized URL for gallery images -->
-                            <img src="{{ image.get_optimized_url }}" alt="{{ image.caption|default:'Property image' }}" loading="lazy">
+                            <img src="{{ image.image_url }}" alt="{{ image.caption|default:'Property image' }}" loading="lazy">
                             
                             <div class="badges">
                                 {% if image.is_main %}
                                     <span class="badge badge-main"><i class="fas fa-star mr-1"></i> Main</span>
                                 {% endif %}
-                                {% if property.thumbnail and property.thumbnail.url == image.image.url %}
+                                {% if property.thumbnail == image.image_url %}
                                     <span class="badge badge-thumbnail"><i class="fas fa-image mr-1"></i> Thumb</span>
                                 {% endif %}
                                 <span class="badge badge-order">#{{ forloop.counter }}</span>
@@ -358,7 +357,7 @@
                                 <button onclick="setMain('{{ image.id }}')" class="btn-main {% if image.is_main %}active{% endif %}" title="Set as main image">
                                     <i class="fas fa-star"></i> Main
                                 </button>
-                                <button onclick="setThumbnail('{{ image.id }}')" class="btn-thumb {% if property.thumbnail and property.thumbnail.url == image.image.url %}active{% endif %}" title="Set as thumbnail">
+                                <button onclick="setThumbnail('{{ image.id }}')" class="btn-thumb {% if property.thumbnail == image.image_url %}active{% endif %}" title="Set as thumbnail">
                                     <i class="fas fa-image"></i> Thumb
                                 </button>
                                 <button onclick="editCaption('{{ image.id }}')" class="btn-edit" title="Edit caption">
