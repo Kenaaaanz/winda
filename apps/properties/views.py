@@ -816,6 +816,9 @@ def property_images_manage(request, pk):
 def upload_property_images(request, pk):
     """Upload multiple images for a property using Cloudinary"""
     from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+    from django.db import models
+    import time
+    import uuid
     
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     images = request.FILES.getlist('images')
@@ -824,47 +827,64 @@ def upload_property_images(request, pk):
         return JsonResponse({'status': 'error', 'message': 'No images provided'}, status=400)
     
     uploaded = []
-    
-    # Get the current max order
-    max_order = property_obj.property_images.filter(is_active=True).aggregate(
-        models.Max('order')
-    )['order__max'] or -1
+    errors = []
     
     for idx, img in enumerate(images):
         try:
-            # Compress image
-            compressed = CloudinaryImageHandler.compress_image(img)
+            # Generate a unique public_id
+            unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+            
+            # Upload to Cloudinary
             result = CloudinaryService.upload_property_image(
-                compressed,
+                img,
                 str(property_obj.id),
-                'gallery'
+                f'gallery_{unique_id}'
             )
             
             if result:
-                # Use max_order + idx + 1 to ensure unique order
+                # Get the full public_id from Cloudinary response
+                public_id = result.get('public_id', '')
+                
+                # Check if this public_id already exists
+                existing = property_obj.property_images.filter(
+                    cloudinary_public_id=public_id,
+                    is_active=True
+                ).first()
+                
+                if existing:
+                    # If it exists, generate a new unique one
+                    public_id = f"{public_id}_{uuid.uuid4().hex[:4]}"
+                
+                # Get the current max order
+                max_order = property_obj.property_images.filter(is_active=True).aggregate(
+                    models.Max('order')
+                )['order__max'] or 0
                 order_value = max_order + idx + 1
                 
                 property_image = PropertyImage.objects.create(
                     property=property_obj,
                     image=result['secure_url'],
-                    cloudinary_public_id=result['public_id'],
+                    cloudinary_public_id=public_id,
                     is_main=(idx == 0 and not property_obj.main_image),
-                    order=order_value
+                    order=order_value,
+                    is_active=True
                 )
                 
                 # If this is the first image and no main image exists, set as main
                 if idx == 0 and not property_obj.main_image:
                     property_obj.main_image = result['secure_url']
-                    property_obj.save(update_fields=['main_image'])
+                    property_obj.main_image_public_id = public_id
+                    property_obj.save(update_fields=['main_image', 'main_image_public_id'])
                 
                 uploaded.append({
                     'id': str(property_image.id),
                     'url': result['secure_url'],
-                    'thumbnail': CloudinaryService.get_thumbnail_url(result['public_id'], 200, 150),
-                    'public_id': result['public_id']
+                    'thumbnail': CloudinaryService.get_thumbnail_url(public_id, 200, 150),
+                    'public_id': public_id
                 })
         except Exception as e:
-            print(f"Error uploading image {idx}: {e}")
+            errors.append(f"Image {idx+1}: {str(e)}")
+            print(f"Error uploading image {idx}: {str(e)}")
             continue
     
     # If no main image was set, set the first uploaded as main
@@ -874,20 +894,22 @@ def upload_property_images(request, pk):
             first_image.is_main = True
             first_image.save()
             property_obj.main_image = first_image.image
-            property_obj.save(update_fields=['main_image'])
+            property_obj.main_image_public_id = first_image.cloudinary_public_id
+            property_obj.save(update_fields=['main_image', 'main_image_public_id'])
     
     if uploaded:
         return JsonResponse({
             'status': 'success',
             'message': f'{len(uploaded)} images uploaded successfully',
-            'images': uploaded
+            'images': uploaded,
+            'errors': errors
         })
     else:
         return JsonResponse({
             'status': 'error',
-            'message': 'No images were uploaded successfully'
+            'message': 'No images were uploaded successfully',
+            'errors': errors
         }, status=400)
-
 
 @login_required
 @owner_required

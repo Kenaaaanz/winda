@@ -84,6 +84,8 @@ class Property(models.Model):
     # Media
     main_image = models.ImageField(upload_to='properties/', null=True, blank=True)
     thumbnail = models.ImageField(upload_to='properties/thumbnails/', null=True, blank=True)
+    main_image_public_id = models.CharField(max_length=500, blank=True, null=True)
+    thumbnail_public_id = models.CharField(max_length=500, blank=True, null=True)
     images = models.JSONField(default=list, blank=True)
     video_url = models.URLField(blank=True, null=True)
     virtual_tour_url = models.URLField(blank=True, null=True)
@@ -138,26 +140,27 @@ class Property(models.Model):
         return self.rental_price + self.service_charge
     
     def get_main_image_url(self):
-        """Get optimized main image URL"""
-        if self.main_image:
+        """Get optimized main image URL from Cloudinary"""
+        if self.main_image_public_id:
             try:
                 from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_optimized_url(self.main_image.name, 800, 600)
+                return CloudinaryService.get_optimized_url(self.main_image_public_id, 800, 600)
             except:
                 return self.main_image.url if self.main_image else None
-        return None
-
+        return self.main_image.url if self.main_image else None
+    
     def get_thumbnail_url(self):
-        """Get optimized thumbnail URL"""
-        if self.thumbnail:
+        """Get optimized thumbnail URL from Cloudinary"""
+        if self.thumbnail_public_id:
             try:
                 from apps.common.utils.cloudinary_utils import CloudinaryService
-                return CloudinaryService.get_thumbnail_url(self.thumbnail.name, 400, 300)
+                return CloudinaryService.get_thumbnail_url(self.thumbnail_public_id, 400, 300)
             except:
                 return self.thumbnail.url if self.thumbnail else None
-        elif self.main_image:
+        elif self.main_image_public_id:
             return self.get_main_image_url()
-        return None
+        return self.thumbnail.url if self.thumbnail else None
+
 
     
     def get_all_images(self):
@@ -401,7 +404,7 @@ class PropertyImage(models.Model):
     caption = models.CharField(max_length=200, blank=True)
     order = models.PositiveIntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    cloudinary_public_id = models.CharField(max_length=255, blank=True, null=True)  # Store public_id for deletion
+    cloudinary_public_id = models.CharField(max_length=500, blank=True, null=True)
 
     class Meta:
         db_table = 'property_images'
@@ -422,20 +425,25 @@ class PropertyImage(models.Model):
                 return self.image.url if self.image else None
         return self.image.url if self.image else None    
         
-    def thumbnail_url(self):
+    def get_thumbnail_url(self):
         """Get thumbnail URL from Cloudinary"""
         if self.cloudinary_public_id:
-            from apps.common.utils.cloudinary_utils import CloudinaryService
-            return CloudinaryService.get_thumbnail_url(self.cloudinary_public_id, width=200, height=150)
+            try:
+                from apps.common.utils.cloudinary_utils import CloudinaryService
+                return CloudinaryService.get_thumbnail_url(self.cloudinary_public_id, 200, 150)
+            except:
+                return self.image.url if self.image else None
         return self.image.url if self.image else None
     
     def delete(self, *args, **kwargs):
         """Delete image from Cloudinary when record is deleted"""
         if self.cloudinary_public_id:
-            from apps.common.utils.cloudinary_utils import CloudinaryService
-            CloudinaryService.delete_image(self.cloudinary_public_id)
+            try:
+                from apps.common.utils.cloudinary_utils import CloudinaryService
+                CloudinaryService.delete_image(self.cloudinary_public_id)
+            except:
+                pass
         super().delete(*args, **kwargs)
-
     
     
 class PropertyDocument(models.Model):
