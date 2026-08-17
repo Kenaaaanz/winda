@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import json
 import os
-
+import uuid
 from .models import Property, PropertyImage, PropertyDocument, Favorite, Unit
 from .forms import PropertyForm, PropertySearchForm, PropertyDocumentForm, UnitForm, UnitFormSet
 from .services import PropertyService
