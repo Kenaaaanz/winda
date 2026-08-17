@@ -193,7 +193,6 @@ def property_search_autocomplete(request):
 
 @login_required
 @owner_required
-@require_http_methods(["POST"])
 def property_create(request):
     """Create new property listing with Cloudinary image upload"""
     from .forms import PropertyWithUnitsForm
