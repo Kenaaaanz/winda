@@ -194,77 +194,103 @@ def property_search_autocomplete(request):
 @login_required
 @owner_required
 def property_create(request):
-    """Create new property listing with Cloudinary image upload"""
+    """Create new property listing with optional units"""
     from .forms import PropertyWithUnitsForm
+    from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+    import time
     
     if request.method == 'POST':
         form = PropertyWithUnitsForm(request.POST, request.FILES)
         
         if form.is_valid():
-            property_obj = form.save(commit=False)
-            property_obj.owner = request.user.owner_profile
-            
-            # Handle amenities and features
-            amenities = request.POST.getlist('amenities')
-            features = request.POST.getlist('features')
-            property_obj.amenities = amenities if amenities else []
-            property_obj.features = features if features else []
-            
-            # Handle main image - Upload to Cloudinary
-            main_image = request.FILES.get('main_image')
-            if main_image:
-                # Compress before upload
-                compressed = CloudinaryImageHandler.compress_image(main_image)
-                result = CloudinaryService.upload_property_image(
-                    compressed, 
-                    str(property_obj.id) if property_obj.id else 'temp',
-                    'main'
-                )
-                if result:
-                    property_obj.main_image = result['secure_url']
-                    property_obj.save()
-            
-            # Handle multi-unit
-            is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
-            property_obj.is_multi_unit = is_multi_unit
-            
-            if not is_multi_unit:
-                property_obj.total_units = 1
-                property_obj.available_units = 1
-            else:
-                property_obj.total_units = form.cleaned_data.get('total_units', 1)
-                property_obj.available_units = form.cleaned_data.get('total_units', 1)
-            
-            property_obj.save()
-            
-            # Handle gallery images - Upload to Cloudinary
-            images = request.FILES.getlist('images')
-            for idx, image in enumerate(images):
-                compressed = CloudinaryImageHandler.compress_image(image)
-                result = CloudinaryService.upload_property_image(
-                    compressed,
-                    str(property_obj.id),
-                    f'gallery'
-                )
-                if result:
-                    PropertyImage.objects.create(
-                        property=property_obj,
-                        image=result['secure_url'],
-                        cloudinary_public_id=result['public_id'],
-                        is_main=(idx == 0 and not main_image),
-                        order=idx
-                    )
-            
-            # Handle units for multi-unit properties
-            if is_multi_unit:
-                messages.success(request, 'Property created! Now add your units.')
-                return redirect('properties:manage_units', pk=property_obj.pk)
-            else:
-                messages.success(request, 'Property created successfully!')
-                return redirect('properties:detail', pk=property_obj.pk)
-    else:
-        form = PropertyWithUnitsForm()
+            try:
+                property_obj = form.save(commit=False)
+                property_obj.owner = request.user.owner_profile
+                
+                # Handle amenities and features
+                amenities = request.POST.getlist('amenities')
+                features = request.POST.getlist('features')
+                property_obj.amenities = amenities if amenities else []
+                property_obj.features = features if features else []
+                
+                # Handle main image
+                main_image = request.FILES.get('main_image')
+                if main_image:
+                    try:
+                        compressed = CloudinaryImageHandler.compress_image(main_image)
+                        unique_id = f"main_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+                        result = CloudinaryService.upload_property_image(
+                            compressed, 
+                            str(property_obj.id) if property_obj.id else f'temp_{int(time.time())}',
+                            f'main_{unique_id}'
+                        )
+                        if result:
+                            property_obj.main_image = result['secure_url']
+                            public_id = result.get('public_id', '')
+                            if len(public_id) > 500:
+                                public_id = public_id[:500]
+                            property_obj.main_image_public_id = public_id
+                    except Exception as e:
+                        print(f"Main image upload error: {e}")
+                
+                # Handle multi-unit
+                is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
+                property_obj.is_multi_unit = is_multi_unit
+                
+                if not is_multi_unit:
+                    property_obj.total_units = 1
+                    property_obj.available_units = 1
+                else:
+                    property_obj.total_units = form.cleaned_data.get('total_units', 1)
+                    property_obj.available_units = form.cleaned_data.get('total_units', 1)
+                
+                property_obj.save()
+                
+                # Handle gallery images
+                images = request.FILES.getlist('images')
+                for idx, image in enumerate(images):
+                    try:
+                        compressed = CloudinaryImageHandler.compress_image(image)
+                        unique_id = f"gal_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+                        result = CloudinaryService.upload_property_image(
+                            compressed,
+                            str(property_obj.id),
+                            f'gallery_{unique_id}'
+                        )
+                        if result:
+                            public_id = result.get('public_id', '')
+                            if len(public_id) > 500:
+                                public_id = public_id[:500]
+                            PropertyImage.objects.create(
+                                property=property_obj,
+                                image=result['secure_url'],
+                                cloudinary_public_id=public_id,
+                                is_main=(idx == 0 and not property_obj.main_image),
+                                order=idx
+                            )
+                    except Exception as e:
+                        print(f"Gallery image {idx} upload error: {e}")
+                        continue
+                
+                # Handle units for multi-unit properties
+                if is_multi_unit:
+                    messages.success(request, 'Property created! Now add your units.')
+                    return redirect('properties:manage_units', pk=property_obj.pk)
+                else:
+                    messages.success(request, 'Property created successfully!')
+                    return redirect('properties:detail', pk=property_obj.pk)
+                    
+            except Exception as e:
+                messages.error(request, f'Error creating property: {str(e)}')
+                return redirect('properties:create')
+        else:
+            # Show form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     
+    # GET request or invalid POST - display the form
+    form = PropertyWithUnitsForm()
     amenities_list = PropertyService.get_amenities_list()
     features_list = PropertyService.get_features_list()
     
@@ -273,7 +299,6 @@ def property_create(request):
         'amenities': amenities_list,
         'features': features_list,
     })
-
 
 @login_required
 @owner_required
@@ -830,8 +855,8 @@ def upload_property_images(request, pk):
     
     for idx, img in enumerate(images):
         try:
-            # Generate a unique public_id
-            unique_id = f"{int(time.time())}_{uuid.uuid4().hex[:8]}"
+            # Generate a unique public_id - keep it shorter
+            unique_id = f"prop_{str(property_obj.id)[:8]}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
             
             # Upload to Cloudinary
             result = CloudinaryService.upload_property_image(
@@ -841,8 +866,12 @@ def upload_property_images(request, pk):
             )
             
             if result:
-                # Get the full public_id from Cloudinary response
+                # Get the public_id from Cloudinary response (might be long)
                 public_id = result.get('public_id', '')
+                
+                # Truncate if it's too long (just in case)
+                if len(public_id) > 500:
+                    public_id = public_id[:500]
                 
                 # Check if this public_id already exists
                 existing = property_obj.property_images.filter(
@@ -852,7 +881,9 @@ def upload_property_images(request, pk):
                 
                 if existing:
                     # If it exists, generate a new unique one
-                    public_id = f"{public_id}_{uuid.uuid4().hex[:4]}"
+                    public_id = f"{public_id[:200]}_{uuid.uuid4().hex[:4]}"
+                    if len(public_id) > 500:
+                        public_id = public_id[:500]
                 
                 # Get the current max order
                 max_order = property_obj.property_images.filter(is_active=True).aggregate(
@@ -909,7 +940,7 @@ def upload_property_images(request, pk):
             'message': 'No images were uploaded successfully',
             'errors': errors
         }, status=400)
-
+    
 @login_required
 @owner_required
 @require_http_methods(["POST"])
