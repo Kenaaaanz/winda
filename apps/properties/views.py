@@ -1,3 +1,7 @@
+import os
+import json
+import uuid
+import time
 from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -7,9 +11,6 @@ from django.db.models import Q, Sum, Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-import json
-import os
-import uuid
 from .models import Property, PropertyImage, PropertyDocument, Favorite, Unit
 from .forms import PropertyForm, PropertySearchForm, PropertyDocumentForm, UnitForm, UnitFormSet
 from .services import PropertyService
@@ -17,6 +18,8 @@ from ..accounts.decorators import owner_required
 from ..tenants.models import TenantApplication
 from ..payments.models import Payment
 from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+from apps.common.utils.image_utils import upload_property_image_to_cloudinary
+
 
 
 
@@ -196,7 +199,8 @@ def property_search_autocomplete(request):
 def property_create(request):
     """Create new property listing with optional units"""
     from .forms import PropertyWithUnitsForm
-    from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+    from apps.common.utils.image_utils import upload_property_image_to_cloudinary
+    import uuid
     import time
     
     if request.method == 'POST':
@@ -213,25 +217,17 @@ def property_create(request):
                 property_obj.amenities = amenities if amenities else []
                 property_obj.features = features if features else []
                 
-                # Handle main image
+                # Handle main image - use the helper function
                 main_image = request.FILES.get('main_image')
                 if main_image:
-                    try:
-                        compressed = CloudinaryImageHandler.compress_image(main_image)
-                        unique_id = f"main_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-                        result = CloudinaryService.upload_property_image(
-                            compressed, 
-                            str(property_obj.id) if property_obj.id else f'temp_{int(time.time())}',
-                            f'main_{unique_id}'
-                        )
-                        if result:
-                            property_obj.main_image = result['secure_url']
-                            public_id = result.get('public_id', '')
-                            if len(public_id) > 500:
-                                public_id = public_id[:500]
-                            property_obj.main_image_public_id = public_id
-                    except Exception as e:
-                        print(f"Main image upload error: {e}")
+                    result = upload_property_image_to_cloudinary(
+                        main_image, 
+                        property_obj.id if property_obj.id else f'temp_{int(time.time())}',
+                        'main'
+                    )
+                    if result:
+                        property_obj.main_image = result['url']
+                        property_obj.main_image_public_id = result['public_id']
                 
                 # Handle multi-unit
                 is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
@@ -244,33 +240,25 @@ def property_create(request):
                     property_obj.total_units = form.cleaned_data.get('total_units', 1)
                     property_obj.available_units = form.cleaned_data.get('total_units', 1)
                 
+                # Save property first to get an ID
                 property_obj.save()
                 
-                # Handle gallery images
+                # Handle gallery images - use the helper function
                 images = request.FILES.getlist('images')
                 for idx, image in enumerate(images):
-                    try:
-                        compressed = CloudinaryImageHandler.compress_image(image)
-                        unique_id = f"gal_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-                        result = CloudinaryService.upload_property_image(
-                            compressed,
-                            str(property_obj.id),
-                            f'gallery_{unique_id}'
+                    result = upload_property_image_to_cloudinary(
+                        image,
+                        property_obj.id,
+                        'gallery'
+                    )
+                    if result:
+                        PropertyImage.objects.create(
+                            property=property_obj,
+                            image=result['url'],
+                            cloudinary_public_id=result['public_id'],
+                            is_main=(idx == 0 and not property_obj.main_image),
+                            order=idx
                         )
-                        if result:
-                            public_id = result.get('public_id', '')
-                            if len(public_id) > 500:
-                                public_id = public_id[:500]
-                            PropertyImage.objects.create(
-                                property=property_obj,
-                                image=result['secure_url'],
-                                cloudinary_public_id=public_id,
-                                is_main=(idx == 0 and not property_obj.main_image),
-                                order=idx
-                            )
-                    except Exception as e:
-                        print(f"Gallery image {idx} upload error: {e}")
-                        continue
                 
                 # Handle units for multi-unit properties
                 if is_multi_unit:
@@ -461,9 +449,6 @@ def bulk_add_units(request, pk):
 @require_http_methods(["POST"])
 def toggle_unit_availability(request, unit_id):
     """Toggle unit availability"""
-    from django.http import JsonResponse
-    from django.shortcuts import get_object_or_404
-    from .models import Unit
     
     try:
         unit = get_object_or_404(Unit, id=unit_id)
@@ -839,10 +824,8 @@ def property_images_manage(request, pk):
 @owner_required
 def upload_property_images(request, pk):
     """Upload multiple images for a property using Cloudinary"""
-    from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+    from apps.common.utils.image_utils import upload_property_image_to_cloudinary
     from django.db import models
-    import time
-    import uuid
     
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     images = request.FILES.getlist('images')
@@ -853,48 +836,27 @@ def upload_property_images(request, pk):
     uploaded = []
     errors = []
     
+    # Get the current max order
+    max_order = property_obj.property_images.filter(is_active=True).aggregate(
+        models.Max('order')
+    )['order__max'] or 0
+    
     for idx, img in enumerate(images):
         try:
-            # Generate a unique public_id - keep it shorter
-            unique_id = f"prop_{str(property_obj.id)[:8]}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
-            
-            # Upload to Cloudinary
-            result = CloudinaryService.upload_property_image(
+            # Use the helper function
+            result = upload_property_image_to_cloudinary(
                 img,
-                str(property_obj.id),
-                f'gallery_{unique_id}'
+                property_obj.id,
+                'gallery'
             )
             
             if result:
-                # Get the public_id from Cloudinary response (might be long)
-                public_id = result.get('public_id', '')
-                
-                # Truncate if it's too long (just in case)
-                if len(public_id) > 500:
-                    public_id = public_id[:500]
-                
-                # Check if this public_id already exists
-                existing = property_obj.property_images.filter(
-                    cloudinary_public_id=public_id,
-                    is_active=True
-                ).first()
-                
-                if existing:
-                    # If it exists, generate a new unique one
-                    public_id = f"{public_id[:200]}_{uuid.uuid4().hex[:4]}"
-                    if len(public_id) > 500:
-                        public_id = public_id[:500]
-                
-                # Get the current max order
-                max_order = property_obj.property_images.filter(is_active=True).aggregate(
-                    models.Max('order')
-                )['order__max'] or 0
                 order_value = max_order + idx + 1
                 
                 property_image = PropertyImage.objects.create(
                     property=property_obj,
-                    image=result['secure_url'],
-                    cloudinary_public_id=public_id,
+                    image=result['url'],
+                    cloudinary_public_id=result['public_id'],
                     is_main=(idx == 0 and not property_obj.main_image),
                     order=order_value,
                     is_active=True
@@ -902,15 +864,16 @@ def upload_property_images(request, pk):
                 
                 # If this is the first image and no main image exists, set as main
                 if idx == 0 and not property_obj.main_image:
-                    property_obj.main_image = result['secure_url']
-                    property_obj.main_image_public_id = public_id
+                    property_obj.main_image = result['url']
+                    property_obj.main_image_public_id = result['public_id']
                     property_obj.save(update_fields=['main_image', 'main_image_public_id'])
                 
+                from apps.common.utils.cloudinary_utils import CloudinaryService
                 uploaded.append({
                     'id': str(property_image.id),
-                    'url': result['secure_url'],
-                    'thumbnail': CloudinaryService.get_thumbnail_url(public_id, 200, 150),
-                    'public_id': public_id
+                    'url': result['url'],
+                    'thumbnail': CloudinaryService.get_thumbnail_url(result['public_id'], 200, 150),
+                    'public_id': result['public_id']
                 })
         except Exception as e:
             errors.append(f"Image {idx+1}: {str(e)}")
@@ -1026,8 +989,6 @@ def update_image_caption(request, pk, image_id):
 @require_http_methods(["POST"])
 def reorder_images(request, pk):
     """Reorder property images"""
-    import json
-    from django.db import models
     
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     order_data = json.loads(request.POST.get('order_data', '[]'))
