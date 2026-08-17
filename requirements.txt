@@ -38,7 +38,8 @@ dj-database-url
 drf-yasg
 django-ckeditor-5
 python-decouple
-
+cloudinary
+django-cloudinary-storage
 # Windows-specific packages
 # pywin32==306  # For Windows services
 

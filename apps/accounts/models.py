@@ -55,6 +55,18 @@ class User(AbstractUser):
     
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"
+
+    @property
+    def profile_picture_url(self):
+        """Get optimized profile picture URL"""
+        if self.profile_picture:
+            from apps.common.utils.cloudinary_utils import CloudinaryService
+            try:
+                public_id = self.profile_picture.name
+                return CloudinaryService.get_thumbnail_url(public_id, width=200, height=200, crop='fill')
+            except:
+                return self.profile_picture.url if self.profile_picture else None
+        return None
     
     @property
     def is_verified(self):

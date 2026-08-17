@@ -16,6 +16,8 @@ from .services import PropertyService
 from ..accounts.decorators import owner_required
 from ..tenants.models import TenantApplication
 from ..payments.models import Payment
+from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+
 
 
 
@@ -191,8 +193,9 @@ def property_search_autocomplete(request):
 
 @login_required
 @owner_required
+@require_http_methods(["POST"])
 def property_create(request):
-    """Create new property listing with optional units"""
+    """Create new property listing with Cloudinary image upload"""
     from .forms import PropertyWithUnitsForm
     
     if request.method == 'POST':
@@ -202,13 +205,25 @@ def property_create(request):
             property_obj = form.save(commit=False)
             property_obj.owner = request.user.owner_profile
             
-            # Handle amenities and features - they come as lists from checkboxes
+            # Handle amenities and features
             amenities = request.POST.getlist('amenities')
             features = request.POST.getlist('features')
-            
-            # Convert to JSON-compatible format
             property_obj.amenities = amenities if amenities else []
             property_obj.features = features if features else []
+            
+            # Handle main image - Upload to Cloudinary
+            main_image = request.FILES.get('main_image')
+            if main_image:
+                # Compress before upload
+                compressed = CloudinaryImageHandler.compress_image(main_image)
+                result = CloudinaryService.upload_property_image(
+                    compressed, 
+                    str(property_obj.id) if property_obj.id else 'temp',
+                    'main'
+                )
+                if result:
+                    property_obj.main_image = result['secure_url']
+                    property_obj.save()
             
             # Handle multi-unit
             is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
@@ -223,15 +238,23 @@ def property_create(request):
             
             property_obj.save()
             
-            # Handle images
+            # Handle gallery images - Upload to Cloudinary
             images = request.FILES.getlist('images')
             for idx, image in enumerate(images):
-                PropertyImage.objects.create(
-                    property=property_obj,
-                    image=image,
-                    is_main=(idx == 0),
-                    order=idx
+                compressed = CloudinaryImageHandler.compress_image(image)
+                result = CloudinaryService.upload_property_image(
+                    compressed,
+                    str(property_obj.id),
+                    f'gallery'
                 )
+                if result:
+                    PropertyImage.objects.create(
+                        property=property_obj,
+                        image=result['secure_url'],
+                        cloudinary_public_id=result['public_id'],
+                        is_main=(idx == 0 and not main_image),
+                        order=idx
+                    )
             
             # Handle units for multi-unit properties
             if is_multi_unit:
@@ -240,11 +263,6 @@ def property_create(request):
             else:
                 messages.success(request, 'Property created successfully!')
                 return redirect('properties:detail', pk=property_obj.pk)
-        else:
-            # Print form errors for debugging
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
     else:
         form = PropertyWithUnitsForm()
     
@@ -256,6 +274,7 @@ def property_create(request):
         'amenities': amenities_list,
         'features': features_list,
     })
+
 
 @login_required
 @owner_required
@@ -794,9 +813,10 @@ def property_images_manage(request, pk):
 
 @login_required
 @owner_required
-@require_http_methods(["POST"])
 def upload_property_images(request, pk):
-    """Upload multiple images for a property"""
+    """Upload multiple images for a property using Cloudinary"""
+    from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+    
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     images = request.FILES.getlist('images')
     
@@ -804,130 +824,182 @@ def upload_property_images(request, pk):
         return JsonResponse({'status': 'error', 'message': 'No images provided'}, status=400)
     
     uploaded = []
-    current_count = property_obj.property_images.filter(is_active=True).count()
+    
+    # Get the current max order
+    max_order = property_obj.property_images.filter(is_active=True).aggregate(
+        models.Max('order')
+    )['order__max'] or -1
     
     for idx, img in enumerate(images):
-        is_main = (idx == 0 and not property_obj.main_image)
-        property_image = PropertyImage.objects.create(
-            property=property_obj,
-            image=img,
-            is_main=is_main,
-            order=current_count + idx
-        )
-        
-        # If this is the first image and no main exists, set as main
-        if is_main:
-            property_obj.main_image = img
-            property_obj.save(update_fields=['main_image'])
-        
-        uploaded.append({
-            'id': str(property_image.id),
-            'url': property_image.image.url
-        })
+        try:
+            # Compress image
+            compressed = CloudinaryImageHandler.compress_image(img)
+            result = CloudinaryService.upload_property_image(
+                compressed,
+                str(property_obj.id),
+                'gallery'
+            )
+            
+            if result:
+                # Use max_order + idx + 1 to ensure unique order
+                order_value = max_order + idx + 1
+                
+                property_image = PropertyImage.objects.create(
+                    property=property_obj,
+                    image=result['secure_url'],
+                    cloudinary_public_id=result['public_id'],
+                    is_main=(idx == 0 and not property_obj.main_image),
+                    order=order_value
+                )
+                
+                # If this is the first image and no main image exists, set as main
+                if idx == 0 and not property_obj.main_image:
+                    property_obj.main_image = result['secure_url']
+                    property_obj.save(update_fields=['main_image'])
+                
+                uploaded.append({
+                    'id': str(property_image.id),
+                    'url': result['secure_url'],
+                    'thumbnail': CloudinaryService.get_thumbnail_url(result['public_id'], 200, 150),
+                    'public_id': result['public_id']
+                })
+        except Exception as e:
+            print(f"Error uploading image {idx}: {e}")
+            continue
     
-    # If no main image was set but we have images, set the first as main
+    # If no main image was set, set the first uploaded as main
     if not property_obj.main_image and uploaded:
-        first_image = property_obj.property_images.get(id=uploaded[0]['id'])
-        first_image.is_main = True
-        first_image.save()
-        property_obj.main_image = first_image.image
-        property_obj.save(update_fields=['main_image'])
+        first_image = property_obj.property_images.filter(is_active=True).order_by('order').first()
+        if first_image:
+            first_image.is_main = True
+            first_image.save()
+            property_obj.main_image = first_image.image
+            property_obj.save(update_fields=['main_image'])
     
-    return JsonResponse({
-        'status': 'success',
-        'message': f'{len(uploaded)} images uploaded successfully',
-        'images': uploaded
-    })
+    if uploaded:
+        return JsonResponse({
+            'status': 'success',
+            'message': f'{len(uploaded)} images uploaded successfully',
+            'images': uploaded
+        })
+    else:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No images were uploaded successfully'
+        }, status=400)
 
 
 @login_required
 @owner_required
 @require_http_methods(["POST"])
-def set_main_image(request, pk):
+def set_main_image(request, pk, image_id):
     """Set a property image as the main image"""
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
-    image_id = request.POST.get('image_id')
-    
-    if not image_id:
-        return JsonResponse({'status': 'error', 'message': 'No image ID provided'}, status=400)
     
     try:
+        # Try to get by UUID first, then by integer ID
+        try:
+            image = property_obj.property_images.get(id=image_id, is_active=True)
+        except (ValueError, TypeError):
+            # If image_id is not a valid UUID, try as integer
+            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        
         # Reset all images to not main
         property_obj.property_images.filter(is_active=True).update(is_main=False)
         
-        # Get the image to set as main
-        image = property_obj.property_images.get(id=image_id, is_active=True)
+        # Set selected image as main
         image.is_main = True
         image.save()
         
-        # Update property's main_image field
+        # Also update property's main_image field
         property_obj.main_image = image.image
         property_obj.save(update_fields=['main_image'])
         
         return JsonResponse({'status': 'success', 'message': 'Main image updated successfully'})
-    except PropertyImage.DoesNotExist:
+    except (PropertyImage.DoesNotExist, ValueError, TypeError):
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 @login_required
 @owner_required
 @require_http_methods(["POST"])
-def set_thumbnail(request, pk):
+def set_thumbnail(request, pk, image_id):
     """Set a property image as the thumbnail"""
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
-    image_id = request.POST.get('image_id')
-    
-    if not image_id:
-        return JsonResponse({'status': 'error', 'message': 'No image ID provided'}, status=400)
     
     try:
-        if image_id == 'main':
-            # Use main image as thumbnail
-            if property_obj.main_image:
-                property_obj.thumbnail = property_obj.main_image
-                property_obj.save(update_fields=['thumbnail'])
-                return JsonResponse({'status': 'success', 'message': 'Thumbnail updated to main image'})
-            else:
-                return JsonResponse({'status': 'error', 'message': 'No main image set'}, status=400)
-        else:
-            # Use gallery image as thumbnail
+        # Try to get by UUID first, then by integer ID
+        try:
             image = property_obj.property_images.get(id=image_id, is_active=True)
-            property_obj.thumbnail = image.image
-            property_obj.save(update_fields=['thumbnail'])
-            return JsonResponse({'status': 'success', 'message': 'Thumbnail updated successfully'})
-    except PropertyImage.DoesNotExist:
+        except (ValueError, TypeError):
+            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        
+        property_obj.thumbnail = image.image
+        property_obj.save(update_fields=['thumbnail'])
+        
+        return JsonResponse({'status': 'success', 'message': 'Thumbnail updated successfully'})
+    except (PropertyImage.DoesNotExist, ValueError, TypeError):
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
+@login_required
+@owner_required
+@require_http_methods(["POST"])
+def update_image_caption(request, pk, image_id):
+    """Update image caption"""
+    property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
+    caption = request.POST.get('caption', '')
+    
+    try:
+        # Try to get by UUID first, then by integer ID
+        try:
+            image = property_obj.property_images.get(id=image_id, is_active=True)
+        except (ValueError, TypeError):
+            image = property_obj.property_images.get(id=int(image_id), is_active=True)
+        
+        image.caption = caption
+        image.save(update_fields=['caption'])
+        return JsonResponse({'status': 'success', 'message': 'Caption updated successfully'})
+    except (PropertyImage.DoesNotExist, ValueError, TypeError):
+        return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        
 @login_required
 @owner_required
 @require_http_methods(["POST"])
 def reorder_images(request, pk):
     """Reorder property images"""
+    import json
+    from django.db import models
+    
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
+    order_data = json.loads(request.POST.get('order_data', '[]'))
+    
+    if not order_data:
+        return JsonResponse({'status': 'error', 'message': 'No order data provided'}, status=400)
     
     try:
-        order_data = json.loads(request.body).get('order_data', [])
-        if not order_data:
-            return JsonResponse({'status': 'error', 'message': 'No order data provided'}, status=400)
-        
+        # Update orders in a transaction
         for item in order_data:
-            try:
-                image = property_obj.property_images.get(id=item['id'], is_active=True)
-                image.order = item['order']
-                image.save(update_fields=['order'])
-            except PropertyImage.DoesNotExist:
-                continue
+            image_id = item.get('id')
+            new_order = item.get('order')
+            
+            if image_id and new_order is not None:
+                # Use update() to bypass any constraints temporarily
+                PropertyImage.objects.filter(
+                    id=image_id,
+                    property=property_obj,
+                    is_active=True
+                ).update(order=new_order)
         
         return JsonResponse({'status': 'success', 'message': 'Images reordered successfully'})
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 @login_required
@@ -939,16 +1011,21 @@ def delete_property_image(request, pk):
     image_id = request.POST.get('image_id')
     
     if not image_id:
-        return JsonResponse({'status': 'error', 'message': 'No image ID provided'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Image ID required'}, status=400)
     
     try:
         image = property_obj.property_images.get(id=image_id, is_active=True)
         
-        # Store image URL for reference
-        image_url = image.image.url if image.image else None
+        # Delete from Cloudinary
+        if image.cloudinary_public_id:
+            try:
+                from apps.common.utils.cloudinary_utils import CloudinaryService
+                CloudinaryService.delete_image(image.cloudinary_public_id)
+            except:
+                pass
         
         # Check if this is the main image
-        if image.is_main or (property_obj.main_image and property_obj.main_image.url == image_url):
+        if image.is_main or (property_obj.main_image and property_obj.main_image == image.image):
             # Set a new main image if available
             other_images = property_obj.property_images.filter(is_active=True).exclude(id=image_id)
             if other_images.exists():
@@ -962,7 +1039,7 @@ def delete_property_image(request, pk):
                 property_obj.save(update_fields=['main_image'])
         
         # Check if this is the thumbnail
-        if property_obj.thumbnail and property_obj.thumbnail.url == image_url:
+        if property_obj.thumbnail and property_obj.thumbnail == image.image:
             # Set new thumbnail if available
             other_images = property_obj.property_images.filter(is_active=True).exclude(id=image_id)
             if other_images.exists():
@@ -981,31 +1058,8 @@ def delete_property_image(request, pk):
     except PropertyImage.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-
-@login_required
-@owner_required
-@require_http_methods(["POST"])
-def update_image_caption(request, pk):
-    """Update image caption"""
-    property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
-    image_id = request.POST.get('image_id')
-    caption = request.POST.get('caption', '')
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     
-    if not image_id:
-        return JsonResponse({'status': 'error', 'message': 'No image ID provided'}, status=400)
-    
-    try:
-        image = property_obj.property_images.get(id=image_id, is_active=True)
-        image.caption = caption
-        image.save(update_fields=['caption'])
-        return JsonResponse({'status': 'success', 'message': 'Caption updated successfully'})
-    except PropertyImage.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Image not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
 
 # ==================== FAVORITE VIEWS ====================
 

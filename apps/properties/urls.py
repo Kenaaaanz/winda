@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import views
 
 app_name = 'properties'
@@ -22,9 +22,12 @@ urlpatterns = [
     # ==================== IMAGE MANAGEMENT (POST endpoints) ====================
     path('<uuid:pk>/images/manage/', views.property_images_manage, name='images_manage'),
     path('<uuid:pk>/images/upload/', views.upload_property_images, name='upload_images'),
-    path('<uuid:pk>/images/set-main/', views.set_main_image, name='set_main_image'),
-    path('<uuid:pk>/images/set-thumbnail/', views.set_thumbnail, name='set_thumbnail'),
-    path('<uuid:pk>/images/caption/', views.update_image_caption, name='update_caption'),
+
+    # Use re_path to handle both UUID and integer IDs for images
+    re_path(r'^(?P<pk>[0-9a-f-]+)/images/(?P<image_id>[0-9a-f-]+)/set-main/$', views.set_main_image, name='set_main_image'),
+    re_path(r'^(?P<pk>[0-9a-f-]+)/images/(?P<image_id>[0-9a-f-]+)/set-thumbnail/$', views.set_thumbnail, name='set_thumbnail'),
+    re_path(r'^(?P<pk>[0-9a-f-]+)/images/(?P<image_id>[0-9a-f-]+)/caption/$', views.update_image_caption, name='update_caption'),
+
     path('<uuid:pk>/images/delete/', views.delete_property_image, name='delete_image'),
     path('<uuid:pk>/images/reorder/', views.reorder_images, name='reorder_images'),
     

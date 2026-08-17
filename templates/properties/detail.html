@@ -3,420 +3,377 @@
 
 {% block title %}{{ property.title }} - Winda{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Image viewer modal */
+    #imageViewer {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+    #imageViewer.active {
+        display: flex;
+    }
+    #imageViewer img {
+        max-width: 100%;
+        max-height: 90vh;
+        object-fit: contain;
+        border-radius: 0.5rem;
+    }
+    #imageViewer .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: white;
+        font-size: 2rem;
+        cursor: pointer;
+        background: rgba(0,0,0,0.5);
+        width: 3rem;
+        height: 3rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    #imageViewer .close-btn:hover {
+        background: rgba(255,255,255,0.2);
+        transform: rotate(90deg);
+    }
+    .image-thumbnail {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    .image-thumbnail:hover {
+        transform: scale(1.05);
+        border-color: #3b82f6;
+    }
+    .image-thumbnail.active {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Breadcrumb -->
-    <nav class="flex mb-6 text-sm">
-        <a href="{% url 'home' %}" class="text-gray-500 hover:text-blue-600">Home</a>
-        <span class="mx-2 text-gray-400">/</span>
-        <a href="{% url 'properties:list' %}" class="text-gray-500 hover:text-blue-600">Properties</a>
-        <span class="mx-2 text-gray-400">/</span>
-        <span class="text-gray-900">{{ property.title|truncatechars:30 }}</span>
-    </nav>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Main Content -->
-        <div class="lg:col-span-2">
-            <!-- Property Images -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="col-span-2">
-                        {% if property.main_image %}
-                            <img src="{{ property.main_image.url }}" alt="{{ property.title }}" class="w-full h-96 object-cover">
-                        {% endif %}
-                    </div>
-                    {% for image in property.property_images.all|slice:"0:4" %}
-                        <img src="{{ image.image.url }}" alt="{{ image.caption }}" class="w-full h-32 object-cover">
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Property Photos Gallery -->
-            <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-                <div class="p-4">
-                    <h3 class="text-lg font-semibold mb-3">Property Photos</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {% for image in property.get_all_images %}
-                            <div class="relative group cursor-pointer" onclick="openImageViewer('{{ image.url }}')">
-                                <img src="{{ image.url }}" alt="Property image" class="w-full h-32 object-cover rounded-lg">
-                                {% if image.is_thumbnail %}
-                                    <span class="absolute top-1 right-1 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                                        <i class="fas fa-image"></i> Thumb
-                                    </span>
-                                {% endif %}
-                                {% if image.is_main %}
-                                    <span class="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                                        <i class="fas fa-star"></i> Main
-                                    </span>
-                                {% endif %}
-                            </div>
-                        {% empty %}
-                            <div class="col-span-full text-center py-8 text-gray-500">
-                                <i class="fas fa-images text-4xl text-gray-300 mb-2 block"></i>
-                                No photos available
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Image Viewer Modal -->
-            <div id="imageViewer" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex items-center justify-center">
-                <button onclick="closeImageViewer()" class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300">
-                    <i class="fas fa-times"></i>
-                </button>
-                <img id="viewerImage" src="" alt="Property image" class="max-w-full max-h-screen object-contain p-4">
-            </div>
-
-            <script>
-            function openImageViewer(imageUrl) {
-                document.getElementById('viewerImage').src = imageUrl;
-                document.getElementById('imageViewer').classList.remove('hidden');
-            }
-
-            function closeImageViewer() {
-                document.getElementById('imageViewer').classList.add('hidden');
-            }
-
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    closeImageViewer();
-                }
-            });
-
-            document.getElementById('imageViewer').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeImageViewer();
-                }
-            });
-            </script>
-            
-            <!-- Property Details -->
-            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h1 class="text-3xl font-bold text-gray-900">{{ property.title }}</h1>
-                        <p class="text-gray-600 mt-1">
-                            <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
-                            {{ property.address }}, {{ property.city }}, {{ property.state }}
-                        </p>
-                    </div>
-                    {% if user.is_authenticated %}
-                        <button onclick="toggleFavorite('{{ property.id }}')" 
-                                class="text-2xl hover:scale-110 transition-transform">
-                            <i class="fas fa-heart {% if is_favorited %}text-red-500{% else %}text-gray-300{% endif %}"></i>
-                        </button>
-                    {% endif %}
-                </div>
-                
-                <div class="flex flex-wrap gap-4 mb-6">
-                    <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
-                        <span class="font-semibold">{{ property.get_property_type_display }}</span>
-                    </div>
-                    <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
-                        <span class="font-semibold">{{ property.get_furnishing_status_display }}</span>
-                    </div>
-                    <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
-                        <i class="fas fa-check-circle text-green-500 mr-1"></i>
-                        {{ property.get_verification_status_display }}
-                    </div>
-                    {% if property.is_multi_unit %}
-                        <div class="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg">
-                            <i class="fas fa-building mr-1"></i>
-                            Multi-Unit Building
-                        </div>
-                    {% endif %}
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-bed text-2xl text-blue-500 mb-1"></i>
-                        <p class="font-semibold">{{ property.bedrooms }}</p>
-                        <p class="text-sm text-gray-600">Bedrooms</p>
-                    </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-bath text-2xl text-blue-500 mb-1"></i>
-                        <p class="font-semibold">{{ property.bathrooms }}</p>
-                        <p class="text-sm text-gray-600">Bathrooms</p>
-                    </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-car text-2xl text-blue-500 mb-1"></i>
-                        <p class="font-semibold">{{ property.parking_spaces }}</p>
-                        <p class="text-sm text-gray-600">Parking Spaces</p>
-                    </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg">
-                        <i class="fas fa-ruler-combined text-2xl text-blue-500 mb-1"></i>
-                        <p class="font-semibold">{{ property.square_feet|default:'N/A' }}</p>
-                        <p class="text-sm text-gray-600">Sq. Feet</p>
-                    </div>
-                </div>
-                
-                <div class="mb-6">
-                    <h3 class="text-xl font-semibold mb-3">Description</h3>
-                    <div class="prose max-w-none text-gray-700">
-                        {{ property.description|safe }}
-                    </div>
-                </div>
-
-                <!-- Unit Information (for multi-unit properties) -->
-                {% if property.is_multi_unit %}
-                    <div class="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-semibold text-gray-900">Available Units</h3>
-                            <span class="text-sm text-gray-500">{{ property.units.count }} total units</span>
-                        </div>
-                        
-                        <!-- Unit Stats -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            <div class="bg-green-50 rounded-lg p-3 text-center">
-                                <p class="text-2xl font-bold text-green-600">{{ property.units.filter.is_available.count }}</p>
-                                <p class="text-sm text-gray-600">Available</p>
-                            </div>
-                            <div class="bg-red-50 rounded-lg p-3 text-center">
-                                <p class="text-2xl font-bold text-red-600">{{ property.units.filter.status.rented.count }}</p>
-                                <p class="text-sm text-gray-600">Rented</p>
-                            </div>
-                            <div class="bg-yellow-50 rounded-lg p-3 text-center">
-                                <p class="text-2xl font-bold text-yellow-600">{{ property.units.filter.status.booked.count }}</p>
-                                <p class="text-sm text-gray-600">Booked</p>
-                            </div>
-                            <div class="bg-gray-50 rounded-lg p-3 text-center">
-                                <p class="text-2xl font-bold text-gray-600">{{ property.units.filter.status.under_maintenance.count }}</p>
-                                <p class="text-sm text-gray-600">Maintenance</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Unit List -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {% for unit in property.units.all|dictsort:"unit_number" %}
-                                <div class="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <h4 class="font-semibold text-gray-900">Unit {{ unit.unit_number }}</h4>
-                                            <p class="text-sm text-gray-600">{{ unit.bedrooms }} bed, {{ unit.bathrooms }} bath</p>
-                                            {% if unit.floor_number %}
-                                                <p class="text-xs text-gray-500">Floor {{ unit.floor_number }}</p>
-                                            {% endif %}
-                                        </div>
-                                        <span class="px-2 py-1 text-xs rounded-full 
-                                            {% if unit.status == 'AVAILABLE' %}bg-green-100 text-green-700
-                                            {% elif unit.status == 'RENTED' %}bg-red-100 text-red-700
-                                            {% elif unit.status == 'BOOKED' %}bg-yellow-100 text-yellow-700
-                                            {% else %}bg-gray-100 text-gray-700{% endif %}">
-                                            {{ unit.get_status_display }}
-                                        </span>
-                                    </div>
-                                    <p class="text-sm font-semibold text-blue-600 mt-1">
-                                        KES {{ unit.get_rental_price|intcomma }}/month
-                                    </p>
-                                    {% if unit.amenities %}
-                                        <div class="flex flex-wrap gap-1 mt-1">
-                                            {% for amenity in unit.amenities|slice:":3" %}
-                                                <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">{{ amenity }}</span>
-                                            {% endfor %}
-                                            {% if unit.amenities|length > 3 %}
-                                                <span class="text-xs text-gray-500">+{{ unit.amenities|length|add:"-3" }} more</span>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
-                                    {% if unit.current_tenant %}
-                                        <p class="text-xs text-gray-500 mt-1">
-                                            <i class="fas fa-user mr-1"></i> {{ unit.current_tenant.get_full_name }}
-                                        </p>
-                                    {% endif %}
-                                    {% if unit.status == 'AVAILABLE' and user.is_authenticated and user.is_tenant %}
-                                        <a href="{% url 'tenants:apply' property.id %}?unit={{ unit.id }}" 
-                                           class="mt-2 inline-block text-xs text-blue-600 hover:text-blue-500 font-medium">
-                                            Apply Now <i class="fas fa-arrow-right ml-1"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            {% empty %}
-                                <div class="col-span-2 text-center py-4 text-gray-500">
-                                    No units configured for this property.
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <!-- Amenities -->
-                {% if property.amenities %}
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Amenities</h3>
-                        <div class="flex flex-wrap gap-2">
-                            {% for amenity in property.amenities %}
-                                <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
-                                    {{ amenity }}
-                                </span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <!-- Features -->
-                {% if property.features %}
-                    <div class="mb-6">
-                        <h3 class="text-xl font-semibold mb-3">Features</h3>
-                        <ul class="grid grid-cols-2 gap-2">
-                            {% for feature in property.features %}
-                                <li class="flex items-center text-gray-700">
-                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                                    {{ feature }}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-            </div>
-            
-            <!-- Similar Properties -->
-            {% if similar_properties %}
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-xl font-semibold mb-4">Similar Properties</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {% for similar in similar_properties %}
-                            <a href="{% url 'properties:detail' similar.id %}" class="block hover:shadow-lg transition-shadow">
-                                <div class="bg-gray-50 rounded-lg overflow-hidden">
-                                    {% if similar.main_image %}
-                                        <img src="{{ similar.main_image.url }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
-                                    {% endif %}
-                                    <div class="p-3">
-                                        <h4 class="font-semibold text-sm truncate">{{ similar.title }}</h4>
-                                        {% if similar.is_multi_unit %}
-                                            <p class="text-sm text-blue-600 font-semibold">
-                                                <i class="fas fa-building mr-1"></i> Multi-Unit
-                                            </p>
-                                        {% else %}
-                                            <p class="text-blue-600 font-bold">KES {{ similar.rental_price|intcomma }}</p>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
-        </div>
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Breadcrumb -->
+        <nav class="flex mb-6 text-sm">
+            <a href="{% url 'home' %}" class="text-gray-500 hover:text-blue-600">Home</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <a href="{% url 'properties:list' %}" class="text-gray-500 hover:text-blue-600">Properties</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <span class="text-gray-900">{{ property.title|truncatechars:30 }}</span>
+        </nav>
         
-        <!-- Sidebar -->
-        <div class="lg:col-span-1">
-            <!-- Price Card -->
-            <div class="bg-white rounded-xl shadow-md p-6 sticky top-20">
-                <div class="text-center border-b border-gray-200 pb-4 mb-4">
-                    {% if property.is_multi_unit %}
-                        <p class="text-sm text-gray-600">Multi-Unit Building</p>
-                        <p class="text-2xl font-bold text-blue-600">
-                            {% with price_range=property.get_price_range %}
-                                {{ price_range }}
-                            {% endwith %}
-                        </p>
-                        <p class="text-sm text-gray-500">per unit / month</p>
-                        <div class="mt-2 flex justify-center space-x-4 text-sm">
-                            <span class="text-gray-600">
-                                <i class="fas fa-building mr-1"></i> {{ property.units.count }} units
-                            </span>
-                            <span class="text-green-600">
-                                <i class="fas fa-check-circle mr-1"></i> {{ property.units.filter.is_available.count }} available
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2">
+                <!-- Property Images -->
+                <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+                    <!-- Main Image -->
+                    <div class="relative">
+                        {% if property.main_image_url %}
+                            <img src="{{ property.main_image_url }}" alt="{{ property.title }}" class="w-full h-96 object-cover cursor-pointer" onclick="openImageViewer('{{ property.main_image_url }}')">
+                        {% else %}
+                            <div class="w-full h-96 bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-home text-6xl text-gray-400"></i>
+                            </div>
+                        {% endif %}
+                        <!-- Status Badge -->
+                        <div class="absolute top-4 right-4">
+                            <span class="px-3 py-1 rounded-full text-sm font-semibold 
+                                {% if property.availability_status == 'AVAILABLE' %}bg-green-500 text-white
+                                {% elif property.availability_status == 'RENTED' %}bg-red-500 text-white
+                                {% elif property.availability_status == 'BOOKED' %}bg-yellow-500 text-white
+                                {% else %}bg-gray-500 text-white{% endif %}">
+                                {{ property.get_availability_status_display }}
                             </span>
                         </div>
-                        {% if property.get_unit_summary %}
-                            <p class="text-xs text-gray-500 mt-1">{{ property.get_unit_summary }}</p>
+                        {% if property.is_multi_unit %}
+                            <div class="absolute bottom-4 left-4">
+                                <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                                    <i class="fas fa-building mr-1"></i> Multi-Unit
+                                </span>
+                            </div>
                         {% endif %}
-                    {% else %}
-                        <p class="text-sm text-gray-600">Monthly Rent</p>
-                        <p class="text-4xl font-bold text-blue-600">KES {{ property.rental_price|intcomma }}</p>
-                        {% if property.service_charge > 0 %}
-                            <p class="text-sm text-gray-500">+ KES {{ property.service_charge|intcomma }} service charge</p>
+                    </div>
+                    
+                    <!-- Thumbnail Gallery -->
+                    {% with property.get_all_images as all_images %}
+                        {% if all_images|length > 1 %}
+                            <div class="grid grid-cols-4 gap-2 p-4">
+                                {% for image in all_images %}
+                                    {% if not image.is_main %}
+                                        <img src="{{ image.thumbnail }}" alt="{{ image.caption|default:'Property image' }}" 
+                                             class="image-thumbnail w-full h-24 object-cover rounded-lg {% if forloop.first %}active{% endif %}"
+                                             onclick="changeMainImage('{{ image.url }}', this)">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         {% endif %}
+                    {% endwith %}
+                </div>
+                
+                <!-- Property Details -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">{{ property.title }}</h1>
+                            <p class="text-gray-600 mt-1">
+                                <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                                {{ property.address }}, {{ property.city }}, {{ property.state }}
+                            </p>
+                        </div>
+                        {% if user.is_authenticated %}
+                            <button onclick="toggleFavorite('{{ property.id }}')" 
+                                    class="text-2xl hover:scale-110 transition-transform">
+                                <i class="fas fa-heart {% if is_favorited %}text-red-500{% else %}text-gray-300{% endif %}"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+                            <span class="font-semibold">{{ property.get_property_type_display }}</span>
+                        </div>
+                        <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+                            <span class="font-semibold">{{ property.get_furnishing_status_display }}</span>
+                        </div>
+                        <div class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+                            <i class="fas fa-check-circle text-green-500 mr-1"></i>
+                            {{ property.get_verification_status_display }}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-bed text-2xl text-blue-500 mb-1"></i>
+                            <p class="font-semibold">{{ property.bedrooms }}</p>
+                            <p class="text-sm text-gray-600">Bedrooms</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-bath text-2xl text-blue-500 mb-1"></i>
+                            <p class="font-semibold">{{ property.bathrooms }}</p>
+                            <p class="text-sm text-gray-600">Bathrooms</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-car text-2xl text-blue-500 mb-1"></i>
+                            <p class="font-semibold">{{ property.parking_spaces }}</p>
+                            <p class="text-sm text-gray-600">Parking Spaces</p>
+                        </div>
+                        <div class="text-center p-3 bg-gray-50 rounded-lg">
+                            <i class="fas fa-ruler-combined text-2xl text-blue-500 mb-1"></i>
+                            <p class="font-semibold">{{ property.square_feet|default:'N/A' }}</p>
+                            <p class="text-sm text-gray-600">Sq. Feet</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-xl font-semibold mb-3">Description</h3>
+                        <div class="prose max-w-none text-gray-700">
+                            {{ property.description|safe }}
+                        </div>
+                    </div>
+                    
+                    <!-- Amenities -->
+                    {% if property.amenities %}
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold mb-3">Amenities</h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for amenity in property.amenities %}
+                                    <span class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-700">
+                                        {{ amenity }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Features -->
+                    {% if property.features %}
+                        <div class="mb-6">
+                            <h3 class="text-xl font-semibold mb-3">Features</h3>
+                            <ul class="grid grid-cols-2 gap-2">
+                                {% for feature in property.features %}
+                                    <li class="flex items-center text-gray-700">
+                                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                        {{ feature }}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
                     {% endif %}
                 </div>
                 
-                <div class="space-y-3 mb-6">
-                    {% if not property.is_multi_unit %}
+                <!-- Similar Properties -->
+                {% if similar_properties %}
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <h3 class="text-xl font-semibold mb-4">Similar Properties</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {% for similar in similar_properties %}
+                                <a href="{% url 'properties:detail' similar.id %}" class="block hover:shadow-lg transition-shadow">
+                                    <div class="bg-gray-50 rounded-lg overflow-hidden">
+                                        {% if similar.main_image_url %}
+                                            <img src="{{ similar.main_image_url }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
+                                        {% else %}
+                                            <div class="w-full h-32 bg-gray-200 flex items-center justify-center">
+                                                <i class="fas fa-home text-2xl text-gray-400"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div class="p-3">
+                                            <h4 class="font-semibold text-sm truncate">{{ similar.title }}</h4>
+                                            <p class="text-blue-600 font-bold">KES {{ similar.rental_price|intcomma }}</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <!-- Price Card -->
+                <div class="bg-white rounded-xl shadow-md p-6 sticky top-20">
+                    <div class="text-center border-b border-gray-200 pb-4 mb-4">
+                        {% if property.is_multi_unit %}
+                            <p class="text-sm text-gray-600">Multi-Unit Building</p>
+                            <p class="text-2xl font-bold text-blue-600">
+                                {% with price_range=property.get_price_range %}
+                                    {{ price_range }}
+                                {% endwith %}
+                            </p>
+                            <p class="text-sm text-gray-500">per unit</p>
+                            <div class="mt-2 flex justify-center space-x-4 text-sm">
+                                <span class="text-gray-600">
+                                    <i class="fas fa-building mr-1"></i> {{ property.units.count }} units
+                                </span>
+                                <span class="text-green-600">
+                                    <i class="fas fa-check-circle mr-1"></i> {{ property.units.filter.is_available.count }} available
+                                </span>
+                            </div>
+                            {% if property.get_unit_summary %}
+                                <p class="text-xs text-gray-500 mt-1">{{ property.get_unit_summary }}</p>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-sm text-gray-600">Monthly Rent</p>
+                            <p class="text-4xl font-bold text-blue-600">KES {{ property.rental_price|intcomma }}</p>
+                            {% if property.service_charge > 0 %}
+                                <p class="text-sm text-gray-500">+ KES {{ property.service_charge|intcomma }} service charge</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="space-y-3 mb-6">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Security Deposit</span>
                             <span class="font-semibold">KES {{ property.security_deposit|intcomma }}</span>
                         </div>
-                    {% endif %}
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Status</span>
-                        <span class="{% if property.availability_status == 'AVAILABLE' %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
-                            {{ property.get_availability_status_display }}
-                        </span>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Status</span>
+                            <span class="{% if property.availability_status == 'AVAILABLE' %}text-green-600{% else %}text-red-600{% endif %} font-semibold">
+                                {{ property.get_availability_status_display }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Posted</span>
+                            <span>{{ property.created_at|timesince }} ago</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Views</span>
+                            <span>{{ property.view_count }}</span>
+                        </div>
                     </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Posted</span>
-                        <span>{{ property.created_at|timesince }} ago</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">Views</span>
-                        <span>{{ property.view_count }}</span>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <!-- Owner Actions -->
-                {% if user.is_authenticated and user.is_owner and property.owner.user == user %}
-                    <div class="space-y-2 mb-4">
-                        <a href="{% url 'properties:images_manage' property.id %}" 
-                           class="block w-full bg-purple-500 text-white text-center py-3 rounded-lg hover:bg-purple-600 transition-colors">
-                            <i class="fas fa-images mr-2"></i> Manage Images
-                        </a>
-                        
-                        {% if property.is_multi_unit %}
-                            <a href="{% url 'properties:manage_units' property.id %}" 
-                               class="block w-full bg-indigo-500 text-white text-center py-3 rounded-lg hover:bg-indigo-600 transition-colors">
-                                <i class="fas fa-building mr-2"></i> Manage Units ({{ property.units.count }})
-                            </a>
-                        {% endif %}
-                    </div>
-                {% endif %}
-
-                <!-- Tenant Actions -->
-                {% if user.is_authenticated %}
-                    {% if user.is_tenant %}
-                        {% if property.is_multi_unit %}
-                            {% if property.units.filter.is_available.count > 0 %}
-                                <a href="{% url 'tenants:apply' property.id %}" 
-                                   class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200 mb-3">
-                                    <i class="fas fa-paper-plane mr-2"></i> Apply for a Unit
-                                </a>
-                            {% else %}
-                                <div class="block w-full bg-gray-300 text-gray-600 text-center py-3 rounded-lg mb-3 cursor-not-allowed">
-                                    <i class="fas fa-times-circle mr-2"></i> No Units Available
-                                </div>
-                            {% endif %}
-                        {% else %}
-                            <a href="{% url 'tenants:apply' property.id %}" 
-                               class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200 mb-3">
-                                <i class="fas fa-paper-plane mr-2"></i> Apply Now
-                            </a>
-                        {% endif %}
+                    
+                    <!-- Multi-Unit Available Units -->
+                    {% if property.is_multi_unit %}
+                        <div class="border-t border-gray-200 pt-4 mb-4">
+                            <h3 class="text-sm font-medium text-gray-700 mb-3">Available Units</h3>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                {% for unit in property.units.all|dictsort:"unit_number" %}
+                                    {% if unit.is_available %}
+                                        <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                            <div>
+                                                <span class="font-medium">Unit {{ unit.unit_number }}</span>
+                                                <span class="text-sm text-gray-600 ml-2">
+                                                    {{ unit.bedrooms }} bed • {{ unit.bathrooms }} bath
+                                                </span>
+                                            </div>
+                                            <div class="flex items-center space-x-3">
+                                                <span class="text-sm font-semibold text-blue-600">
+                                                    KES {{ unit.get_rental_price|intcomma }}/mo
+                                                </span>
+                                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
+                                                    Available
+                                                </span>
+                                                {% if user.is_authenticated and user.is_tenant %}
+                                                    <a href="{% url 'tenants:apply' property.id %}" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                                                        Apply
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% empty %}
+                                    <p class="text-gray-500 text-sm">No units available at the moment.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
                     {% endif %}
                     
-                    {% if user.is_owner and property.owner.user == user %}
-                        <a href="{% url 'properties:edit' property.id %}" 
-                           class="block w-full bg-yellow-500 text-white text-center py-3 rounded-lg hover:bg-yellow-600 transition-colors mb-2">
-                            <i class="fas fa-edit mr-2"></i> Edit Property
-                        </a>
-                        <a href="{% url 'properties:delete' property.id %}" 
-                           class="block w-full bg-red-500 text-white text-center py-3 rounded-lg hover:bg-red-600 transition-colors">
-                            <i class="fas fa-trash mr-2"></i> Delete Property
-                        </a>
-                    {% endif %}
-                {% else %}
-                    <a href="{% url 'accounts:login' %}?next={{ request.path }}" 
-                       class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200">
-                        <i class="fas fa-sign-in-alt mr-2"></i> Login to Apply
-                    </a>
-                    <p class="text-center text-sm text-gray-500 mt-2">
-                        New here? <a href="{% url 'accounts:register' %}" class="text-blue-500 hover:text-blue-600">Create account</a>
-                    </p>
-                {% endif %}
+                    <!-- Action Buttons -->
+                    <div class="space-y-3">
+                        {% if user.is_authenticated %}
+                            {% if user.is_tenant %}
+                                <a href="{% url 'tenants:apply' property.id %}" class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                                    <i class="fas fa-paper-plane mr-2"></i> Apply Now
+                                </a>
+                            {% endif %}
+                            {% if user.is_owner and property.owner.user == user %}
+                                <a href="{% url 'properties:images_manage' property.id %}" class="block w-full bg-purple-500 text-white text-center py-3 rounded-lg hover:bg-purple-600 transition-colors mb-2">
+                                    <i class="fas fa-images mr-2"></i> Manage Images
+                                </a>
+                                <a href="{% url 'properties:edit' property.id %}" class="block w-full bg-yellow-500 text-white text-center py-3 rounded-lg hover:bg-yellow-600 transition-colors mb-2">
+                                    <i class="fas fa-edit mr-2"></i> Edit Property
+                                </a>
+                                {% if property.is_multi_unit %}
+                                    <a href="{% url 'properties:manage_units' property.id %}" class="block w-full bg-green-500 text-white text-center py-3 rounded-lg hover:bg-green-600 transition-colors mb-2">
+                                        <i class="fas fa-layer-group mr-2"></i> Manage Units ({{ property.units.count }})
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'properties:delete' property.id %}" class="block w-full bg-red-500 text-white text-center py-3 rounded-lg hover:bg-red-600 transition-colors">
+                                    <i class="fas fa-trash mr-2"></i> Delete Property
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                                <i class="fas fa-sign-in-alt mr-2"></i> Login to Apply
+                            </a>
+                            <p class="text-center text-sm text-gray-500 mt-2">New here? <a href="{% url 'accounts:register' %}" class="text-blue-500 hover:text-blue-600">Create account</a></p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div id="imageViewer" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex items-center justify-center">
+    <button onclick="closeImageViewer()" class="absolute top-4 right-4 text-white text-3xl hover:text-gray-300 transition-colors">
+        <i class="fas fa-times"></i>
+    </button>
+    <img id="viewerImage" src="" alt="Property image" class="max-w-full max-h-screen object-contain p-4">
 </div>
 
 <script>
@@ -432,10 +389,45 @@ function toggleFavorite(propertyId) {
         if (data.status === 'success') {
             location.reload();
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
     });
 }
+
+function openImageViewer(imageUrl) {
+    document.getElementById('viewerImage').src = imageUrl;
+    document.getElementById('imageViewer').classList.remove('hidden');
+}
+
+function closeImageViewer() {
+    document.getElementById('imageViewer').classList.add('hidden');
+}
+
+function changeMainImage(imageUrl, element) {
+    // Update main image
+    const mainImg = document.querySelector('.w-full.h-96.object-cover');
+    if (mainImg) {
+        mainImg.src = imageUrl;
+        mainImg.onclick = function() { openImageViewer(imageUrl); };
+    }
+    
+    // Update active state on thumbnails
+    document.querySelectorAll('.image-thumbnail').forEach(el => {
+        el.classList.remove('active');
+    });
+    element.classList.add('active');
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageViewer();
+    }
+});
+
+// Close modal on click outside
+document.getElementById('imageViewer').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeImageViewer();
+    }
+});
 </script>
 {% endblock %}

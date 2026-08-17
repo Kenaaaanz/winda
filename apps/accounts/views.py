@@ -14,6 +14,8 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db import models
 from django.views.decorators.http import require_http_methods
+from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+
 
 
 
@@ -617,12 +619,30 @@ def delete_bank_account(request):
 
 @login_required
 def update_profile_picture(request):
-    """Update profile picture via AJAX"""
+    """Update profile picture using Cloudinary"""
     if request.method == 'POST' and request.FILES.get('profile_picture'):
         user = request.user
-        user.profile_picture = request.FILES['profile_picture']
-        user.save()
-        return JsonResponse({'status': 'success'})
+        
+        # Delete old profile picture from Cloudinary
+        if user.profile_picture:
+            try:
+                public_id = user.profile_picture.name
+                CloudinaryService.delete_image(public_id)
+            except:
+                pass
+        
+        # Upload new profile picture
+        file = request.FILES['profile_picture']
+        compressed = CloudinaryImageHandler.compress_image(file, max_size=(400, 400))
+        result = CloudinaryService.upload_profile_picture(compressed, str(user.id))
+        
+        if result:
+            user.profile_picture = result['secure_url']
+            user.save()
+            return JsonResponse({'status': 'success', 'url': result['secure_url']})
+        
+        return JsonResponse({'status': 'error', 'message': 'Upload failed'}, status=400)
+    
     return JsonResponse({'status': 'error'}, status=400)
 
 @login_required
