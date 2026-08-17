@@ -5,7 +5,6 @@
 
 {% block extra_css %}
 <style>
-    /* Image viewer modal */
     #imageViewer {
         position: fixed;
         inset: 0;
@@ -79,16 +78,14 @@
             <div class="lg:col-span-2">
                 <!-- Property Images -->
                 <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
-                    <!-- Main Image -->
                     <div class="relative">
-                        {% if property.main_image_url %}
-                            <img src="{{ property.main_image_url }}" alt="{{ property.title }}" class="w-full h-96 object-cover cursor-pointer" onclick="openImageViewer('{{ property.main_image_url }}')">
+                        {% if property.main_image %}
+                            <img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-96 object-cover cursor-pointer" onclick="openImageViewer('{{ property.main_image }}')">
                         {% else %}
                             <div class="w-full h-96 bg-gray-200 flex items-center justify-center">
                                 <i class="fas fa-home text-6xl text-gray-400"></i>
                             </div>
                         {% endif %}
-                        <!-- Status Badge -->
                         <div class="absolute top-4 right-4">
                             <span class="px-3 py-1 rounded-full text-sm font-semibold 
                                 {% if property.availability_status == 'AVAILABLE' %}bg-green-500 text-white
@@ -113,7 +110,7 @@
                             <div class="grid grid-cols-4 gap-2 p-4">
                                 {% for image in all_images %}
                                     {% if not image.is_main %}
-                                        <img src="{{ image.thumbnail }}" alt="{{ image.caption|default:'Property image' }}" 
+                                        <img src="{{ image.url }}" alt="{{ image.caption|default:'Property image' }}" 
                                              class="image-thumbnail w-full h-24 object-cover rounded-lg {% if forloop.first %}active{% endif %}"
                                              onclick="changeMainImage('{{ image.url }}', this)">
                                     {% endif %}
@@ -184,7 +181,6 @@
                         </div>
                     </div>
                     
-                    <!-- Amenities -->
                     {% if property.amenities %}
                         <div class="mb-6">
                             <h3 class="text-xl font-semibold mb-3">Amenities</h3>
@@ -198,7 +194,6 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Features -->
                     {% if property.features %}
                         <div class="mb-6">
                             <h3 class="text-xl font-semibold mb-3">Features</h3>
@@ -222,8 +217,8 @@
                             {% for similar in similar_properties %}
                                 <a href="{% url 'properties:detail' similar.id %}" class="block hover:shadow-lg transition-shadow">
                                     <div class="bg-gray-50 rounded-lg overflow-hidden">
-                                        {% if similar.main_image_url %}
-                                            <img src="{{ similar.main_image_url }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
+                                        {% if similar.main_image %}
+                                            <img src="{{ similar.main_image }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
                                         {% else %}
                                             <div class="w-full h-32 bg-gray-200 flex items-center justify-center">
                                                 <i class="fas fa-home text-2xl text-gray-400"></i>
@@ -243,7 +238,6 @@
             
             <!-- Sidebar -->
             <div class="lg:col-span-1">
-                <!-- Price Card -->
                 <div class="bg-white rounded-xl shadow-md p-6 sticky top-20">
                     <div class="text-center border-b border-gray-200 pb-4 mb-4">
                         {% if property.is_multi_unit %}
@@ -295,7 +289,6 @@
                         </div>
                     </div>
                     
-                    <!-- Multi-Unit Available Units -->
                     {% if property.is_multi_unit %}
                         <div class="border-t border-gray-200 pt-4 mb-4">
                             <h3 class="text-sm font-medium text-gray-700 mb-3">Available Units</h3>
@@ -331,7 +324,6 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Action Buttons -->
                     <div class="space-y-3">
                         {% if user.is_authenticated %}
                             {% if user.is_tenant %}
@@ -402,28 +394,24 @@ function closeImageViewer() {
 }
 
 function changeMainImage(imageUrl, element) {
-    // Update main image
     const mainImg = document.querySelector('.w-full.h-96.object-cover');
     if (mainImg) {
         mainImg.src = imageUrl;
         mainImg.onclick = function() { openImageViewer(imageUrl); };
     }
     
-    // Update active state on thumbnails
     document.querySelectorAll('.image-thumbnail').forEach(el => {
         el.classList.remove('active');
     });
     element.classList.add('active');
 }
 
-// Close modal on escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeImageViewer();
     }
 });
 
-// Close modal on click outside
 document.getElementById('imageViewer').addEventListener('click', function(e) {
     if (e.target === this) {
         closeImageViewer();

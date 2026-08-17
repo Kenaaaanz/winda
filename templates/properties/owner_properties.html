@@ -82,7 +82,7 @@
                         <!-- Image -->
                         <div class="w-full md:w-48 h-48 md:h-auto">
                             {% if property.main_image %}
-                                <img src="{{ property.main_image.url }}" alt="{{ property.title }}" class="w-full h-full object-cover">
+                                <img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-full object-cover">
                             {% else %}
                                 <div class="w-full h-full bg-gray-200 flex items-center justify-center">
                                     <i class="fas fa-home text-4xl text-gray-400"></i>
@@ -90,6 +90,7 @@
                             {% endif %}
                         </div>
                         
+                        <!-- Details -->
                         <div class="flex-1 p-4">
                             <div class="flex flex-wrap items-start justify-between">
                                 <div>

@@ -82,8 +82,8 @@
             <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 {% if property.availability_status != 'AVAILABLE' %}opacity-75{% endif %}">
                 <a href="{% url 'properties:detail' property.id %}" class="block">
                     <div class="relative">
-                        {% if property.main_image_url %}
-                            <img src="{{ property.main_image_url }}" alt="{{ property.title }}" class="w-full h-48 object-cover">
+                        {% if property.main_image %}
+                            <img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-48 object-cover">
                         {% else %}
                             <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
                                 <i class="fas fa-home text-6xl text-gray-400"></i>

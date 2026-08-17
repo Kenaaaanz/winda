@@ -116,77 +116,59 @@
         {% if featured_properties %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {% for property in featured_properties %}
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                        <a href="{% url 'properties:detail' property.id %}" class="block">
-                            <div class="relative h-48">
-                                {% if property.main_image %}
-                                    <img src="{{ property.main_image.url }}" alt="{{ property.title }}" class="w-full h-full object-cover">
-                                {% else %}
-                                    <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                                        <i class="fas fa-home text-4xl text-gray-400"></i>
-                                    </div>
-                                {% endif %}
-                                <div class="absolute top-2 right-2">
-                                    <span class="px-2 py-1 rounded-full text-xs font-semibold 
-                                        {% if property.availability_status == 'AVAILABLE' %}bg-green-500 text-white
-                                        {% elif property.availability_status == 'RENTED' %}bg-red-500 text-white
-                                        {% elif property.availability_status == 'BOOKED' %}bg-yellow-500 text-white
-                                        {% else %}bg-gray-500 text-white{% endif %}">
-                                        {{ property.get_availability_status_display }}
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                        <div class="relative">
+                            {% if property.main_image %}
+                                <img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-48 object-cover">
+                            {% else %}
+                                <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                    <i class="fas fa-home text-4xl text-gray-400"></i>
+                                </div>
+                            {% endif %}
+                            <div class="absolute top-2 right-2">
+                                <span class="px-2 py-1 rounded-full text-xs font-semibold 
+                                    {% if property.availability_status == 'AVAILABLE' %}bg-green-500 text-white
+                                    {% else %}bg-gray-500 text-white{% endif %}">
+                                    {{ property.get_availability_status_display }}
+                                </span>
+                            </div>
+                            {% if property.is_multi_unit %}
+                                <div class="absolute top-2 left-2">
+                                    <span class="bg-purple-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                                        <i class="fas fa-building mr-1"></i> Multi-Unit
                                     </span>
                                 </div>
-                                {% if property.is_multi_unit %}
-                                    <div class="absolute bottom-2 left-2">
-                                        <span class="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-semibold">
-                                            <i class="fas fa-building mr-1"></i> Multi-Unit
-                                        </span>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="p-4">
-                                <h3 class="font-semibold text-gray-900 truncate">{{ property.title }}</h3>
-                                <p class="text-sm text-gray-600">
-                                    <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
-                                    {{ property.city }}, {{ property.state }}
-                                </p>
-                                
-                                {% if property.is_multi_unit %}
-                                    <div class="mt-2">
-                                        <p class="text-sm text-blue-600 font-semibold">
-                                            {% with price_range=property.get_price_range %}
-                                                {% if price_range %}
-                                                    {{ price_range }}
-                                                {% else %}
-                                                    Multiple Units Available
-                                                {% endif %}
-                                            {% endwith %}
-                                        </p>
-                                        <p class="text-xs text-gray-500">
-                                            {{ property.get_unit_count_display }}
-                                        </p>
-                                        {% with unit_summary=property.get_unit_summary %}
-                                            {% if unit_summary %}
-                                                <p class="text-xs text-gray-500 mt-1">{{ unit_summary }}</p>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </div>
-                                {% else %}
-                                    <p class="text-xl font-bold text-blue-600 mt-2">
-                                        KES {{ property.rental_price|intcomma }}
-                                        <span class="text-sm font-normal text-gray-500">/ month</span>
+                            {% endif %}
+                        </div>
+                        <div class="p-4">
+                            <h3 class="font-semibold text-gray-900">{{ property.title }}</h3>
+                            <p class="text-sm text-gray-600">{{ property.city }}</p>
+                            
+                            {% if property.is_multi_unit %}
+                                <div class="mt-2">
+                                    <span class="text-sm text-blue-600 font-semibold">
+                                        <i class="fas fa-building mr-1"></i> Multi-Unit
+                                    </span>
+                                    <p class="text-sm text-gray-600">
+                                        {{ property.get_price_range }}
                                     </p>
-                                {% endif %}
-                                
-                                <div class="flex justify-between text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
-                                    <span><i class="fas fa-bed mr-1"></i> {{ property.bedrooms }}</span>
-                                    <span><i class="fas fa-bath mr-1"></i> {{ property.bathrooms }}</span>
-                                    <span><i class="fas fa-car mr-1"></i> {{ property.parking_spaces }}</span>
-                                    {% if property.is_multi_unit %}
-                                        <span><i class="fas fa-layer-group mr-1"></i> {{ property.units.count }}</span>
-                                    {% endif %}
+                                    <p class="text-xs text-gray-500">
+                                        {{ property.get_unit_count_display }}
+                                    </p>
                                 </div>
+                            {% else %}
+                                <p class="text-xl font-bold text-blue-600 mt-2">
+                                    KES {{ property.rental_price|intcomma }}
+                                    <span class="text-sm font-normal text-gray-500">/ month</span>
+                                </p>
+                            {% endif %}
+                            
+                            <div class="flex justify-between text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
+                                <span><i class="fas fa-bed mr-1"></i> {{ property.bedrooms }}</span>
+                                <span><i class="fas fa-bath mr-1"></i> {{ property.bathrooms }}</span>
+                                <span><i class="fas fa-car mr-1"></i> {{ property.parking_spaces }}</span>
                             </div>
-                        </a>
+                        </div>
                     </div>
                 {% endfor %}
             </div>
