@@ -218,7 +218,7 @@
                                 <a href="{% url 'properties:detail' similar.id %}" class="block hover:shadow-lg transition-shadow">
                                     <div class="bg-gray-50 rounded-lg overflow-hidden">
                                         {% if similar.main_image %}
-                                            <img src="{{ similar.main_image }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
+                                            <img src="{{ similar.get_main_image_url }}" alt="{{ similar.title }}" class="w-full h-32 object-cover">
                                         {% else %}
                                             <div class="w-full h-32 bg-gray-200 flex items-center justify-center">
                                                 <i class="fas fa-home text-2xl text-gray-400"></i>
@@ -226,7 +226,30 @@
                                         {% endif %}
                                         <div class="p-3">
                                             <h4 class="font-semibold text-sm truncate">{{ similar.title }}</h4>
-                                            <p class="text-blue-600 font-bold">KES {{ similar.rental_price|intcomma }}</p>
+                                            <div class="mt-1">
+                                                {% if similar.is_multi_unit %}
+                                                    <p class="text-xs text-blue-600 font-semibold">
+                                                        <i class="fas fa-building mr-1"></i> Multi-Unit
+                                                    </p>
+                                                    <p class="text-sm text-blue-600 font-bold">
+                                                        {{ similar.get_price_range }}
+                                                    </p>
+                                                    <p class="text-xs text-gray-500">
+                                                        Deposit: {{ similar.get_security_deposit_range }}
+                                                    </p>
+                                                {% else %}
+                                                    <p class="text-blue-600 font-bold">KES {{ similar.rental_price|intcomma }}</p>
+                                                    {% if similar.security_deposit > 0 %}
+                                                        <p class="text-xs text-gray-500">
+                                                            Deposit: KES {{ similar.security_deposit|intcomma }}
+                                                        </p>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                                <span>{{ similar.bedrooms }} bed</span>
+                                                <span>{{ similar.bathrooms }} bath</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </a>
@@ -239,13 +262,12 @@
             <!-- Sidebar -->
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-xl shadow-md p-6 sticky top-20">
+                    <!-- In the sidebar price card - Update the security deposit display -->
                     <div class="text-center border-b border-gray-200 pb-4 mb-4">
                         {% if property.is_multi_unit %}
                             <p class="text-sm text-gray-600">Multi-Unit Building</p>
                             <p class="text-2xl font-bold text-blue-600">
-                                {% with price_range=property.get_price_range %}
-                                    {{ price_range }}
-                                {% endwith %}
+                                {{ property.get_price_range }}
                             </p>
                             <p class="text-sm text-gray-500">per unit</p>
                             <div class="mt-2 flex justify-center space-x-4 text-sm">
@@ -267,11 +289,28 @@
                             {% endif %}
                         {% endif %}
                     </div>
-                    
+
+                    <!-- Security Deposit - Updated to show range -->
                     <div class="space-y-3 mb-6">
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Security Deposit</span>
-                            <span class="font-semibold">KES {{ property.security_deposit|intcomma }}</span>
+                            <span class="font-semibold">
+                                {% if property.is_multi_unit %}
+                                    {{ property.get_security_deposit_range }}
+                                {% else %}
+                                    KES {{ property.security_deposit|intcomma }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Service Charge</span>
+                            <span class="font-semibold">
+                                {% if property.is_multi_unit %}
+                                    {{ property.get_service_charge_range }}
+                                {% else %}
+                                    KES {{ property.service_charge|intcomma }}
+                                {% endif %}
+                            </span>
                         </div>
                         <div class="flex justify-between text-sm">
                             <span class="text-gray-600">Status</span>
@@ -288,7 +327,8 @@
                             <span>{{ property.view_count }}</span>
                         </div>
                     </div>
-                    
+
+                    <!-- Multi-Unit Available Units - Show deposit per unit -->
                     {% if property.is_multi_unit %}
                         <div class="border-t border-gray-200 pt-4 mb-4">
                             <h3 class="text-sm font-medium text-gray-700 mb-3">Available Units</h3>
@@ -303,9 +343,14 @@
                                                 </span>
                                             </div>
                                             <div class="flex items-center space-x-3">
-                                                <span class="text-sm font-semibold text-blue-600">
-                                                    KES {{ unit.get_rental_price|intcomma }}/mo
-                                                </span>
+                                                <div class="text-right">
+                                                    <span class="text-sm font-semibold text-blue-600">
+                                                        KES {{ unit.get_rental_price|intcomma }}/mo
+                                                    </span>
+                                                    <span class="text-xs text-gray-500 block">
+                                                        Deposit: KES {{ unit.get_security_deposit|intcomma }}
+                                                    </span>
+                                                </div>
                                                 <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
                                                     Available
                                                 </span>
@@ -324,6 +369,7 @@
                         </div>
                     {% endif %}
                     
+                    <!-- sidebar actions -->
                     <div class="space-y-3">
                         {% if user.is_authenticated %}
                             {% if user.is_tenant %}
@@ -331,18 +377,26 @@
                                     <i class="fas fa-paper-plane mr-2"></i> Apply Now
                                 </a>
                             {% endif %}
+                            
                             {% if user.is_owner and property.owner.user == user %}
-                                <a href="{% url 'properties:images_manage' property.id %}" class="block w-full bg-purple-500 text-white text-center py-3 rounded-lg hover:bg-purple-600 transition-colors mb-2">
+                                <!-- Manage Images Button -->
+                                <a href="{% url 'properties:images_manage' property.id %}" class="block w-full bg-purple-500 text-white text-center py-3 rounded-lg hover:bg-purple-600 transition-colors">
                                     <i class="fas fa-images mr-2"></i> Manage Images
                                 </a>
-                                <a href="{% url 'properties:edit' property.id %}" class="block w-full bg-yellow-500 text-white text-center py-3 rounded-lg hover:bg-yellow-600 transition-colors mb-2">
-                                    <i class="fas fa-edit mr-2"></i> Edit Property
-                                </a>
+                                
+                                <!-- Manage Units Button - Shows for ALL multi-unit properties -->
                                 {% if property.is_multi_unit %}
-                                    <a href="{% url 'properties:manage_units' property.id %}" class="block w-full bg-green-500 text-white text-center py-3 rounded-lg hover:bg-green-600 transition-colors mb-2">
+                                    <a href="{% url 'properties:manage_units' property.id %}" class="block w-full bg-green-500 text-white text-center py-3 rounded-lg hover:bg-green-600 transition-colors">
                                         <i class="fas fa-layer-group mr-2"></i> Manage Units ({{ property.units.count }})
                                     </a>
                                 {% endif %}
+                                
+                                <!-- Edit Property Button -->
+                                <a href="{% url 'properties:edit' property.id %}" class="block w-full bg-yellow-500 text-white text-center py-3 rounded-lg hover:bg-yellow-600 transition-colors">
+                                    <i class="fas fa-edit mr-2"></i> Edit Property
+                                </a>
+                                
+                                <!-- Delete Property Button -->
                                 <a href="{% url 'properties:delete' property.id %}" class="block w-full bg-red-500 text-white text-center py-3 rounded-lg hover:bg-red-600 transition-colors">
                                     <i class="fas fa-trash mr-2"></i> Delete Property
                                 </a>

@@ -1,7 +1,95 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}List Your Property - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .tab-btn {
+        transition: all 0.3s ease;
+    }
+    .tab-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+    .tab-btn.active:hover {
+        background: #2563eb;
+    }
+    .required-field::after {
+        content: '*';
+        color: #ef4444;
+        margin-left: 2px;
+    }
+    .form-error {
+        color: #ef4444;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    .image-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    .image-preview-grid img {
+        width: 100%;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    /* Toggle Switch Styles */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+        flex-shrink: 0;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .3s;
+        border-radius: 34px;
+    }
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #3b82f6;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+    }
+    .toggle-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+    }
+    .toggle-description {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="bg-gray-50 min-h-screen py-8">
@@ -12,277 +100,371 @@
                 <p class="text-blue-100 mt-1">Fill in the details below to list your property on Winda</p>
             </div>
             
-            <form method="post" enctype="multipart/form-data" class="p-6">
-                {% csrf_token %}
-                
-                {% if form.errors %}
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                        <p class="text-red-600 font-semibold">Please fix the following errors:</p>
-                        <ul class="list-disc list-inside text-red-600 text-sm">
-                            {% for field in form %}
-                                {% for error in field.errors %}
-                                    <li>{{ field.label }}: {{ error }}</li>
+            <div class="p-6">
+                <!-- Multi-Unit Toggle -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <label class="toggle-label">Multi-Unit Building</label>
+                            <p class="toggle-description">Toggle on if this is an apartment building with multiple units</p>
+                        </div>
+                        <div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="multiUnitToggle" 
+                                       {% if property_type == 'multi' %}checked{% endif %}
+                                       onchange="toggleMultiUnit(this)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Property Type Selection -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Property Type</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="?type=single" 
+                           class="tab-btn {% if property_type == 'single' %}active{% endif %} border-2 border-gray-300 rounded-lg px-4 py-3 text-center hover:border-blue-500 transition-all duration-200" id="singleTab">
+                            <i class="fas fa-home text-2xl block mb-1"></i>
+                            <span class="font-medium">Single Unit</span>
+                            <p class="text-xs text-gray-500 mt-1">House, apartment, or standalone unit</p>
+                        </a>
+                        <a href="?type=multi" 
+                           class="tab-btn {% if property_type == 'multi' %}active{% endif %} border-2 border-gray-300 rounded-lg px-4 py-3 text-center hover:border-blue-500 transition-all duration-200" id="multiTab">
+                            <i class="fas fa-building text-2xl block mb-1"></i>
+                            <span class="font-medium">Multi-Unit Building</span>
+                            <p class="text-xs text-gray-500 mt-1">Apartment building with multiple units</p>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Property Form -->
+                <form method="post" enctype="multipart/form-data" id="propertyForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="property_type" value="{{ property_type }}">
+                    <input type="hidden" name="is_multi_unit" id="isMultiUnitHidden" value="{% if property_type == 'multi' %}on{% else %}off{% endif %}">
+                    
+                    {% if form.errors %}
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                            <p class="text-red-600 font-semibold">Please fix the following errors:</p>
+                            <ul class="list-disc list-inside text-red-600 text-sm">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
                                 {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Basic Information -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Title</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="form-error">{{ form.title.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Property Type</label>
+                                {{ form.property_type }}
+                                {% if form.property_type.errors %}
+                                    <div class="form-error">{{ form.property_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Furnishing Status</label>
+                                {{ form.furnishing_status }}
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="form-error">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Location</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Address</label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="form-error">{{ form.address.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 required-field">City</label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="form-error">{{ form.city.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">State/County</label>
+                                {{ form.state }}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
+                                {{ form.postal_code }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Unit Specific Fields -->
+                    {% if property_type == 'single' %}
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Pricing & Details</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Monthly Rent (KES)</label>
+                                    {{ form.rental_price }}
+                                    {% if form.rental_price.errors %}
+                                        <div class="form-error">{{ form.rental_price.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Service Charge</label>
+                                    {{ form.service_charge }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Security Deposit</label>
+                                    {{ form.security_deposit }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Bedrooms</label>
+                                    {{ form.bedrooms }}
+                                    {% if form.bedrooms.errors %}
+                                        <div class="form-error">{{ form.bedrooms.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Bathrooms</label>
+                                    {{ form.bathrooms }}
+                                    {% if form.bathrooms.errors %}
+                                        <div class="form-error">{{ form.bathrooms.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Parking Spaces</label>
+                                    {{ form.parking_spaces }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Square Feet</label>
+                                    {{ form.square_feet }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Floor Number</label>
+                                    {{ form.floor_number }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Total Floors</label>
+                                    {{ form.total_floors }}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Year Built</label>
+                                    {{ form.year_built }}
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="flex items-center">
+                                    {{ form.negotiation_allowed }}
+                                    <span class="ml-2 text-sm text-gray-700">Allow price negotiation</span>
+                                </label>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Multi-Unit Building Fields -->
+                    {% if property_type == 'multi' %}
+                        <div class="mb-8">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Building Details</h3>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div class="flex items-start">
+                                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                                    <div>
+                                        <p class="text-sm text-blue-700">After creating the building, you'll be redirected to add individual units with their own pricing, bedrooms, and bathrooms.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Parking Spaces</label>
+                                    {{ form.parking_spaces }}
+                                    {% if form.parking_spaces.errors %}
+                                        <div class="form-error">{{ form.parking_spaces.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Square Feet (Building)</label>
+                                    {{ form.square_feet }}
+                                    {% if form.square_feet.errors %}
+                                        <div class="form-error">{{ form.square_feet.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Total Floors</label>
+                                    {{ form.total_floors }}
+                                    {% if form.total_floors.errors %}
+                                        <div class="form-error">{{ form.total_floors.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Year Built</label>
+                                    {{ form.year_built }}
+                                    {% if form.year_built.errors %}
+                                        <div class="form-error">{{ form.year_built.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Amenities -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {% for value, label in form.amenities.field.choices %}
+                                <label class="flex items-center space-x-2 text-sm">
+                                    <input type="checkbox" name="amenities" value="{{ value }}" 
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        {% if value in form.amenities.value %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
                             {% endfor %}
-                            {% for error in form.non_field_errors %}
-                                <li>{{ error }}</li>
+                        </div>
+                        {% if form.amenities.errors %}
+                            <div class="form-error">{{ form.amenities.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Features -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Features</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {% for value, label in form.features.field.choices %}
+                                <label class="flex items-center space-x-2 text-sm">
+                                    <input type="checkbox" name="features" value="{{ value }}" 
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        {% if value in form.features.value %}checked{% endif %}>
+                                    <span>{{ label }}</span>
+                                </label>
                             {% endfor %}
-                        </ul>
+                        </div>
+                        {% if form.features.errors %}
+                            <div class="form-error">{{ form.features.errors }}</div>
+                        {% endif %}
                     </div>
-                {% endif %}
 
-                <!-- Basic Information -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
-                            <input type="text" name="title" value="{{ form.title.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Property Type *</label>
-                            <select name="property_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                                <option value="">Select type</option>
-                                <option value="APARTMENT" {% if form.property_type.value == 'APARTMENT' %}selected{% endif %}>Apartment</option>
-                                <option value="BUNGALOW" {% if form.property_type.value == 'BUNGALOW' %}selected{% endif %}>Bungalow</option>
-                                <option value="MAISONETTE" {% if form.property_type.value == 'MAISONETTE' %}selected{% endif %}>Maisonette</option>
-                                <option value="DUPLEX" {% if form.property_type.value == 'DUPLEX' %}selected{% endif %}>Duplex</option>
-                                <option value="PENTHOUSE" {% if form.property_type.value == 'PENTHOUSE' %}selected{% endif %}>Penthouse</option>
-                                <option value="STUDIO" {% if form.property_type.value == 'STUDIO' %}selected{% endif %}>Studio</option>
-                                <option value="TOWNHOUSE" {% if form.property_type.value == 'TOWNHOUSE' %}selected{% endif %}>Townhouse</option>
-                                <option value="COMMERCIAL" {% if form.property_type.value == 'COMMERCIAL' %}selected{% endif %}>Commercial</option>
-                                <option value="LAND" {% if form.property_type.value == 'LAND' %}selected{% endif %}>Land</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Furnishing Status</label>
-                            <select name="furnishing_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                                <option value="UNFURNISHED" {% if form.furnishing_status.value == 'UNFURNISHED' %}selected{% endif %}>Unfurnished</option>
-                                <option value="SEMI_FURNISHED" {% if form.furnishing_status.value == 'SEMI_FURNISHED' %}selected{% endif %}>Semi-Furnished</option>
-                                <option value="FURNISHED" {% if form.furnishing_status.value == 'FURNISHED' %}selected{% endif %}>Furnished</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                        <textarea name="description" rows="5" 
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
-                                  required>{{ form.description.value|default:'' }}</textarea>
-                    </div>
-                </div>
-
-                <!-- Location -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Location</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Address *</label>
-                            <input type="text" name="address" value="{{ form.address.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">City *</label>
-                            <input type="text" name="city" value="{{ form.city.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">State/County</label>
-                            <input type="text" name="state" value="{{ form.state.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
-                            <input type="text" name="postal_code" value="{{ form.postal_code.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pricing -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Pricing (KES)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Monthly Rent *</label>
-                            <input type="number" name="rental_price" value="{{ form.rental_price.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Service Charge</label>
-                            <input type="number" name="service_charge" value="{{ form.service_charge.value|default:'0' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Security Deposit</label>
-                            <input type="number" name="security_deposit" value="{{ form.security_deposit.value|default:'0' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="negotiation_allowed" {% if form.negotiation_allowed.value %}checked{% endif %} 
-                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                            <span class="ml-2 text-sm text-gray-700">Allow price negotiation</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Property Details -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Property Details</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Bedrooms *</label>
-                            <input type="number" name="bedrooms" value="{{ form.bedrooms.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Bathrooms *</label>
-                            <input type="number" name="bathrooms" value="{{ form.bathrooms.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Parking Spaces</label>
-                            <input type="number" name="parking_spaces" value="{{ form.parking_spaces.value|default:'0' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Square Feet</label>
-                            <input type="number" name="square_feet" value="{{ form.square_feet.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Floor Number</label>
-                            <input type="number" name="floor_number" value="{{ form.floor_number.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Total Floors</label>
-                            <input type="number" name="total_floors" value="{{ form.total_floors.value|default:'' }}" 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Available Units *</label>
-                            <input type="number" name="total_units" value="{{ form.total_units.value|default:'1' }}" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
-                            <p class="mt-1 text-xs text-gray-500">Use 1 for a single home. This listing stays on the market while units remain.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Add this after the Property Details section -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Multi-Unit Building</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="flex items-center">
-                                <input type="checkbox" name="is_multi_unit" id="id_is_multi_unit" 
-                                    class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    onchange="toggleUnitsSection()">
-                                <span class="ml-2 text-sm font-medium text-gray-700">This is a multi-unit building (apartment complex)</span>
+                    <!-- Main Image -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Main Image</h3>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                            <input type="file" name="main_image" accept="image/*" class="hidden" id="main-image-upload">
+                            <label for="main-image-upload" class="cursor-pointer">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-600">Click to upload main image</p>
+                                <p class="text-sm text-gray-500">This will be the primary image for your property</p>
                             </label>
-                            <p class="mt-1 text-xs text-gray-500">Check this if you're listing a building with multiple units</p>
                         </div>
-                        <div id="units-section" class="hidden">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Total Number of Units</label>
-                            <input type="number" name="total_units" value="2" min="2" max="100" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                            <p class="mt-1 text-xs text-gray-500">After creating the property, you'll be able to manage each unit individually</p>
+                        <div id="main-image-preview" class="mt-2 hidden">
+                            <img src="" alt="Main image preview" class="w-32 h-32 object-cover rounded-lg">
                         </div>
                     </div>
-                </div>
 
-                <script>
-                function toggleUnitsSection() {
-                    const checkbox = document.getElementById('id_is_multi_unit');
-                    const section = document.getElementById('units-section');
-                    if (checkbox.checked) {
-                        section.classList.remove('hidden');
-                    } else {
-                        section.classList.add('hidden');
-                    }
-                }
-
-                // Check initial state
-                document.addEventListener('DOMContentLoaded', function() {
-                    const checkbox = document.getElementById('id_is_multi_unit');
-                    if (checkbox && checkbox.checked) {
-                        document.getElementById('units-section').classList.remove('hidden');
-                    }
-                });
-                </script>
-
-                <!-- Amenities -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Amenities</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {% for amenity in amenities %}
-                            <label class="flex items-center space-x-2 text-sm">
-                                <input type="checkbox" name="amenities" value="{{ amenity }}" 
-                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                       {% if amenity in form.amenities.value %}checked{% endif %}>
-                                <span>{{ amenity }}</span>
+                    <!-- Gallery Images -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Gallery Images</h3>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                            <input type="file" name="images" multiple accept="image/*" class="hidden" id="gallery-image-upload">
+                            <label for="gallery-image-upload" class="cursor-pointer">
+                                <i class="fas fa-images text-4xl text-gray-400 mb-2"></i>
+                                <p class="text-gray-600">Click to upload gallery images</p>
+                                <p class="text-sm text-gray-500">You can select multiple images</p>
                             </label>
-                        {% endfor %}
+                        </div>
+                        <div id="gallery-image-preview" class="image-preview-grid"></div>
                     </div>
-                </div>
 
-                <!-- Features -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Features</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {% for feature in features %}
-                            <label class="flex items-center space-x-2 text-sm">
-                                <input type="checkbox" name="features" value="{{ feature }}" 
-                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                       {% if feature in form.features.value %}checked{% endif %}>
-                                <span>{{ feature }}</span>
-                            </label>
-                        {% endfor %}
+                    <!-- Submit -->
+                    <div class="flex items-center space-x-4">
+                        <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            <i class="fas fa-plus-circle mr-2"></i> 
+                            {% if property_type == 'multi' %}
+                                Create Building
+                            {% else %}
+                                List Property
+                            {% endif %}
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                            Cancel
+                        </a>
                     </div>
-                </div>
-
-                <!-- Images -->
-                <div class="mb-8">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Property Images</h3>
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <input type="file" name="images" multiple accept="image/*" class="hidden" id="image-upload">
-                        <label for="image-upload" class="cursor-pointer">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
-                            <p class="text-gray-600">Click to upload images</p>
-                            <p class="text-sm text-gray-500">You can select multiple images</p>
-                        </label>
-                    </div>
-                    <div id="image-preview" class="grid grid-cols-4 gap-2 mt-2"></div>
-                </div>
-
-                <!-- Submit -->
-                <div class="flex items-center space-x-4">
-                    <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
-                        <i class="fas fa-plus-circle mr-2"></i> List Property
-                    </button>
-                    <a href="{% url 'dashboard' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
-                        Cancel
-                    </a>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Image preview
-document.getElementById('image-upload').addEventListener('change', function(e) {
-    const preview = document.getElementById('image-preview');
+// Main image preview
+document.getElementById('main-image-upload').addEventListener('change', function(e) {
+    const preview = document.getElementById('main-image-preview');
+    const img = preview.querySelector('img');
+    if (this.files && this.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            img.src = ev.target.result;
+            preview.classList.remove('hidden');
+        }
+        reader.readAsDataURL(this.files[0]);
+    }
+});
+
+// Gallery image preview
+document.getElementById('gallery-image-upload').addEventListener('change', function(e) {
+    const preview = document.getElementById('gallery-image-preview');
     preview.innerHTML = '';
     for (const file of this.files) {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function(ev) {
             const div = document.createElement('div');
-            div.innerHTML = `<img src="${e.target.result}" class="w-full h-24 object-cover rounded-lg">`;
+            div.innerHTML = `<img src="${ev.target.result}" class="w-full h-24 object-cover rounded-lg">`;
             preview.appendChild(div);
         }
         reader.readAsDataURL(file);
+    }
+});
+
+// Toggle multi-unit
+function toggleMultiUnit(checkbox) {
+    const hiddenInput = document.getElementById('isMultiUnitHidden');
+    if (checkbox.checked) {
+        window.location.href = '?type=multi';
+    } else {
+        window.location.href = '?type=single';
+    }
+}
+
+// Sync the toggle with the current URL parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('multiUnitToggle');
+    const currentType = '{{ property_type }}';
+    
+    if (currentType === 'multi') {
+        toggle.checked = true;
+    } else {
+        toggle.checked = false;
     }
 });
 </script>

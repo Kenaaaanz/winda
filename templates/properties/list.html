@@ -125,6 +125,7 @@
                         {% endif %}
                     </div>
                     
+                    <!-- property card -->
                     <div class="p-4">
                         <h3 class="text-lg font-semibold text-gray-900 mb-1 truncate">{{ property.title }}</h3>
                         <p class="text-gray-600 text-sm mb-2">
@@ -139,9 +140,10 @@
                                     <i class="fas fa-building mr-1"></i> Multi-Unit Building
                                 </p>
                                 <p class="text-sm text-gray-600">
-                                    {% if property.get_price_range %}
-                                        {{ property.get_price_range }}
-                                    {% endif %}
+                                    Rent: {{ property.get_price_range }}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    Deposit: {{ property.get_security_deposit_range }}
                                 </p>
                                 <p class="text-xs text-gray-500">
                                     {{ property.get_unit_count_display }}
@@ -152,6 +154,11 @@
                                 KES {{ property.rental_price|intcomma }}
                                 <span class="text-sm font-normal text-gray-500">/ month</span>
                             </p>
+                            {% if property.security_deposit > 0 %}
+                                <p class="text-sm text-gray-600">
+                                    Deposit: KES {{ property.security_deposit|intcomma }}
+                                </p>
+                            {% endif %}
                         {% endif %}
                         
                         <div class="flex justify-between text-sm text-gray-600 border-t border-gray-100 pt-2">

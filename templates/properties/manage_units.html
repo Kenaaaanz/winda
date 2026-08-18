@@ -47,7 +47,7 @@
                 </div>
                 
                 <!-- Unit Management Form -->
-                <form method="POST" id="unitForm">
+                <form method="POST">
                     {% csrf_token %}
                     {{ formset.management_form }}
                     
@@ -60,13 +60,15 @@
                                     <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Beds</th>
                                     <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Baths</th>
                                     <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Rent (KES)</th>
+                                    <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Service Fee</th>
+                                    <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Deposit</th>
                                     <th class="text-left py-3 px-3 text-sm font-semibold text-gray-600">Status</th>
                                     <th class="text-center py-3 px-3 text-sm font-semibold text-gray-600">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for form in formset %}
-                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors" id="unit-row-{{ form.instance.id }}">
+                                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                         <td class="py-2 px-3">
                                             {{ form.id }}
                                             {{ form.unit_number }}
@@ -99,22 +101,27 @@
                                             {% endif %}
                                         </td>
                                         <td class="py-2 px-3">
+                                            {{ form.service_charge }}
+                                            {% if form.service_charge.errors %}
+                                                <div class="text-red-500 text-xs">{{ form.service_charge.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 px-3">
+                                            {{ form.security_deposit }}
+                                            {% if form.security_deposit.errors %}
+                                                <div class="text-red-500 text-xs">{{ form.security_deposit.errors }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 px-3">
                                             {{ form.status }}
                                             {% if form.status.errors %}
                                                 <div class="text-red-500 text-xs">{{ form.status.errors }}</div>
                                             {% endif %}
                                         </td>
                                         <td class="py-2 px-3 text-center">
-                                            {% if form.instance.id %}
-                                                <button type="button" 
-                                                        onclick="toggleUnit('{{ form.instance.id }}')" 
-                                                        class="text-sm px-3 py-1 rounded-lg transition-colors 
-                                                            {% if form.instance.is_available %}bg-green-100 text-green-700 hover:bg-green-200{% else %}bg-red-100 text-red-700 hover:bg-red-200{% endif %}">
-                                                    <i class="fas {% if form.instance.is_available %}fa-check-circle{% else %}fa-times-circle{% endif %} mr-1"></i>
-                                                    {% if form.instance.is_available %}Available{% else %}Unavailable{% endif %}
-                                                </button>
-                                            {% else %}
-                                                <span class="text-xs text-gray-400">Save to toggle</span>
+                                            {{ form.DELETE }}
+                                            {% if form.DELETE.errors %}
+                                                <div class="text-red-500 text-xs">{{ form.DELETE.errors }}</div>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -147,17 +154,32 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Starting Unit #</label>
                                 <input type="text" name="start_unit_number" value="1" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., 1, A1, B1">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Bedrooms</label>
-                                <input type="number" name="default_bedrooms" value="{{ property.bedrooms }}" 
+                                <input type="number" name="default_bedrooms" value="{{ property.bedrooms|default:1 }}" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Bathrooms</label>
-                                <input type="number" name="default_bathrooms" value="{{ property.bathrooms }}" 
+                                <input type="number" name="default_bathrooms" value="{{ property.bathrooms|default:1 }}" 
                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Rent (KES)</label>
+                                <input type="number" name="default_rental_price" value="25000" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" step="1000">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Service Fee (KES)</label>
+                                <input type="number" name="default_service_charge" value="2000" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" step="100">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Deposit (KES)</label>
+                                <input type="number" name="default_security_deposit" value="30000" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" step="1000">
                             </div>
                             <div class="md:col-span-4">
                                 <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 transition-colors">
@@ -179,34 +201,25 @@ function toggleUnit(unitId) {
         return;
     }
     
-    if (!confirm('Toggle availability for this unit?')) {
-        return;
+    if (confirm('Toggle availability for this unit?')) {
+        fetch(`/properties/unit/${unitId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert(data.message || 'Failed to toggle unit');
+            }
+        })
+        .catch(error => {
+            alert('An error occurred. Please try again.');
+        });
     }
-    
-    // Get CSRF token from the form
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    fetch(`/properties/unit/${unitId}/toggle/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin',
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            // Reload the page to show updated status
-            window.location.reload();
-        } else {
-            alert(data.message || 'Failed to toggle unit availability');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('An error occurred while toggling the unit. Please try again.');
-    });
 }
 </script>
 {% endblock %}

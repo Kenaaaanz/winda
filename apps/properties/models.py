@@ -57,15 +57,15 @@ class Property(models.Model):
     latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     
-    # Pricing
-    rental_price = models.DecimalField(max_digits=10, decimal_places=2)
-    service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Pricing - Make these nullable for multi-unit
+    rental_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    service_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
+    security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     negotiation_allowed = models.BooleanField(default=False)
     
-    # Property Details
-    bedrooms = models.PositiveIntegerField()
-    bathrooms = models.PositiveIntegerField()
+    # Property Details - Make these nullable for multi-unit
+    bedrooms = models.PositiveIntegerField(null=True, blank=True)
+    bathrooms = models.PositiveIntegerField(null=True, blank=True)
     parking_spaces = models.PositiveIntegerField(default=0)
     square_feet = models.PositiveIntegerField(null=True, blank=True)
     floor_number = models.PositiveIntegerField(null=True, blank=True)
@@ -81,14 +81,9 @@ class Property(models.Model):
     amenities = models.JSONField(default=list, blank=True)
     features = models.JSONField(default=list, blank=True)
     
-    # Media
-    main_image = models.ImageField(upload_to='properties/', null=True, blank=True)
-    thumbnail = models.ImageField(upload_to='properties/thumbnails/', null=True, blank=True)
-
-    # Media - Store Cloudinary URLs directly
-    main_image = models.URLField(max_length=500, blank=True, null=True)  
-    thumbnail = models.URLField(max_length=500, blank=True, null=True)   
-
+    # Media - Store Cloudinary URLs directly (ONLY ONE VERSION)
+    main_image = models.URLField(max_length=500, blank=True, null=True)
+    thumbnail = models.URLField(max_length=500, blank=True, null=True)
     images = models.JSONField(default=list, blank=True)
     video_url = models.URLField(blank=True, null=True)
     virtual_tour_url = models.URLField(blank=True, null=True)
@@ -129,7 +124,6 @@ class Property(models.Model):
     @property
     def is_market_available(self):
         """Check if property is available for listing"""
-        # A property is market available if it's verified and has available units
         if self.verification_status != 'VERIFIED':
             return False
         
@@ -138,9 +132,11 @@ class Property(models.Model):
         else:
             return self.availability_status == 'AVAILABLE'
     
-    @property
-    def total_price(self):
-        return self.rental_price + self.service_charge
+    def get_total_price(self):
+        """Get total price including service charge"""
+        if self.rental_price and self.service_charge:
+            return self.rental_price + self.service_charge
+        return self.rental_price or 0
     
     def get_main_image_url(self):
         """Get main image URL"""
@@ -179,7 +175,6 @@ class Property(models.Model):
         
         return images
 
-        
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse('properties:detail', kwargs={'pk': self.id})
@@ -199,7 +194,7 @@ class Property(models.Model):
             else:
                 image = self.property_images.get(id=image_id)
                 if image:
-                    self.thumbnail = image.image
+                    self.thumbnail = image.image_url
                     self.save(update_fields=['thumbnail'])
                     return True
         except:
@@ -227,7 +222,36 @@ class Property(models.Model):
                 if len(set(prices)) == 1:
                     return f"KES {prices[0]:,.0f}"
                 return f"KES {min(prices):,.0f} - {max(prices):,.0f}"
-        return f"KES {self.rental_price:,.0f}"
+        elif self.rental_price:
+            return f"KES {self.rental_price:,.0f}"
+        return "Price not set"
+
+    def get_security_deposit_range(self):
+        """Get security deposit range for multi-unit properties"""
+        if self.is_multi_unit:
+            units = self.units.all()
+            if units.exists():
+                deposits = [unit.get_security_deposit() for unit in units]
+                if len(set(deposits)) == 1:
+                    return f"KES {deposits[0]:,.0f}"
+                return f"KES {min(deposits):,.0f} - {max(deposits):,.0f}"
+        elif self.security_deposit:
+            return f"KES {self.security_deposit:,.0f}"
+        return "KES 0"
+    
+    def get_service_charge_range(self):
+        """Get service charge range for multi-unit properties"""
+        if self.is_multi_unit:
+            units = self.units.all()
+            if units.exists():
+                charges = [unit.get_service_charge() for unit in units]
+                if len(set(charges)) == 1:
+                    return f"KES {charges[0]:,.0f}"
+                return f"KES {min(charges):,.0f} - {max(charges):,.0f}"
+        elif self.service_charge:
+            return f"KES {self.service_charge:,.0f}"
+        return "KES 0"
+
     
     def get_unit_count_display(self):
         """Get unit count display"""
@@ -289,7 +313,6 @@ class Property(models.Model):
         """Update availability based on unit status (alias for refresh_availability_status)"""
         return self.refresh_availability_status()
 
-    
 
 class Unit(models.Model):
     """Individual units within a property (for apartments/buildings)"""
@@ -350,15 +373,15 @@ class Unit(models.Model):
     
     def get_rental_price(self):
         """Get rental price (unit-specific or fallback to property)"""
-        return self.rental_price or self.property_obj.rental_price
+        return self.rental_price or self.property_obj.rental_price or 0
     
     def get_service_charge(self):
         """Get service charge (unit-specific or fallback to property)"""
-        return self.service_charge or self.property_obj.service_charge
+        return self.service_charge or self.property_obj.service_charge or 0
     
     def get_security_deposit(self):
         """Get security deposit (unit-specific or fallback to property)"""
-        return self.security_deposit or self.property_obj.security_deposit
+        return self.security_deposit or self.property_obj.security_deposit or 0
     
     def toggle_availability(self):
         """Toggle unit availability"""
@@ -369,7 +392,7 @@ class Unit(models.Model):
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='property_images')
-    image_url = models.URLField(max_length=500, blank=True, null=True)  # Store Cloudinary URL directly
+    image_url = models.URLField(max_length=500, blank=True, null=True)
     is_main = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     caption = models.CharField(max_length=200, blank=True)
@@ -397,11 +420,9 @@ class PropertyImage(models.Model):
             try:
                 from apps.common.utils.cloudinary_utils import CloudinaryService
                 # Extract public_id from URL
-                # URL format: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/public_id.jpg
                 parts = self.image_url.split('/')
                 for i, part in enumerate(parts):
                     if part == 'upload':
-                        # The public_id is after the version number or directly after 'upload/'
                         if i + 1 < len(parts) and parts[i+1].startswith('v'):
                             public_id_parts = parts[i+2:]
                         else:
@@ -413,8 +434,7 @@ class PropertyImage(models.Model):
                 print(f"Error deleting from Cloudinary: {e}")
         super().delete(*args, **kwargs)
 
-            
-    
+
 class PropertyDocument(models.Model):
     DOCUMENT_TYPES = (
         ('TITLE_DEED', 'Title Deed'),

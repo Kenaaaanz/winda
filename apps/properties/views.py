@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from .models import Property, PropertyImage, PropertyDocument, Favorite, Unit
-from .forms import PropertyForm, PropertySearchForm, PropertyDocumentForm, UnitForm, UnitFormSet
+from .forms import PropertySearchForm, PropertyDocumentForm, UnitForm, UnitFormSet
 from .services import PropertyService
 from ..accounts.decorators import owner_required
 from ..tenants.models import TenantApplication
@@ -197,96 +197,148 @@ def property_search_autocomplete(request):
 @login_required
 @owner_required
 def property_create(request):
-    """Create new property listing with optional units"""
-    from .forms import PropertyWithUnitsForm
+    """Create new property listing with simplified flow"""
+    from .forms import PropertyMultiUnitForm, PropertyBaseForm
     from apps.common.utils.image_utils import upload_property_image_to_cloudinary
     import uuid
     import time
     
-    if request.method == 'POST':
-        form = PropertyWithUnitsForm(request.POST, request.FILES)
-        
-        if form.is_valid():
-            try:
-                property_obj = form.save(commit=False)
-                property_obj.owner = request.user.owner_profile
-                
-                # Handle amenities and features
-                amenities = request.POST.getlist('amenities')
-                features = request.POST.getlist('features')
-                property_obj.amenities = amenities if amenities else []
-                property_obj.features = features if features else []
-                
-                # Handle main image - use URL field
-                main_image = request.FILES.get('main_image')
-                if main_image:
-                    result = upload_property_image_to_cloudinary(
-                        main_image, 
-                        property_obj.id if property_obj.id else f'temp_{int(time.time())}',
-                        'main'
-                    )
-                    if result:
-                        property_obj.main_image = result['url']  # Store URL directly
-                
-                # Handle multi-unit
-                is_multi_unit = form.cleaned_data.get('is_multi_unit', False)
-                property_obj.is_multi_unit = is_multi_unit
-                
-                if not is_multi_unit:
-                    property_obj.total_units = 1
-                    property_obj.available_units = 1
-                else:
-                    property_obj.total_units = form.cleaned_data.get('total_units', 1)
-                    property_obj.available_units = form.cleaned_data.get('total_units', 1)
-                
-                # Save property first to get an ID
-                property_obj.save()
-                
-                # Handle gallery images - use URL field
-                images = request.FILES.getlist('images')
-                for idx, image in enumerate(images):
-                    result = upload_property_image_to_cloudinary(
-                        image,
-                        property_obj.id,
-                        'gallery'
-                    )
-                    if result:
-                        PropertyImage.objects.create(
-                            property=property_obj,
-                            image_url=result['url'],  # Store URL directly
-                            is_main=(idx == 0 and not property_obj.main_image),
-                            order=idx
-                        )
-                
-                # Handle units for multi-unit properties
-                if is_multi_unit:
-                    messages.success(request, 'Property created! Now add your units.')
-                    return redirect('properties:manage_units', pk=property_obj.pk)
-                else:
-                    messages.success(request, 'Property created successfully!')
-                    return redirect('properties:detail', pk=property_obj.pk)
-                    
-            except Exception as e:
-                messages.error(request, f'Error creating property: {str(e)}')
-                return redirect('properties:create')
-        else:
-            # Show form errors
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
+    # Get the property type from GET parameter or POST
+    property_type = request.GET.get('type') or request.POST.get('property_type') or request.session.get('property_type', 'single')
+    request.session['property_type'] = property_type
     
-    # GET request or invalid POST - display the form
-    form = PropertyWithUnitsForm()
     amenities_list = PropertyService.get_amenities_list()
     features_list = PropertyService.get_features_list()
     
-    return render(request, 'properties/create.html', {
-        'form': form,
-        'amenities': amenities_list,
-        'features': features_list,
-    })
-
-
+    if request.method == 'POST':
+        # Check if multi-unit toggle is on
+        is_multi_unit = request.POST.get('is_multi_unit', 'off') == 'on'
+        
+        if is_multi_unit:
+            # Multi-unit property form
+            form = PropertyMultiUnitForm(request.POST, request.FILES)
+            
+            if form.is_valid():
+                try:
+                    # Create the property
+                    property_obj = form.save(commit=False)
+                    property_obj.owner = request.user.owner_profile
+                    
+                    # Set multi-unit flag
+                    property_obj.is_multi_unit = True
+                    property_obj.availability_status = 'AVAILABLE'
+                    
+                    # Set default values for unit-specific fields
+                    property_obj.rental_price = 0
+                    property_obj.security_deposit = 0
+                    property_obj.service_charge = 0
+                    property_obj.bedrooms = 0
+                    property_obj.bathrooms = 0
+                    property_obj.total_units = 0
+                    property_obj.available_units = 0
+                    
+                    # Handle amenities and features
+                    amenities = request.POST.getlist('amenities')
+                    features = request.POST.getlist('features')
+                    property_obj.amenities = amenities if amenities else []
+                    property_obj.features = features if features else []
+                    
+                    # Handle main image
+                    main_image = request.FILES.get('main_image')
+                    if main_image:
+                        result = upload_property_image_to_cloudinary(
+                            main_image, 
+                            property_obj.id if property_obj.id else f'temp_{int(time.time())}',
+                            'main'
+                        )
+                        if result:
+                            property_obj.main_image = result['url']
+                    
+                    # Save property
+                    property_obj.save()
+                    
+                    messages.success(request, 'Building created! Now add your units.')
+                    return redirect('properties:manage_units', pk=property_obj.pk)
+                    
+                except Exception as e:
+                    messages.error(request, f'Error creating property: {str(e)}')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'{field}: {error}')
+            
+            return render(request, 'properties/create.html', {
+                'form': form,
+                'formset': None,
+                'property_type': 'multi',
+                'amenities': amenities_list,
+                'features': features_list,
+            })
+            
+        else:
+            # Single unit property form
+            form = PropertyBaseForm(request.POST, request.FILES)
+            
+            if form.is_valid():
+                try:
+                    property_obj = form.save(commit=False)
+                    property_obj.owner = request.user.owner_profile
+                    property_obj.is_multi_unit = False
+                    property_obj.total_units = 1
+                    property_obj.available_units = 1
+                    
+                    # Handle amenities and features
+                    amenities = request.POST.getlist('amenities')
+                    features = request.POST.getlist('features')
+                    property_obj.amenities = amenities if amenities else []
+                    property_obj.features = features if features else []
+                    
+                    # Handle main image
+                    main_image = request.FILES.get('main_image')
+                    if main_image:
+                        result = upload_property_image_to_cloudinary(
+                            main_image, 
+                            property_obj.id if property_obj.id else f'temp_{int(time.time())}',
+                            'main'
+                        )
+                        if result:
+                            property_obj.main_image = result['url']
+                    
+                    property_obj.save()
+                    
+                    messages.success(request, 'Property created successfully!')
+                    return redirect('properties:detail', pk=property_obj.pk)
+                    
+                except Exception as e:
+                    messages.error(request, f'Error creating property: {str(e)}')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'{field}: {error}')
+            
+            return render(request, 'properties/create.html', {
+                'form': form,
+                'formset': None,
+                'property_type': 'single',
+                'amenities': amenities_list,
+                'features': features_list,
+            })
+    
+    else:
+        # GET request - display the appropriate form
+        if property_type == 'multi':
+            form = PropertyMultiUnitForm()
+        else:
+            form = PropertyBaseForm()
+        
+        return render(request, 'properties/create.html', {
+            'form': form,
+            'formset': None,
+            'property_type': property_type,
+            'amenities': amenities_list,
+            'features': features_list,
+        })
+            
 @login_required
 @owner_required
 def manage_units(request, pk):
@@ -347,34 +399,23 @@ def manage_units(request, pk):
 @login_required
 @owner_required
 def bulk_add_units(request, pk):
-    """Bulk add units to a property with pricing"""
+    """Bulk add units to a property"""
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     
     if request.method == 'POST':
         unit_count = int(request.POST.get('unit_count', 0))
         start_unit = request.POST.get('start_unit_number', '1')
-        default_bedrooms = int(request.POST.get('default_bedrooms', 1))
-        default_bathrooms = int(request.POST.get('default_bathrooms', 1))
-        
-        # Get pricing from form or use property defaults
-        default_rent = request.POST.get('default_rental_price', '')
-        default_service = request.POST.get('default_service_charge', '')
-        default_deposit = request.POST.get('default_security_deposit', '')
-        
-        # Use property defaults if not specified
-        if not default_rent:
-            default_rent = property_obj.rental_price
-        if not default_service:
-            default_service = property_obj.service_charge
-        if not default_deposit:
-            default_deposit = property_obj.security_deposit
+        default_bedrooms = int(request.POST.get('default_bedrooms', 0))
+        default_bathrooms = int(request.POST.get('default_bathrooms', 0))
+        default_rental_price = request.POST.get('default_rental_price', 0)
+        default_service_charge = request.POST.get('default_service_charge', 0)
+        default_security_deposit = request.POST.get('default_security_deposit', 0)
         
         if unit_count <= 0:
             messages.error(request, 'Please enter a valid number of units.')
             return redirect('properties:manage_units', pk=property_obj.pk)
         
         created_count = 0
-        errors = []
         
         # Determine if start_unit is numeric or alphanumeric
         if start_unit.isdigit():
@@ -382,25 +423,20 @@ def bulk_add_units(request, pk):
             for i in range(unit_count):
                 unit_number = str(start_num + i)
                 if not property_obj.units.filter(unit_number=unit_number).exists():
-                    try:
-                        Unit.objects.create(
-                            property_obj=property_obj,
-                            unit_number=unit_number,
-                            bedrooms=default_bedrooms,
-                            bathrooms=default_bathrooms,
-                            rental_price=default_rent,
-                            service_charge=default_service,
-                            security_deposit=default_deposit,
-                            amenities=[],
-                            features=[],
-                            is_available=True,
-                            status='AVAILABLE'
-                        )
-                        created_count += 1
-                    except Exception as e:
-                        errors.append(f'Unit {unit_number}: {str(e)}')
-                else:
-                    errors.append(f'Unit {unit_number} already exists')
+                    Unit.objects.create(
+                        property_obj=property_obj,
+                        unit_number=unit_number,
+                        bedrooms=default_bedrooms,
+                        bathrooms=default_bathrooms,
+                        rental_price=default_rental_price,
+                        service_charge=default_service_charge,
+                        security_deposit=default_security_deposit,
+                        amenities=[],  # Empty list
+                        features=[],   # Empty list
+                        is_available=True,
+                        status='AVAILABLE'
+                    )
+                    created_count += 1
         else:
             # Alphanumeric (e.g., A1, A2)
             prefix = ''.join([c for c in start_unit if not c.isdigit()])
@@ -408,40 +444,30 @@ def bulk_add_units(request, pk):
             for i in range(unit_count):
                 unit_number = f"{prefix}{start_num + i}"
                 if not property_obj.units.filter(unit_number=unit_number).exists():
-                    try:
-                        Unit.objects.create(
-                            property_obj=property_obj,
-                            unit_number=unit_number,
-                            bedrooms=default_bedrooms,
-                            bathrooms=default_bathrooms,
-                            rental_price=default_rent,
-                            service_charge=default_service,
-                            security_deposit=default_deposit,
-                            amenities=[],
-                            features=[],
-                            is_available=True,
-                            status='AVAILABLE'
-                        )
-                        created_count += 1
-                    except Exception as e:
-                        errors.append(f'Unit {unit_number}: {str(e)}')
-                else:
-                    errors.append(f'Unit {unit_number} already exists')
+                    Unit.objects.create(
+                        property_obj=property_obj,
+                        unit_number=unit_number,
+                        bedrooms=default_bedrooms,
+                        bathrooms=default_bathrooms,
+                        rental_price=default_rental_price,
+                        service_charge=default_service_charge,
+                        security_deposit=default_security_deposit,
+                        amenities=[],  # Empty list
+                        features=[],   # Empty list
+                        is_available=True,
+                        status='AVAILABLE'
+                    )
+                    created_count += 1
         
         # Update total units
         property_obj.total_units = property_obj.units.count()
         property_obj.available_units = property_obj.units.filter(is_available=True).count()
         property_obj.save()
         
-        if errors:
-            messages.warning(request, f'{created_count} units added. Errors: {", ".join(errors[:5])}')
-        else:
-            messages.success(request, f'{created_count} units added successfully!')
-        
+        messages.success(request, f'{created_count} units added successfully!')
         return redirect('properties:manage_units', pk=property_obj.pk)
     
     return redirect('properties:manage_units', pk=property_obj.pk)
-
     
 @login_required
 @owner_required
@@ -570,29 +596,54 @@ def update_units(request, pk):
 @owner_required
 def property_edit(request, pk):
     """Edit property listing"""
+    from .forms import PropertyBaseForm
+    
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
     
     if request.method == 'POST':
-        form = PropertyForm(request.POST, request.FILES, instance=property_obj)
+        # Use PropertyBaseForm for editing (works for both single and multi-unit)
+        form = PropertyBaseForm(request.POST, request.FILES, instance=property_obj)
+        
         if form.is_valid():
             property_obj = form.save(commit=False)
+            
+            # Handle amenities and features from checkboxes
+            amenities = request.POST.getlist('amenities')
+            features = request.POST.getlist('features')
+            property_obj.amenities = amenities if amenities else []
+            property_obj.features = features if features else []
+            
+            # Handle availability status
             availability_status = request.POST.get('availability_status')
             if availability_status in dict(Property.AVAILABILITY_STATUS):
                 property_obj.availability_status = availability_status
+            
+            # Handle verification status (if user is superuser or has permission)
+            verification_status = request.POST.get('verification_status')
+            if verification_status in dict(Property.VERIFICATION_STATUS) and request.user.is_superuser:
+                property_obj.verification_status = verification_status
+            
             property_obj.save()
             messages.success(request, 'Property updated successfully!')
             return redirect('properties:detail', pk=property_obj.pk)
+        else:
+            # Show form errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
-        form = PropertyForm(instance=property_obj)
+        # GET request - display the form
+        form = PropertyBaseForm(instance=property_obj)
     
-    context = {
+    amenities_list = PropertyService.get_amenities_list()
+    features_list = PropertyService.get_features_list()
+    
+    return render(request, 'properties/edit.html', {
         'form': form,
         'property': property_obj,
-        'amenities': PropertyService.get_amenities_list(),
-        'features': PropertyService.get_features_list(),
-    }
-    return render(request, 'properties/edit.html', context)
-
+        'amenities': amenities_list,
+        'features': features_list,
+    })
 
 @login_required
 @owner_required
