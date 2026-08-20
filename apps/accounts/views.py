@@ -141,21 +141,35 @@ def create_tenant_account(request):
     data = request.session.get('registration_data', {})
     
     with transaction.atomic():
-        user = User.objects.create_user(
-            username=data['email'],
-            email=data['email'],
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            password=data['password'],
-            user_type='TENANT',
-            is_active=True,
-            is_email_verified=True,
-            verification_status='VERIFIED',
-        )
+        # Check if user already exists
+        user = None
+        try:
+            user = User.objects.get(email=data['email'])
+            # If user exists but is inactive, reactivate
+            if not user.is_active:
+                user.is_active = True
+                user.is_email_verified = True
+                user.verification_status = 'VERIFIED'
+                user.save()
+        except User.DoesNotExist:
+            # Create new user
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                password=data['password'],
+                user_type='TENANT',
+                is_active=True,
+                is_email_verified=True,
+                verification_status='VERIFIED',
+            )
         
-        # Create tenant profile
-        TenantProfile.objects.create(user=user)
-        UserProfile.objects.create(user=user)
+        # Create user profile if it doesn't exist
+        UserProfile.objects.get_or_create(user=user)
+        
+        # Create tenant profile if it doesn't exist
+        TenantProfile.objects.get_or_create(user=user)
         
         # Clear session
         request.session.pop('registration_data', None)
@@ -167,8 +181,7 @@ def create_tenant_account(request):
         
         messages.success(request, 'Account created successfully! Welcome to Winda.')
         return redirect('dashboard')
-
-
+    
 def create_owner_account(request):
     """Create owner account (pending admin approval)"""
     data = request.session.get('registration_data', {})
@@ -176,42 +189,75 @@ def create_owner_account(request):
     bank_data = request.session.get('registration_bank_data', {})
     
     with transaction.atomic():
-        user = User.objects.create_user(
-            username=data['email'],
-            email=data['email'],
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            password=data['password'],
-            user_type='HOUSE_OWNER',
-            is_active=True,
-            is_email_verified=False,
-            verification_status='PENDING',
-        )
+        # Check if user already exists
+        user = None
+        try:
+            user = User.objects.get(email=data['email'])
+            # If user exists but is not active or not verified, update
+            if not user.is_active:
+                user.is_active = True
+            if user.verification_status == 'PENDING':
+                user.verification_status = 'PENDING'
+                user.is_email_verified = False
+                user.save()
+        except User.DoesNotExist:
+            # Create new user
+            user = User.objects.create_user(
+                username=data['email'],
+                email=data['email'],
+                first_name=data['first_name'],
+                last_name=data['last_name'],
+                password=data['password'],
+                user_type='HOUSE_OWNER',
+                is_active=True,
+                is_email_verified=False,
+                verification_status='PENDING',
+            )
         
-        # Create user profile
-        UserProfile.objects.create(user=user)
+        # Create user profile if it doesn't exist
+        UserProfile.objects.get_or_create(user=user)
         
-        # Create owner profile
-        owner_profile = OwnerProfile.objects.create(
+        # Create owner profile if it doesn't exist
+        owner_profile, created = OwnerProfile.objects.get_or_create(
             user=user,
-            company_name=business_data.get('company_name', ''),
-            company_registration_number=business_data.get('company_registration_number', ''),
-            tax_pin=business_data.get('tax_pin', ''),
+            defaults={
+                'company_name': business_data.get('company_name', ''),
+                'company_registration_number': business_data.get('company_registration_number', ''),
+                'tax_pin': business_data.get('tax_pin', ''),
+            }
         )
+        
+        # If owner profile already exists, update it
+        if not created:
+            owner_profile.company_name = business_data.get('company_name', owner_profile.company_name)
+            owner_profile.company_registration_number = business_data.get('company_registration_number', owner_profile.company_registration_number)
+            owner_profile.tax_pin = business_data.get('tax_pin', owner_profile.tax_pin)
+            owner_profile.save()
         
         # Create bank account (if we have the model)
         try:
             from apps.payments.models import PaystackSubaccount
-            PaystackSubaccount.objects.create(
-                owner_profile=owner_profile,
-                bank_code=bank_data.get('bank_code', ''),
-                account_number=bank_data.get('account_number', ''),
-                account_name=bank_data.get('account_name', ''),
-                business_name=business_data.get('company_name', ''),
-                verification_status='PENDING',
-                is_active=False,
-            )
-        except:
+            # Check if bank account already exists
+            bank_account = PaystackSubaccount.objects.filter(owner_profile=owner_profile).first()
+            if not bank_account:
+                PaystackSubaccount.objects.create(
+                    owner_profile=owner_profile,
+                    bank_code=bank_data.get('bank_code', ''),
+                    account_number=bank_data.get('account_number', ''),
+                    account_name=bank_data.get('account_name', ''),
+                    business_name=business_data.get('company_name', ''),
+                    verification_status='PENDING',
+                    is_active=False,
+                )
+            else:
+                # Update existing bank account
+                bank_account.bank_code = bank_data.get('bank_code', bank_account.bank_code)
+                bank_account.account_number = bank_data.get('account_number', bank_account.account_number)
+                bank_account.account_name = bank_data.get('account_name', bank_account.account_name)
+                bank_account.business_name = business_data.get('company_name', bank_account.business_name)
+                bank_account.save()
+        except Exception as e:
+            print(f"Bank account creation error: {e}")
             pass
         
         # Notify admins
@@ -230,7 +276,6 @@ def create_owner_account(request):
             'You will receive a notification once your account is verified.'
         )
         return redirect('accounts:owner_pending_approval')
-
 
 def notify_admins_new_owner(user):
     """Notify admins about new owner registration"""
