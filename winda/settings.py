@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-here')
 DEBUG = os.getenv('DEBUG')
-ALLOWED_HOSTS = [ '.onrender.com', 'www.winda.africa', 'winda.africa']
+ALLOWED_HOSTS = [ 'localhost', '127.0.0.1', '.onrender.com', 'www.winda.africa', 'winda.africa']
 
 # Application definition
 INSTALLED_APPS = [
@@ -248,7 +248,7 @@ REST_FRAMEWORK = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Security Settings
-SECURE_SSL_REDIRECT=True
+SECURE_SSL_REDIRECT= True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

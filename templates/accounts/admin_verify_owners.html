@@ -1,0 +1,77 @@
+{% extends 'admin/base_site.html' %}
+{% load humanize %}
+
+{% block title %}Verify Property Owners - Winda Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Pending Owner Verifications</h1>
+    
+    {% if pending_owners %}
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for owner in pending_owners %}
+                        <tr>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                        <span class="text-gray-600 font-bold">{{ owner.get_full_name|slice:":1"|upper }}</span>
+                                    </div>
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">{{ owner.get_full_name }}</div>
+                                        <div class="text-sm text-gray-500">{{ owner.phone }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ owner.email }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                {% if owner.owner_profile %}
+                                    {{ owner.owner_profile.company_name }}
+                                    <div class="text-xs text-gray-400">
+                                        Reg: {{ owner.owner_profile.company_registration_number|default:"N/A" }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-gray-400">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">{{ owner.date_joined|date:"M d, Y" }}</td>
+                            <td class="px-6 py-4">
+                                <form method="POST" class="flex space-x-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="user_id" value="{{ owner.id }}">
+                                    <input type="text" name="notes" placeholder="Add notes..." 
+                                           class="px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                    <button type="submit" name="action" value="approve" 
+                                            class="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600">
+                                        <i class="fas fa-check mr-1"></i> Approve
+                                    </button>
+                                    <button type="submit" name="action" value="reject" 
+                                            class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600">
+                                        <i class="fas fa-times mr-1"></i> Reject
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="bg-white rounded-xl shadow-md p-12 text-center">
+            <i class="fas fa-check-circle text-6xl text-green-300 mb-4"></i>
+            <h3 class="text-xl font-semibold text-gray-600">No Pending Verifications</h3>
+            <p class="text-gray-500 mt-2">All property owners have been verified.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

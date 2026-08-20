@@ -2,13 +2,139 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from apps.properties.models import Property
 from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, PaystackSubaccount
 
 User = get_user_model()
 
+# ==================== REGISTRATION WIZARD FORMS ====================
+
+class RegistrationStep1Form(forms.ModelForm):
+    """Step 1: Basic Information"""
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter password'
+        }),
+        label='Password'
+    )
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Confirm password'
+        }),
+        label='Confirm Password'
+    )
+    
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'phone']
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your email'
+            }),
+            'first_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your first name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your last name'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your phone number'
+            }),
+        }
+    
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
+    
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Passwords don't match")
+        return password2
+
+
+class RegistrationStep2Form(forms.ModelForm):
+    """Step 2: Business Details (for owners)"""
+    
+    class Meta:
+        model = OwnerProfile
+        fields = ['company_name', 'company_registration_number', 'tax_pin', 'business_license']
+        widgets = {
+            'company_name': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your company/business name'
+            }),
+            'company_registration_number': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter business registration number'
+            }),
+            'tax_pin': forms.TextInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+                'placeholder': 'Enter your tax PIN'
+            }),
+            'business_license': forms.FileInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+            }),
+        }
+
+
+class RegistrationStep3Form(forms.Form):
+    """Step 3: Bank Account Details (for owners)"""
+    
+    bank_code = forms.ChoiceField(
+        choices=[('', 'Select Bank')],
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+        }),
+        label='Bank Name'
+    )
+    
+    account_number = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter account number'
+        }),
+        label='Account Number'
+    )
+    
+    account_name = forms.CharField(
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter account holder name'
+        }),
+        label='Account Holder Name'
+    )
+    
+    def __init__(self, *args, bank_choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if bank_choices:
+            self.fields['bank_code'].choices = [('', 'Select Bank')] + bank_choices
+    
+    def clean_account_number(self):
+        account_number = self.cleaned_data.get('account_number')
+        if not account_number:
+            raise forms.ValidationError('Account number is required.')
+        account_number = ''.join(filter(str.isdigit, account_number))
+        if len(account_number) < 10:
+            raise forms.ValidationError('Account number must be at least 10 digits.')
+        return account_number
+
+
+# ==================== EXISTING FORMS (KEEP AS IS) ====================
+
 class UserRegistrationForm(UserCreationForm):
+    # Keep this exactly as you have it - used for admin/manual creation
     email = forms.EmailField(required=True, widget=forms.EmailInput(attrs={
         'class': 'appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm',
         'placeholder': 'Email address'
@@ -60,10 +186,9 @@ class UserRegistrationForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.username = self.cleaned_data['email']  # Use email as username
+        user.username = self.cleaned_data['email']
         if commit:
             user.save()
-            # Create profile based on user type
             UserProfile.objects.get_or_create(user=user)
             if user.user_type == 'HOUSE_OWNER':
                 OwnerProfile.objects.get_or_create(user=user)
@@ -185,10 +310,12 @@ class CustomPasswordChangeForm(PasswordChangeForm):
 
 class PasswordResetForm(forms.Form):
     """Password reset form"""
-    email = forms.EmailField(widget=forms.EmailInput(attrs={
-        'class': 'appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm',
-        'placeholder': 'Email address'
-    }))
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm',
+            'placeholder': 'Email address'
+        })
+    )
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
@@ -198,67 +325,13 @@ class PasswordResetForm(forms.Form):
 
 
 
+# ==================== PAYSTACK BANK ACCOUNT FORM (UPDATED) ====================
+
 class PaystackSubaccountForm(forms.ModelForm):
     """Form for setting up Paystack subaccount for bank account information"""
     
-    # Kenyan Bank Codes
-    BANK_CHOICES = [
-        ('', 'Select Bank'),
-        ('001', 'KCB Bank Kenya'),
-        ('002', 'Equity Bank Kenya'),
-        ('003', 'Co-operative Bank of Kenya'),
-        ('004', 'Barclays Bank Kenya'),
-        ('005', 'Standard Chartered Bank Kenya'),
-        ('006', 'Absa Bank Kenya'),
-        ('007', 'Diamond Trust Bank (DTB)'),
-        ('008', 'I&M Bank Kenya'),
-        ('009', 'NCBA Bank Kenya'),
-        ('010', 'Stanbic Bank Kenya'),
-        ('011', 'Sidian Bank'),
-        ('012', 'Ecobank Kenya'),
-        ('013', 'HFC Bank Kenya'),
-        ('014', 'Habib Bank Kenya'),
-        ('015', 'Bank of Africa Kenya'),
-        ('016', 'Citibank Kenya'),
-        ('017', 'Fidelity Commercial Bank'),
-        ('018', 'Prime Bank Kenya'),
-        ('019', 'African Banking Corporation (ABC)'),
-        ('020', 'Guardian Bank'),
-        ('021', 'Vijana Bank'),
-        ('022', 'Middle East Bank Kenya'),
-        ('023', 'Development Bank of Kenya'),
-        ('024', 'Spire Bank Kenya'),
-        ('025', 'Dubai Islamic Bank Kenya'),
-        ('026', 'Gulf African Bank'),
-        ('027', 'First Community Bank'),
-        ('028', 'SBM Bank Kenya'),
-        ('029', 'Kingdom Bank'),
-        ('030', 'Credit Bank Kenya'),
-        ('031', 'Consolidated Bank'),
-        ('032', 'UBA Kenya'),
-        ('033', 'Bank of India Kenya'),
-        ('034', 'M Oriental Bank'),
-        ('035', 'K-Rep Bank'),
-        ('036', 'HF Group'),
-        ('037', 'Mwalimu National Sacco'),
-        ('038', 'Harambee Sacco'),
-        ('039', 'Stima Sacco'),
-        ('040', 'Kenya Police Sacco'),
-        ('041', 'Teachers Sacco'),
-        ('042', 'Mombasa Maize Millers Sacco'),
-        ('043', 'Kenya Tea Development Agency'),
-        ('044', 'M-pesa Paybill'),
-        ('045', 'Safaricom M-Pesa'),
-        ('046', 'Airtel Money'),
-        ('047', 'Telkom Money'),
-        ('048', 'Paypal Kenya'),
-        ('049', 'Pesapal'),
-        ('050', 'Jambo Pay'),
-        ('051', 'Cellulant'),
-    ]
-    
     bank_code = forms.ChoiceField(
-        choices=BANK_CHOICES,
+        choices=[('', 'Select Bank')],
         label='Bank Name',
         widget=forms.Select(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
@@ -294,6 +367,11 @@ class PaystackSubaccountForm(forms.ModelForm):
         model = PaystackSubaccount
         fields = ['bank_code', 'account_number', 'account_name', 'business_name']
     
+    def __init__(self, *args, bank_choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if bank_choices is not None:
+            self.fields['bank_code'].choices = [('', 'Select Bank')] + bank_choices
+    
     def clean_account_number(self):
         account_number = self.cleaned_data.get('account_number')
         if not account_number:
@@ -316,10 +394,8 @@ class PaystackSubaccountForm(forms.ModelForm):
             raise forms.ValidationError('Please select a bank.')
         return bank_code
 
-    def __init__(self, *args, bank_choices=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if bank_choices is not None:
-            self.fields['bank_code'].choices = [('', 'Select Bank')] + bank_choices
+
+# ==================== CARETAKER FORMS ====================
 
 class CaretakerInviteForm(forms.Form):
     """Form to invite a caretaker"""

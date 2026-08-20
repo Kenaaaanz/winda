@@ -28,19 +28,27 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
     bio = models.TextField(max_length=500, blank=True)
     
-    # Verification
+    # Verification - ADD THESE FIELDS
     is_email_verified = models.BooleanField(default=False)
     is_phone_verified = models.BooleanField(default=False)
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_STATUS, default='PENDING')
     verification_documents = models.JSONField(default=list, blank=True)
     
-    # Timestamps
+    # Admin verification fields - ADD THESE
+    admin_notes = models.TextField(blank=True)  # Notes from admin during verification
+    verified_at = models.DateTimeField(null=True, blank=True)  # When the user was verified
+    verified_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)  # Admin who verified
+    
+    # Registration wizard step - ADD THIS
+    registration_step = models.IntegerField(default=0)  # 0=basic, 1=business, 2=bank, 3=complete
+    
+    # Timestamps - KEEP THESE
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     last_activity = models.DateTimeField(null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Preferences
+    # Preferences - KEEP THESE
     language = models.CharField(max_length=10, default='en')
     timezone = models.CharField(max_length=50, default='Africa/Nairobi')
     notification_preferences = models.JSONField(default=dict, blank=True)
@@ -82,6 +90,13 @@ class User(AbstractUser):
     @property
     def is_caretaker(self):
         return self.user_type == 'CARETAKER'
+    
+    @property
+    def is_approved(self):
+        """Check if user is approved (for owners)"""
+        if self.is_owner:
+            return self.verification_status == 'VERIFIED'
+        return True  # Tenants are auto-approved
 
 
 class UserProfile(models.Model):
@@ -123,18 +138,18 @@ class OwnerProfile(models.Model):
     tax_pin = models.CharField(max_length=50, blank=True)
     business_license = models.FileField(upload_to='documents/business_licenses/', null=True, blank=True)
     
-    # Bank Account Info
+    # Bank Account Info - KEEP THESE
     bank_account_set_up = models.BooleanField(default=False)
     paystack_subaccount_verified = models.BooleanField(default=False)
     
-    # Statistics
+    # Statistics - KEEP THESE
     total_properties = models.IntegerField(default=0)
     total_tenants = models.IntegerField(default=0)
     total_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     platform_fees_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     average_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     
-    # Timestamps
+    # Timestamps - KEEP THESE
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -152,17 +167,17 @@ class OwnerProfile(models.Model):
 class PaystackSubaccount(models.Model):
     owner_profile = models.OneToOneField(OwnerProfile, on_delete=models.CASCADE, related_name='paystack_subaccount')
     
-    # Bank Details
+    # Bank Details - KEEP THESE
     bank_code = models.CharField(max_length=10, help_text='Paystack bank code')
     account_number = models.CharField(max_length=20)
     account_name = models.CharField(max_length=200)
     
-    # Paystack Subaccount Info
+    # Paystack Subaccount Info - KEEP THESE
     subaccount_code = models.CharField(max_length=100, unique=True)
     business_name = models.CharField(max_length=200)
     percentage_charge = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('3.00'), help_text='Percentage charge for Winda (owner gets 97%)')
     
-    # Status
+    # Status - KEEP THESE
     is_active = models.BooleanField(default=True)
     verification_status = models.CharField(
         max_length=20,
@@ -174,10 +189,10 @@ class PaystackSubaccount(models.Model):
         default='PENDING'
     )
     
-    # Metadata
+    # Metadata - KEEP THESE
     paystack_response = models.JSONField(default=dict, blank=True)
     
-    # Timestamps
+    # Timestamps - KEEP THESE
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -200,36 +215,36 @@ class PaystackSubaccount(models.Model):
 class TenantProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='tenant_profile')
     
-    # Employment Details
+    # Employment Details - KEEP THESE
     employer_name = models.CharField(max_length=200, blank=True)
     employer_contact = PhoneField(blank=True)
     job_title = models.CharField(max_length=100, blank=True)
     monthly_income = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     
-    # Guarantor Information
+    # Guarantor Information - KEEP THESE
     guarantor_name = models.CharField(max_length=200, blank=True)
     guarantor_phone = PhoneField(blank=True)
     guarantor_email = models.EmailField(blank=True)
     guarantor_relationship = models.CharField(max_length=50, blank=True)
     
-    # Rental History
+    # Rental History - KEEP THESE
     previous_rental_address = models.TextField(blank=True)
     previous_landlord_name = models.CharField(max_length=200, blank=True)
     previous_landlord_phone = PhoneField(blank=True)
     previous_rental_duration = models.CharField(max_length=50, blank=True)
     
-    # Documents
+    # Documents - KEEP THESE
     national_id = models.FileField(upload_to='documents/ids/', null=True, blank=True)
     passport_photo = models.ImageField(upload_to='documents/passports/', null=True, blank=True)
     employment_letter = models.FileField(upload_to='documents/employment/', null=True, blank=True)
     bank_statement = models.FileField(upload_to='documents/bank/', null=True, blank=True)
     
-    # References
+    # References - KEEP THESE
     reference_name = models.CharField(max_length=200, blank=True)
     reference_phone = PhoneField(blank=True)
     reference_email = models.EmailField(blank=True)
     
-    # Tenant Status
+    # Tenant Status - KEEP THESE
     is_approved = models.BooleanField(default=False)
     approved_at = models.DateTimeField(null=True, blank=True)
     
@@ -322,6 +337,7 @@ class CaretakerProfile(models.Model):
             name = self.user.get_full_name() or self.user.email
             return name[:1].upper()
         return "?"
+
 
 class CaretakerPropertyAssignment(models.Model):
     """Through model for caretaker-property assignments"""

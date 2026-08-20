@@ -1,5 +1,4 @@
 import json
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -12,89 +11,326 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.urls import reverse
 from django.http import JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db import models
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.views import LoginView
+from django.urls import reverse_lazy
+from django.db import transaction
+
 from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
 from apps.notifications.models import Notification
 from apps.properties.models import Property
-from django.contrib.auth.views import LoginView
-from django.urls import reverse_lazy
-from django.shortcuts import redirect
-
-
 
 from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, LoginHistory
 from .forms import (
-    CaretakerInviteForm, CaretakerUpdateForm, PaystackSubaccountForm, UserRegistrationForm, UserLoginForm, UserProfileForm,
+    CaretakerInviteForm, CaretakerUpdateForm, PaystackSubaccountForm, 
+    UserRegistrationForm, UserLoginForm, UserProfileForm,
     OwnerProfileForm, TenantProfileForm, UserUpdateForm,
-    CustomPasswordChangeForm, PasswordResetForm
+    CustomPasswordChangeForm, PasswordResetForm,
+    RegistrationStep1Form, RegistrationStep2Form, RegistrationStep3Form
 )
 from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required
 from apps.emails.utils import EmailService
 
-def get_property_model():
-    from apps.properties.models import Property
-    return Property
 
-def register(request):
-    """User registration view"""
+# ==================== NEW REGISTRATION WIZARD ====================
+
+def register_wizard(request):
+    """Registration wizard for owners and tenants"""
+    # If user is already logged in, redirect
     if request.user.is_authenticated:
         return redirect('dashboard')
     
+    # Get current step from session
+    step = request.session.get('registration_step', 1)
+    user_type = request.session.get('registration_user_type', 'TENANT')
+    
+    # Handle user type selection
+    if request.method == 'GET' and 'type' in request.GET:
+        user_type = request.GET.get('type')
+        if user_type in ['TENANT', 'HOUSE_OWNER']:
+            request.session['registration_user_type'] = user_type
+            request.session['registration_step'] = 1
+            return redirect('accounts:register_wizard')
+    
+    # Step 1: Basic Information
+    if step == 1:
+        if request.method == 'POST':
+            form = RegistrationStep1Form(request.POST)
+            if form.is_valid():
+                # Store data in session
+                request.session['registration_data'] = {
+                    'email': form.cleaned_data['email'],
+                    'first_name': form.cleaned_data['first_name'],
+                    'last_name': form.cleaned_data['last_name'],
+                    'phone': form.cleaned_data['phone'],
+                    'password': form.cleaned_data['password1'],
+                }
+                
+                # If tenant, create account and redirect to dashboard
+                if user_type == 'TENANT':
+                    return create_tenant_account(request)
+                
+                # If owner, go to step 2
+                request.session['registration_step'] = 2
+                return redirect('accounts:register_wizard')
+        else:
+            form = RegistrationStep1Form()
+        
+        return render(request, 'accounts/register_wizard_step1.html', {
+            'form': form,
+            'user_type': user_type,
+            'step': step,
+            'total_steps': 3 if user_type == 'HOUSE_OWNER' else 1,
+        })
+    
+    # Step 2: Business Details (Owner only)
+    if step == 2 and user_type == 'HOUSE_OWNER':
+        if request.method == 'POST':
+            form = RegistrationStep2Form(request.POST, request.FILES)
+            if form.is_valid():
+                request.session['registration_business_data'] = {
+                    'company_name': form.cleaned_data['company_name'],
+                    'company_registration_number': form.cleaned_data.get('company_registration_number', ''),
+                    'tax_pin': form.cleaned_data.get('tax_pin', ''),
+                    'business_license': form.cleaned_data.get('business_license'),
+                }
+                request.session['registration_step'] = 3
+                return redirect('accounts:register_wizard')
+        else:
+            form = RegistrationStep2Form()
+        
+        return render(request, 'accounts/register_wizard_step2.html', {
+            'form': form,
+            'user_type': user_type,
+            'step': step,
+            'total_steps': 3,
+        })
+    
+    # Step 3: Bank Details (Owner only)
+    if step == 3 and user_type == 'HOUSE_OWNER':
+        if request.method == 'POST':
+            form = RegistrationStep3Form(request.POST)
+            if form.is_valid():
+                request.session['registration_bank_data'] = {
+                    'bank_code': form.cleaned_data['bank_code'],
+                    'account_number': form.cleaned_data['account_number'],
+                    'account_name': form.cleaned_data['account_name'],
+                }
+                return create_owner_account(request)
+        else:
+            form = RegistrationStep3Form()
+        
+        return render(request, 'accounts/register_wizard_step3.html', {
+            'form': form,
+            'user_type': user_type,
+            'step': step,
+            'total_steps': 3,
+        })
+    
+    # Fallback
+    return redirect('accounts:register_wizard')
+
+
+def create_tenant_account(request):
+    """Create tenant account (auto-approved)"""
+    data = request.session.get('registration_data', {})
+    
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=data['email'],
+            email=data['email'],
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            password=data['password'],
+            user_type='TENANT',
+            is_active=True,
+            is_email_verified=True,
+            verification_status='VERIFIED',
+        )
+        
+        # Create tenant profile
+        TenantProfile.objects.create(user=user)
+        UserProfile.objects.create(user=user)
+        
+        # Clear session
+        request.session.pop('registration_data', None)
+        request.session.pop('registration_step', None)
+        request.session.pop('registration_user_type', None)
+        
+        # Log user in
+        login(request, user)
+        
+        messages.success(request, 'Account created successfully! Welcome to Winda.')
+        return redirect('dashboard')
+
+
+def create_owner_account(request):
+    """Create owner account (pending admin approval)"""
+    data = request.session.get('registration_data', {})
+    business_data = request.session.get('registration_business_data', {})
+    bank_data = request.session.get('registration_bank_data', {})
+    
+    with transaction.atomic():
+        user = User.objects.create_user(
+            username=data['email'],
+            email=data['email'],
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            password=data['password'],
+            user_type='HOUSE_OWNER',
+            is_active=True,
+            is_email_verified=False,
+            verification_status='PENDING',
+        )
+        
+        # Create user profile
+        UserProfile.objects.create(user=user)
+        
+        # Create owner profile
+        owner_profile = OwnerProfile.objects.create(
+            user=user,
+            company_name=business_data.get('company_name', ''),
+            company_registration_number=business_data.get('company_registration_number', ''),
+            tax_pin=business_data.get('tax_pin', ''),
+        )
+        
+        # Create bank account (if we have the model)
+        try:
+            from apps.payments.models import PaystackSubaccount
+            PaystackSubaccount.objects.create(
+                owner_profile=owner_profile,
+                bank_code=bank_data.get('bank_code', ''),
+                account_number=bank_data.get('account_number', ''),
+                account_name=bank_data.get('account_name', ''),
+                business_name=business_data.get('company_name', ''),
+                verification_status='PENDING',
+                is_active=False,
+            )
+        except:
+            pass
+        
+        # Notify admins
+        notify_admins_new_owner(user)
+        
+        # Clear session
+        request.session.pop('registration_data', None)
+        request.session.pop('registration_business_data', None)
+        request.session.pop('registration_bank_data', None)
+        request.session.pop('registration_step', None)
+        request.session.pop('registration_user_type', None)
+        
+        messages.success(
+            request,
+            'Your account has been created! Your application is pending admin approval. '
+            'You will receive a notification once your account is verified.'
+        )
+        return redirect('accounts:owner_pending_approval')
+
+
+def notify_admins_new_owner(user):
+    """Notify admins about new owner registration"""
+    from apps.notifications.models import Notification
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    
+    admins = User.objects.filter(is_superuser=True)
+    for admin in admins:
+        Notification.objects.create(
+            user=admin,
+            notification_type='SYSTEM',
+            title='New Owner Registration Pending',
+            message=f'{user.get_full_name()} has registered as a property owner and is awaiting approval.',
+            related_object_type='user',
+            related_object_id=str(user.id),
+            data={
+                'user_id': str(user.id),
+                'user_email': user.email,
+                'user_name': user.get_full_name()
+            }
+        )
+
+
+@login_required
+def owner_pending_approval(request):
+    """Show pending approval page for owners"""
+    if request.user.user_type != 'HOUSE_OWNER':
+        return redirect('dashboard')
+    
+    if request.user.verification_status == 'VERIFIED':
+        return redirect('dashboard')
+    
+    return render(request, 'accounts/owner_pending_approval.html', {
+        'user': request.user,
+    })
+
+
+@staff_member_required
+def admin_verify_owners(request):
+    """Admin view to verify pending owners"""
+    pending_owners = User.objects.filter(
+        user_type='HOUSE_OWNER',
+        verification_status='PENDING'
+    ).select_related('owner_profile')
+    
     if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = False  # Deactivate until email confirmation
-            user.username = form.cleaned_data['email']
+        user_id = request.POST.get('user_id')
+        action = request.POST.get('action')
+        notes = request.POST.get('notes', '')
+        
+        user = get_object_or_404(User, id=user_id, user_type='HOUSE_OWNER')
+        
+        if action == 'approve':
+            user.verification_status = 'VERIFIED'
+            user.is_email_verified = True
+            user.verified_at = timezone.now()
+            user.verified_by = request.user
+            user.admin_notes = notes
             user.save()
             
-            # Send activation email
-            current_site = get_current_site(request)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = account_activation_token.make_token(user)
-            activation_link = f"{request.scheme}://{current_site.domain}{reverse('accounts:activate', kwargs={'uidb64': uid, 'token': token})}"
+            # Notify owner
+            Notification.objects.create(
+                user=user,
+                notification_type='SYSTEM',
+                title='Account Approved! 🎉',
+                message=f'Your account has been verified by admin. You can now list properties on Winda.',
+                related_object_type='user',
+                related_object_id=str(user.id)
+            )
             
-            # Use EmailService to send activation email
-            EmailService.send_activation_email(user, activation_link)
+            messages.success(request, f'{user.get_full_name()} has been approved.')
             
-            messages.success(request, 'Please confirm your email address to complete registration.')
-            return redirect('accounts:login')
-    else:
-        form = UserRegistrationForm()
-    
-    return render(request, 'accounts/register.html', {'form': form})
-
-
-def activate_account(request, uidb64, token):
-    """Activate user account"""
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
-    
-    if user is not None and account_activation_token.check_token(user, token):
-        user.is_active = True
-        user.is_email_verified = True
-        user.save()
+        elif action == 'reject':
+            user.verification_status = 'REJECTED'
+            user.admin_notes = notes
+            user.verified_at = timezone.now()
+            user.verified_by = request.user
+            user.save()
+            
+            Notification.objects.create(
+                user=user,
+                notification_type='SYSTEM',
+                title='Account Rejected',
+                message=f'Your account application has been rejected. Reason: {notes}',
+                related_object_type='user',
+                related_object_id=str(user.id)
+            )
+            
+            messages.success(request, f'{user.get_full_name()} has been rejected.')
         
-        # Create user profile based on user type
-        UserProfile.objects.get_or_create(user=user)
-        if user.user_type == 'HOUSE_OWNER':
-            OwnerProfile.objects.get_or_create(user=user)
-        elif user.user_type == 'TENANT':
-            TenantProfile.objects.get_or_create(user=user)
-        
-        login(request, user)
-        messages.success(request, 'Your account has been activated successfully!')
-        return redirect('dashboard')
-    else:
-        messages.error(request, 'Activation link is invalid!')
-        return redirect('accounts:login')
+        return redirect('accounts:admin_verify_owners')
+    
+    return render(request, 'accounts/admin_verify_owners.html', {
+        'pending_owners': pending_owners,
+    })
+
+def get_property_model():
+    from apps.properties.models import Property
+    return Property
 
 class CustomLoginView(LoginView):
     """Custom login view that redirects based on user type"""

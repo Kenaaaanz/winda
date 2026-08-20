@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bank Details - Step 3 - Winda{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="flex justify-center">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                    <span class="text-white font-bold text-3xl">W</span>
+                </div>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Bank Details
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Step {{ step }} of {{ total_steps }}
+            </p>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+            <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" 
+                 style="width: {% widthratio step total_steps 100 %}%"></div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Your bank details will be used to receive rent payments directly.
+                </p>
+            </div>
+            
+            <form method="POST">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <ul class="list-disc list-inside text-red-600 text-sm">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
+                        {{ form.bank_code }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Account Number *</label>
+                        {{ form.account_number }}
+                        <p class="text-xs text-gray-500 mt-1">Enter your 10-digit account number</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Account Holder Name *</label>
+                        {{ form.account_name }}
+                        <p class="text-xs text-gray-500 mt-1">Name on the bank account</p>
+                    </div>
+                </div>
+                
+                <button type="submit" 
+                        class="mt-6 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                    Complete Registration
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
