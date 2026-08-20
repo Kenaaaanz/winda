@@ -8,7 +8,7 @@ urlpatterns = [
     # ==================== REGISTRATION (NEW WIZARD) ====================
     # Registration wizard for owners and tenants
     path('register/', views.register_wizard, name='register'),
-    path('register/wizard/', views.register_wizard, name='register_wizard'),
+    #path('register/wizard/', views.register_wizard, name='register_wizard'),
         
     # Owner pending approval page
     path('owner-pending/', views.owner_pending_approval, name='owner_pending_approval'),
