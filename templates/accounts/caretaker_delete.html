@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Remove Caretaker - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-lg mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Remove Caretaker</h2>
+                <p class="text-gray-600 mb-6">
+                    Are you sure you want to remove "<strong>{{ caretaker.user.get_full_name }}</strong>"?
+                    This action cannot be undone.
+                </p>
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                        This will:
+                    </p>
+                    <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                        <li>• Remove the caretaker's access to all properties</li>
+                        <li>• Revoke all permissions</li>
+                        <li>• The caretaker will no longer be able to login</li>
+                    </ul>
+                </div>
+                
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="flex justify-center space-x-3">
+                        <a href="{% url 'accounts:caretaker_list' %}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                            Cancel
+                        </a>
+                        <button type="submit" class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-user-minus mr-2"></i> Remove Caretaker
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

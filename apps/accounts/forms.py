@@ -2,7 +2,9 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
-from .models import User, UserProfile, OwnerProfile, TenantProfile, PaystackSubaccount
+
+from apps.properties.models import Property
+from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, PaystackSubaccount
 
 User = get_user_model()
 
@@ -318,3 +320,64 @@ class PaystackSubaccountForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if bank_choices is not None:
             self.fields['bank_code'].choices = [('', 'Select Bank')] + bank_choices
+
+class CaretakerInviteForm(forms.Form):
+    """Form to invite a caretaker"""
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+            'placeholder': 'Enter caretaker email'
+        })
+    )
+    permission_level = forms.ChoiceField(
+        choices=CaretakerProfile.PERMISSION_LEVELS,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+        })
+    )
+    assigned_properties = forms.ModelMultipleChoiceField(
+        queryset=None,  # Will be set in __init__
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+        }),
+        label='Assigned Properties'
+    )
+    
+    def __init__(self, *args, **kwargs):
+        owner = kwargs.pop('owner', None)
+        super().__init__(*args, **kwargs)
+        if owner:
+            from apps.properties.models import Property
+            self.fields['assigned_properties'].queryset = Property.objects.filter(owner=owner)
+
+
+class CaretakerUpdateForm(forms.ModelForm):
+    """Form to update caretaker permissions"""
+    
+    assigned_properties = forms.ModelMultipleChoiceField(
+        queryset=None,  # Will be set in __init__
+        required=False,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+        })
+    )
+    
+    class Meta:
+        model = CaretakerProfile
+        fields = ['permission_level', 'is_active']
+        widgets = {
+            'permission_level': forms.Select(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        owner = kwargs.pop('owner', None)
+        super().__init__(*args, **kwargs)
+        if owner:
+            from apps.properties.models import Property
+            self.fields['assigned_properties'].queryset = Property.objects.filter(owner=owner)

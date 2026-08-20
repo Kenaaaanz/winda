@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -15,13 +17,17 @@ from django.db.models import Q
 from django.db import models
 from django.views.decorators.http import require_http_methods
 from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
+from apps.notifications.models import Notification
+from apps.properties.models import Property
+from django.contrib.auth.views import LoginView
+from django.urls import reverse_lazy
+from django.shortcuts import redirect
 
 
 
-
-from .models import User, UserProfile, OwnerProfile, TenantProfile, LoginHistory
+from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, LoginHistory
 from .forms import (
-    PaystackSubaccountForm, UserRegistrationForm, UserLoginForm, UserProfileForm,
+    CaretakerInviteForm, CaretakerUpdateForm, PaystackSubaccountForm, UserRegistrationForm, UserLoginForm, UserProfileForm,
     OwnerProfileForm, TenantProfileForm, UserUpdateForm,
     CustomPasswordChangeForm, PasswordResetForm
 )
@@ -29,8 +35,9 @@ from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required
 from apps.emails.utils import EmailService
 
-
-from apps.emails.utils import EmailService
+def get_property_model():
+    from apps.properties.models import Property
+    return Property
 
 def register(request):
     """User registration view"""
@@ -89,24 +96,82 @@ def activate_account(request, uidb64, token):
         messages.error(request, 'Activation link is invalid!')
         return redirect('accounts:login')
 
+class CustomLoginView(LoginView):
+    """Custom login view that redirects based on user type"""
+    template_name = 'accounts/login.html'
+    
+    def form_valid(self, form):
+        """If the form is valid, redirect to the appropriate dashboard"""
+        response = super().form_valid(form)
+        user = form.get_user()
+        
+        # Log login history
+        try:
+            LoginHistory.objects.create(
+                user=user,
+                ip_address=self.request.META.get('REMOTE_ADDR', ''),
+                user_agent=self.request.META.get('HTTP_USER_AGENT', '')[:255],
+                device_type=self.get_device_type(self.request),
+            )
+        except:
+            pass
+        
+        # Redirect based on user type
+        if user.user_type == 'CARETAKER':
+            return redirect('accounts:caretaker_dashboard')
+        elif user.user_type == 'HOUSE_OWNER':
+            return redirect('dashboard')
+        elif user.user_type == 'TENANT':
+            return redirect('dashboard')
+        else:
+            return redirect('dashboard')
+    
+    def get_device_type(self, request):
+        """Determine device type from user agent"""
+        user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
+        if 'mobile' in user_agent:
+            return 'Mobile'
+        elif 'tablet' in user_agent:
+            return 'Tablet'
+        else:
+            return 'Desktop'
+    
+    def form_invalid(self, form):
+        messages.error(self.request, 'Invalid username or password. Please try again.')
+        return super().form_invalid(form)
 
+    
 @login_required
 def dashboard(request):
     """Main dashboard view based on user type"""
-    context = {
-        'user': request.user,
-    }
+    user = request.user
     
-    if request.user.is_superuser:
+    # Check if user is a caretaker
+    if user.user_type == 'CARETAKER':
+        return redirect('accounts:caretaker_dashboard')
+    
+    # Check if user is super admin
+    if user.is_superuser:
         return redirect('admin:index')
-    elif request.user.user_type == 'HOUSE_OWNER':
-        context['stats'] = get_owner_stats(request.user)
+    
+    # Owner dashboard
+    if user.user_type == 'HOUSE_OWNER':
+        context = {
+            'user': user,
+            'stats': get_owner_stats(user)
+        }
         return render(request, 'accounts/owner_dashboard.html', context)
-    elif request.user.user_type == 'TENANT':
-        context['stats'] = get_tenant_stats(request.user)
+    
+    # Tenant dashboard
+    if user.user_type == 'TENANT':
+        context = {
+            'user': user,
+            'stats': get_tenant_stats(user)
+        }
         return render(request, 'accounts/tenant_dashboard.html', context)
-    else:
-        return render(request, 'accounts/guest_dashboard.html', context)
+    
+    # Guest or unknown user type
+    return render(request, 'accounts/guest_dashboard.html', {'user': user})
 
 
 def get_owner_stats(user):
@@ -692,3 +757,395 @@ def resend_activation_email(request):
         messages.error(request, f'Failed to send activation email. Error: {str(e)}')
     
     return redirect('dashboard')
+
+@login_required
+@owner_required
+def caretaker_list(request):
+    """List all caretakers for the owner - Simple template with AJAX"""
+    return render(request, 'accounts/manage_caretakers.html')
+
+@login_required
+@owner_required
+def caretaker_api_list(request):
+    """API endpoint to get caretakers data"""
+    owner = request.user.owner_profile
+    caretakers = CaretakerProfile.objects.filter(owner=owner).select_related('user')
+    
+    data = []
+    for caretaker in caretakers:
+        data.append({
+            'id': str(caretaker.id),  # This will be the actual ID (like '8')
+            'user': {
+                'id': str(caretaker.user.id),
+                'full_name': caretaker.user.get_full_name() or caretaker.user.email,
+                'email': caretaker.user.email,
+                'profile_picture': caretaker.user.profile_picture.url if caretaker.user.profile_picture else None,
+                'is_email_verified': caretaker.user.is_email_verified,
+            },
+            'permission_level': caretaker.permission_level,
+            'permission_display': caretaker.get_permission_level_display(),
+            'assigned_properties_count': caretaker.get_assigned_properties().count(),
+            'is_active': caretaker.is_active,
+            'created_at': caretaker.created_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    
+    return JsonResponse({
+        'caretakers': data,
+        'stats': {
+            'total': len(data),
+            'active': sum(1 for c in data if c['is_active']),
+        }
+    })
+
+@login_required
+@owner_required
+def caretaker_invite(request):
+    """Invite a new caretaker"""
+    owner = request.user.owner_profile
+    
+    if request.method == 'POST':
+        form = CaretakerInviteForm(request.POST, owner=owner)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            permission_level = form.cleaned_data['permission_level']
+            assigned_properties = form.cleaned_data.get('assigned_properties', [])
+            
+            # Check if user exists
+            try:
+                user = User.objects.get(email=email)
+                if user.user_type != 'CARETAKER':
+                    user.user_type = 'CARETAKER'
+                    user.save()
+                if not user.is_email_verified:
+                    user.is_email_verified = True
+                    user.verification_status = 'VERIFIED'
+                    user.save()
+            except User.DoesNotExist:
+                import random
+                import string
+                temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+                
+                user = User.objects.create_user(
+                    email=email,
+                    username=email,
+                    password=temp_password,
+                    first_name=email.split('@')[0].title(),
+                    user_type='CARETAKER',
+                    is_active=True,
+                    is_email_verified=True,
+                    verification_status='VERIFIED'
+                )
+                
+                # Send welcome email
+                from django.core.mail import send_mail
+                send_mail(
+                    'You have been invited as a Caretaker on Winda',
+                    f'You have been invited as a caretaker on Winda.\n\n'
+                    f'Your temporary password is: {temp_password}\n'
+                    f'Please login and change your password.\n\n'
+                    f'Login at: https://winda.co.ke/accounts/login/',
+                    'noreply@winda.co.ke',
+                    [email],
+                    fail_silently=True
+                )
+            
+            # Check if caretaker profile already exists
+            caretaker_profile, created = CaretakerProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'owner': owner,
+                    'permission_level': permission_level,
+                    'is_active': True
+                }
+            )
+            
+            if not created:
+                # Update existing profile
+                caretaker_profile.owner = owner
+                caretaker_profile.permission_level = permission_level
+                caretaker_profile.is_active = True
+                caretaker_profile.save()
+            
+            # Clear existing assignments
+            CaretakerPropertyAssignment.objects.filter(caretaker=caretaker_profile).delete()
+            
+            # Assign properties
+            for property_obj in assigned_properties:
+                CaretakerPropertyAssignment.objects.create(
+                    caretaker=caretaker_profile,
+                    property=property_obj,
+                    is_active=True
+                )
+            
+            # Send notification
+            from apps.notifications.models import Notification
+            Notification.objects.create(
+                user=user,
+                notification_type='SYSTEM',
+                title='Caretaker Invitation',
+                message=f'You have been added as a caretaker for {owner.company_name}.',
+                data={
+                    'owner_id': str(owner.id),
+                    'permission_level': permission_level
+                }
+            )
+            
+            messages.success(request, f'Caretaker {user.get_full_name()} added successfully!')
+            return redirect('accounts:caretaker_list')
+    else:
+        form = CaretakerInviteForm(owner=owner)
+    
+    return render(request, 'accounts/caretaker_invite.html', {
+        'form': form,
+    })
+
+
+@login_required
+@owner_required
+@require_http_methods(["POST"])
+def caretaker_api_delete(request):
+    """API endpoint to delete a caretaker"""
+    try:
+        data = json.loads(request.body)
+        caretaker_id = data.get('caretaker_id')
+        
+        owner = request.user.owner_profile
+        caretaker = CaretakerProfile.objects.get(id=caretaker_id, owner=owner)
+        user = caretaker.user
+        caretaker.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Caretaker {user.get_full_name()} removed successfully'
+        })
+    except CaretakerProfile.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Caretaker not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)
+
+
+@login_required
+@owner_required
+@require_http_methods(["POST"])
+def caretaker_api_update(request):
+    """API endpoint to update caretaker permissions"""
+    try:
+        data = json.loads(request.body)
+        caretaker_id = data.get('caretaker_id')
+        permission_level = data.get('permission_level')
+        is_active = data.get('is_active')
+        assigned_properties = data.get('assigned_properties', [])
+        
+        owner = request.user.owner_profile
+        caretaker = CaretakerProfile.objects.get(id=caretaker_id, owner=owner)
+        
+        # Update permission level
+        if permission_level:
+            caretaker.permission_level = permission_level
+            caretaker.save()
+        
+        # Update active status
+        if is_active is not None:
+            caretaker.is_active = is_active
+            caretaker.save()
+        
+        # Update property assignments
+        if assigned_properties is not None:
+            # Clear existing assignments
+            CaretakerPropertyAssignment.objects.filter(caretaker=caretaker).delete()
+            
+            # Add new assignments
+            for prop_id in assigned_properties:
+                from apps.properties.models import Property
+                try:
+                    property_obj = Property.objects.get(id=prop_id, owner=owner)
+                    CaretakerPropertyAssignment.objects.create(
+                        caretaker=caretaker,
+                        property=property_obj,
+                        is_active=True
+                    )
+                except Property.DoesNotExist:
+                    pass
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Caretaker {caretaker.user.get_full_name()} updated successfully',
+            'data': {
+                'id': str(caretaker.id),
+                'permission_level': caretaker.permission_level,
+                'permission_display': caretaker.get_permission_level_display(),
+                'is_active': caretaker.is_active,
+                'assigned_properties_count': caretaker.get_assigned_properties().count(),
+            }
+        })
+    except CaretakerProfile.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Caretaker not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=400)
+
+@login_required
+def caretaker_dashboard(request):
+    """Dashboard for caretakers"""
+    # Check if user is a caretaker
+    if request.user.user_type != 'CARETAKER':
+        messages.error(request, 'You are not authorized to view this page.')
+        return redirect('dashboard')
+    
+    try:
+        caretaker_profile = request.user.caretaker_profile
+    except CaretakerProfile.DoesNotExist:
+        messages.error(request, 'Caretaker profile not found. Please contact your administrator.')
+        return redirect('dashboard')
+    
+    # Check if caretaker is active
+    if not caretaker_profile.is_active:
+        messages.error(request, 'Your caretaker account has been deactivated. Please contact your administrator.')
+        return redirect('dashboard')
+    
+    # Get assigned properties
+    if caretaker_profile.permission_level == 'FULL':
+        properties = Property.objects.filter(owner=caretaker_profile.owner)
+    else:
+        properties = caretaker_profile.get_assigned_properties()
+    
+    # Get maintenance requests
+    from apps.maintenance.models import MaintenanceRequest
+    maintenance_requests = MaintenanceRequest.objects.filter(
+        property__in=properties
+    ).order_by('-created_at')[:10]
+    
+    # Get pending maintenance
+    pending_maintenance = MaintenanceRequest.objects.filter(
+        property__in=properties,
+        status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED']
+    ).count()
+    
+    # Get total units managed
+    total_units = 0
+    for prop in properties:
+        if prop.is_multi_unit:
+            total_units += prop.units.count()
+        else:
+            total_units += 1
+    
+    context = {
+        'caretaker_profile': caretaker_profile,
+        'properties': properties,
+        'property_count': properties.count(),
+        'total_units': total_units,
+        'maintenance_requests': maintenance_requests,
+        'pending_maintenance': pending_maintenance,
+    }
+    
+    return render(request, 'accounts/caretaker_dashboard.html', context)
+
+@login_required
+@owner_required
+def caretaker_edit(request, caretaker_id):
+    """Edit caretaker permissions - handles both UUID and integer IDs"""
+    from django.contrib import messages
+    from django.shortcuts import redirect, render
+    import uuid
+    
+    try:
+        owner = request.user.owner_profile
+        
+        # Try to find by ID (works for both UUID and integer)
+        try:
+            # Try as integer first
+            caretaker = CaretakerProfile.objects.get(id=int(caretaker_id), owner=owner)
+        except (ValueError, TypeError):
+            # Try as UUID string
+            try:
+                caretaker = CaretakerProfile.objects.get(id=caretaker_id, owner=owner)
+            except (ValueError, TypeError):
+                # Try by user email as last resort
+                caretaker = CaretakerProfile.objects.get(user__email=caretaker_id, owner=owner)
+                
+    except CaretakerProfile.DoesNotExist:
+        messages.error(request, f'Caretaker not found. Please re-invite the caretaker.')
+        return redirect('accounts:caretaker_list')
+    except Exception as e:
+        messages.error(request, f'Error finding caretaker: {str(e)}')
+        return redirect('accounts:caretaker_list')
+    
+    if request.method == 'POST':
+        form = CaretakerUpdateForm(request.POST, instance=caretaker, owner=owner)
+        if form.is_valid():
+            caretaker = form.save()
+            
+            # Update property assignments
+            assigned_properties = form.cleaned_data.get('assigned_properties', [])
+            
+            # Clear existing assignments and add new ones
+            CaretakerPropertyAssignment.objects.filter(caretaker=caretaker).delete()
+            
+            for property_obj in assigned_properties:
+                CaretakerPropertyAssignment.objects.create(
+                    caretaker=caretaker,
+                    property=property_obj,
+                    is_active=True
+                )
+            
+            messages.success(request, f'Caretaker {caretaker.user.get_full_name()} updated successfully!')
+            return redirect('accounts:caretaker_list')
+    else:
+        form = CaretakerUpdateForm(instance=caretaker, owner=owner)
+        # Pre-populate assigned properties
+        form.fields['assigned_properties'].initial = caretaker.get_assigned_properties()
+    
+    return render(request, 'accounts/caretaker_edit.html', {
+        'form': form,
+        'caretaker': caretaker,
+    })
+
+@login_required
+@owner_required
+def caretaker_delete(request, caretaker_id):
+    """Remove a caretaker - handles both UUID and integer IDs"""
+    from django.contrib import messages
+    from django.shortcuts import redirect, render
+    
+    try:
+        owner = request.user.owner_profile
+        
+        # Try to find by ID (works for both UUID and integer)
+        try:
+            # Try as integer first
+            caretaker = CaretakerProfile.objects.get(id=int(caretaker_id), owner=owner)
+        except (ValueError, TypeError):
+            # Try as UUID string
+            try:
+                caretaker = CaretakerProfile.objects.get(id=caretaker_id, owner=owner)
+            except (ValueError, TypeError):
+                # Try by user email as last resort
+                caretaker = CaretakerProfile.objects.get(user__email=caretaker_id, owner=owner)
+                
+    except CaretakerProfile.DoesNotExist:
+        messages.error(request, 'Caretaker not found.')
+        return redirect('accounts:caretaker_list')
+    except Exception as e:
+        messages.error(request, f'Error finding caretaker: {str(e)}')
+        return redirect('accounts:caretaker_list')
+    
+    if request.method == 'POST':
+        user = caretaker.user
+        caretaker.delete()
+        messages.success(request, f'Caretaker {user.get_full_name()} removed successfully!')
+        return redirect('accounts:caretaker_list')
+    
+    return render(request, 'accounts/caretaker_delete.html', {
+        'caretaker': caretaker,
+    })

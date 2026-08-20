@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Welcome, {{ user.get_full_name }}!</h1>
+            <p class="text-gray-600">Your account is not fully set up yet.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Get Started</h3>
+                <div class="space-y-3">
+                    <p class="text-gray-600">Complete your profile to get started on Winda.</p>
+                    <a href="{% url 'accounts:profile' %}" class="inline-block bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-user-edit mr-2"></i> Complete Profile
+                    </a>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Explore Properties</h3>
+                <div class="space-y-3">
+                    <p class="text-gray-600">Browse available properties in your area.</p>
+                    <a href="{% url 'properties:list' %}" class="inline-block bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                        <i class="fas fa-search mr-2"></i> Browse Properties
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

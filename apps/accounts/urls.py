@@ -7,7 +7,7 @@ app_name = 'accounts'
 urlpatterns = [
     # Authentication
     path('register/', views.register, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html'), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'), 
     path('logout/', views.custom_logout, name='logout'),
     path('activate/<uidb64>/<token>/', views.activate_account, name='activate'),
     
@@ -69,5 +69,20 @@ urlpatterns = [
 
     #resend activation email
     path('resend-activation/', views.resend_activation_email, name='resend_activation'),
+
+    # Caretaker Management - HTML Views
+    path('caretakers/', views.caretaker_list, name='caretaker_list'),
+    path('caretakers/invite/', views.caretaker_invite, name='caretaker_invite'),
+    path('caretaker/dashboard/', views.caretaker_dashboard, name='caretaker_dashboard'),
+
+    # Use string pattern for edit and delete - this handles both UUID and integer IDs
+    path('caretakers/<str:caretaker_id>/edit/', views.caretaker_edit, name='caretaker_edit'),
+    path('caretakers/<str:caretaker_id>/delete/', views.caretaker_delete, name='caretaker_delete'),
+    
+    
+    # Caretaker API Endpoints (NEW)
+    path('api/caretakers/', views.caretaker_api_list, name='api_caretaker_list'),
+    path('api/caretakers/delete/', views.caretaker_api_delete, name='api_caretaker_delete'),
+    path('api/caretakers/update/', views.caretaker_api_update, name='api_caretaker_update'),
 
 ]

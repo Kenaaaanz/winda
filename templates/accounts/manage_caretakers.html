@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Caretakers - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .caretaker-row {
+        transition: all 0.3s ease;
+    }
+    .caretaker-row:hover {
+        background-color: #f9fafb;
+    }
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    .status-inactive {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    .permission-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .permission-full {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    .permission-standard {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    .permission-basic {
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+    .avatar-placeholder {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: white;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        flex-shrink: 0;
+    }
+    .avatar-img {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+    .loading-spinner {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        border: 3px solid #e5e7eb;
+        border-radius: 50%;
+        border-top-color: #3b82f6;
+        animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem;
+        color: white;
+        z-index: 9999;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s ease;
+        max-width: 400px;
+    }
+    .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    .toast-success {
+        background: #10b981;
+    }
+    .toast-error {
+        background: #ef4444;
+    }
+    .toast-info {
+        background: #3b82f6;
+    }
+    .action-btn {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 0.875rem;
+    }
+    .action-btn:hover {
+        transform: scale(1.1);
+    }
+    .action-btn-edit {
+        color: #3b82f6;
+        background: transparent;
+    }
+    .action-btn-edit:hover {
+        color: #2563eb;
+        background: rgba(59, 130, 246, 0.1);
+    }
+    .action-btn-delete {
+        color: #ef4444;
+        background: transparent;
+    }
+    .action-btn-delete:hover {
+        color: #dc2626;
+        background: rgba(239, 68, 68, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <!-- Header -->
+            <div class="flex flex-wrap items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Manage Caretakers</h1>
+                    <p class="text-gray-600">Manage your property caretakers and their permissions</p>
+                </div>
+                <div class="flex space-x-3">
+                    <a href="{% url 'accounts:caretaker_invite' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-user-plus mr-2"></i> Invite Caretaker
+                    </a>
+                    <a href="{% url 'dashboard' %}" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <p class="text-sm text-blue-600">Total Caretakers</p>
+                    <p class="text-2xl font-bold text-blue-900" id="totalCaretakers">0</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                    <p class="text-sm text-green-600">Active</p>
+                    <p class="text-2xl font-bold text-green-900" id="activeCaretakers">0</p>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
+                    <p class="text-sm text-purple-600">Properties</p>
+                    <p class="text-2xl font-bold text-purple-900" id="totalProperties">{{ total_properties|default:0 }}</p>
+                </div>
+            </div>
+
+            <!-- Caretakers Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b-2 border-gray-200">
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Caretaker</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Email</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Permission</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Properties</th>
+                            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Status</th>
+                            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="caretakersTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-12">
+                                <div class="flex flex-col items-center">
+                                    <div class="loading-spinner"></div>
+                                    <p class="text-gray-500 mt-4">Loading caretakers...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Help Section -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                        <h4 class="font-semibold text-blue-800">About Caretaker Permissions</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                            <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 mb-2">Basic</span>
+                                <p class="text-sm text-gray-600">View only - Can view assigned properties and maintenance requests</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 mb-2">Standard</span>
+                                <p class="text-sm text-gray-600">View & Respond - Can respond to maintenance requests</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3 border border-gray-200">
+                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 mb-2">Full</span>
+                                <p class="text-sm text-gray-600">Full Access - Can manage properties, tenants, and all settings</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+<script>
+// Get the CSRF token
+function getCSRFToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : '';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCaretakers();
+});
+
+function loadCaretakers() {
+    fetch('/accounts/api/caretakers/', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.caretakers) {
+            renderCaretakers(data);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading caretakers:', error);
+        document.getElementById('caretakersTableBody').innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-12">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                        <p class="text-gray-600">Failed to load caretakers. Please refresh the page.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function renderCaretakers(data) {
+    const tbody = document.getElementById('caretakersTableBody');
+    
+    // Update stats
+    document.getElementById('totalCaretakers').textContent = data.stats.total;
+    document.getElementById('activeCaretakers').textContent = data.stats.active;
+    
+    if (data.caretakers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-12">
+                    <div class="flex flex-col items-center">
+                        <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-600 mb-2">No Caretakers Added</h3>
+                        <p class="text-gray-500 mb-4">You haven't added any caretakers to manage your properties.</p>
+                        <a href="{% url 'accounts:caretaker_invite' %}" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                            <i class="fas fa-user-plus mr-2"></i> Invite Your First Caretaker
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    data.caretakers.forEach(caretaker => {
+        const statusClass = caretaker.is_active ? 'status-active' : 'status-inactive';
+        const statusText = caretaker.is_active ? 'Active' : 'Inactive';
+        const statusIcon = caretaker.is_active ? 'fa-check-circle' : 'fa-times-circle';
+        
+        let permissionClass = 'permission-basic';
+        if (caretaker.permission_level === 'FULL') permissionClass = 'permission-full';
+        else if (caretaker.permission_level === 'STANDARD') permissionClass = 'permission-standard';
+        
+        const avatarHtml = caretaker.user.profile_picture 
+            ? `<img src="${caretaker.user.profile_picture}" alt="${caretaker.user.full_name}" class="avatar-img">`
+            : `<div class="avatar-placeholder">${caretaker.user.full_name.charAt(0).toUpperCase()}</div>`;
+        
+        const verifiedBadge = caretaker.user.is_email_verified 
+            ? '' 
+            : `<span class="inline-block ml-2 px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-700">
+                <i class="fas fa-exclamation-triangle mr-1"></i> Unverified
+               </span>`;
+        
+        // IMPORTANT: Use the caretaker.id directly from the data
+        const caretakerId = caretaker.id;
+        
+        html += `
+            <tr class="caretaker-row border-b border-gray-100" data-id="${caretakerId}">
+                <td class="py-3 px-4">
+                    <div class="flex items-center space-x-3">
+                        ${avatarHtml}
+                        <div>
+                            <span class="font-medium text-gray-900">${caretaker.user.full_name}</span>
+                            ${verifiedBadge}
+                        </div>
+                    </div>
+                </td>
+                <td class="py-3 px-4 text-sm text-gray-600">${caretaker.user.email}</td>
+                <td class="py-3 px-4">
+                    <span class="permission-badge ${permissionClass}">${caretaker.permission_display}</span>
+                </td>
+                <td class="py-3 px-4 text-sm">
+                    <span class="font-medium text-blue-600">${caretaker.assigned_properties_count}</span>
+                    <span class="text-gray-500 text-xs">property${caretaker.assigned_properties_count !== 1 ? 's' : ''}</span>
+                </td>
+                <td class="py-3 px-4">
+                    <span class="status-badge ${statusClass}">
+                        <i class="fas ${statusIcon} mr-1"></i>
+                        ${statusText}
+                    </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                    <div class="flex items-center justify-end space-x-2">
+                        <a href="/accounts/caretakers/${caretakerId}/edit/" 
+                           class="action-btn action-btn-edit" 
+                           title="Edit Permissions">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button onclick="deleteCaretaker('${caretakerId}', '${caretaker.user.full_name}')" 
+                           class="action-btn action-btn-delete" 
+                           title="Remove Caretaker">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+function deleteCaretaker(caretakerId, caretakerName) {
+    if (!confirm(`Are you sure you want to remove ${caretakerName}? This action cannot be undone.`)) {
+        return;
+    }
+    
+    fetch('/accounts/api/caretakers/delete/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+        body: JSON.stringify({ caretaker_id: caretakerId }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            loadCaretakers(); // Reload the list
+        } else {
+            showToast(data.message || 'Failed to delete caretaker', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('An error occurred. Please try again.', 'error');
+        console.error('Error:', error);
+    });
+}
+
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast toast-${type}`;
+    // Trigger reflow
+    void toast.offsetWidth;
+    toast.classList.add('show');
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+</script>
+{% endblock %}

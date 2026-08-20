@@ -1,5 +1,4 @@
 from decimal import Decimal
-
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -41,7 +40,7 @@ class User(AbstractUser):
     date_joined = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Preferences - Using JSONField
+    # Preferences
     language = models.CharField(max_length=10, default='en')
     timezone = models.CharField(max_length=50, default='Africa/Nairobi')
     notification_preferences = models.JSONField(default=dict, blank=True)
@@ -242,16 +241,16 @@ class TenantProfile(models.Model):
 
 
 class CaretakerProfile(models.Model):
+    """Caretaker profile - SINGLE DEFINITION"""
     PERMISSION_LEVELS = (
-        ('basic', 'Basic - View Only'),
-        ('standard', 'Standard - View & Respond'),
-        ('full', 'Full - Manage Properties'),
+        ('BASIC', 'Basic - View Only'),
+        ('STANDARD', 'Standard - View & Respond'),
+        ('FULL', 'Full - Manage Properties'),
     )
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='caretaker_profile')
     owner = models.ForeignKey(OwnerProfile, on_delete=models.CASCADE, related_name='caretakers', null=True, blank=True)
-    permission_level = models.CharField(max_length=20, choices=PERMISSION_LEVELS, default='basic')
-    assigned_properties = models.ManyToManyField('properties.Property', blank=True, related_name='assigned_caretakers')
+    permission_level = models.CharField(max_length=20, choices=PERMISSION_LEVELS, default='BASIC')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -264,12 +263,79 @@ class CaretakerProfile(models.Model):
     def __str__(self):
         return f"Caretaker: {self.user.get_full_name()}"
     
+    def get_assigned_property_ids(self):
+        """Get list of assigned property IDs"""
+        return list(CaretakerPropertyAssignment.objects.filter(
+            caretaker=self,
+            is_active=True
+        ).values_list('property_id', flat=True))
+    
+    def has_access_to_property(self, property_id):
+        """Check if caretaker has access to a specific property"""
+        if self.permission_level == 'FULL':
+            return True
+        return CaretakerPropertyAssignment.objects.filter(
+            caretaker=self,
+            property_id=property_id,
+            is_active=True
+        ).exists()
+    
+    def get_assigned_properties(self):
+        """Get assigned properties"""
+        from apps.properties.models import Property
+        if self.permission_level == 'FULL' and self.owner:
+            return Property.objects.filter(owner=self.owner)
+        return Property.objects.filter(
+            caretaker_assignments__caretaker=self,
+            caretaker_assignments__is_active=True
+        )
+    
     def has_permission(self, level):
         """Check if caretaker has the required permission level"""
-        levels = ['basic', 'standard', 'full']
+        levels = ['BASIC', 'STANDARD', 'FULL']
         if self.permission_level in levels:
             return levels.index(self.permission_level) >= levels.index(level)
         return False
+
+    
+    def get_user_full_name(self):
+        """Get user full name safely"""
+        if self.user:
+            return self.user.get_full_name() or self.user.email
+        return "Unknown User"
+    
+    def get_user_email(self):
+        """Get user email safely"""
+        if self.user:
+            return self.user.email
+        return "No Email"
+    
+    def is_user_verified(self):
+        """Check if user email is verified"""
+        if self.user:
+            return self.user.is_email_verified
+        return False
+    
+    def get_user_initial(self):
+        """Get user initial for avatar"""
+        if self.user:
+            name = self.user.get_full_name() or self.user.email
+            return name[:1].upper()
+        return "?"
+
+class CaretakerPropertyAssignment(models.Model):
+    """Through model for caretaker-property assignments"""
+    caretaker = models.ForeignKey(CaretakerProfile, on_delete=models.CASCADE, related_name='property_assignments')
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, related_name='caretaker_assignments')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'caretaker_property_assignments'
+        unique_together = ['caretaker', 'property']
+    
+    def __str__(self):
+        return f"{self.caretaker.user.get_full_name()} - {self.property.title}"
 
 
 class LoginHistory(models.Model):

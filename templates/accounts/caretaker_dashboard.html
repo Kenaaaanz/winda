@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Caretaker Dashboard - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Welcome Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Welcome, {{ user.get_full_name }}!</h1>
+            <p class="text-gray-600">Caretaker for {{ caretaker_profile.owner.company_name }}</p>
+            <span class="inline-block mt-2 px-3 py-1 text-sm rounded-full 
+                {% if caretaker_profile.permission_level == 'FULL' %}bg-green-100 text-green-700
+                {% elif caretaker_profile.permission_level == 'STANDARD' %}bg-blue-100 text-blue-700
+                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ caretaker_profile.get_permission_level_display }}
+            </span>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+                <p class="text-sm text-gray-600">Properties</p>
+                <p class="text-2xl font-bold">{{ property_count }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                <p class="text-sm text-gray-600">Units</p>
+                <p class="text-2xl font-bold">{{ total_units }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
+                <p class="text-sm text-gray-600">Pending Maintenance</p>
+                <p class="text-2xl font-bold">{{ pending_maintenance }}</p>
+            </div>
+        </div>
+
+        <!-- Properties -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Assigned Properties</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for property in properties %}
+                    <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <h4 class="font-semibold text-gray-900">{{ property.title }}</h4>
+                        <p class="text-sm text-gray-600">{{ property.city }}</p>
+                        <p class="text-sm text-gray-600">
+                            {% if property.is_multi_unit %}
+                                {{ property.units.count }} units
+                            {% else %}
+                                Single unit
+                            {% endif %}
+                        </p>
+                        <a href="{% url 'properties:detail' property.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
+                            View <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                {% empty %}
+                    <p class="text-gray-500 col-span-full">No properties assigned</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Maintenance -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Recent Maintenance Requests</h3>
+                <a href="{% url 'maintenance:list' %}" class="text-sm text-blue-600 hover:text-blue-500">View All</a>
+            </div>
+            <div class="space-y-3">
+                {% for request in maintenance_requests %}
+                    <div class="border-b border-gray-100 pb-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium">{{ request.title }}</p>
+                                <p class="text-sm text-gray-600">{{ request.property.title }}</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs rounded-full 
+                                {% if request.status == 'PENDING' %}bg-yellow-100 text-yellow-700
+                                {% elif request.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-700
+                                {% elif request.status == 'RESOLVED' %}bg-green-100 text-green-700
+                                {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                {{ request.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-gray-500">No maintenance requests</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
