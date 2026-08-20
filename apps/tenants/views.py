@@ -920,6 +920,14 @@ def pending_application_detail(request, pk):
 @require_http_methods(["POST"])
 def review_application(request, pk):
     """Review and approve/reject a pending application"""
+    import json
+    from django.http import JsonResponse
+    from django.urls import reverse
+    from django.utils import timezone
+    from datetime import timedelta
+    from apps.tenants.models import TenantApplication, Lease
+    from apps.notifications.models import Notification
+    
     application = get_object_or_404(TenantApplication, pk=pk)
     owner = request.user.owner_profile
     
@@ -935,99 +943,82 @@ def review_application(request, pk):
     notes = request.POST.get('notes', '')
     
     if action == 'approve':
+        # Check if the unit is still available
+        if application.unit:
+            # Check if the unit is still available
+            if application.unit.status != 'AVAILABLE' and application.unit.is_available != True:
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': f'Unit {application.unit.unit_number} is no longer available. It has been {application.unit.get_status_display().lower()}.'
+                }, status=400)
+            
+            # Mark unit as BOOKED temporarily
+            application.unit.status = 'BOOKED'
+            application.unit.is_available = False
+            application.unit.save()
+        
+        # Update application status
         application.status = 'APPROVED'
         application.owner_notes = notes
         application.reviewed_at = timezone.now()
         application.reviewed_by = request.user
         application.save()
         
-        # Check if property is multi-unit
-        property_obj = application.property
+        # Get the unit to use
+        unit = application.unit
         
-        if property_obj.is_multi_unit:
-            # For multi-unit, find an available unit and assign it
-            available_unit = property_obj.units.filter(is_available=True).first()
-            
-            if available_unit:
-                # Assign the tenant to this unit
-                available_unit.current_tenant = application.tenant
-                available_unit.is_available = False
-                available_unit.status = 'BOOKED'
-                available_unit.save()
-                
-                # Create lease for this specific unit
-                end_date = application.intended_move_in_date + timedelta(days=365)
-                lease = Lease.objects.create(
-                    tenant=application.tenant,
-                    property=application.property,
-                    unit=available_unit,  # You'll need to add a unit field to Lease model
-                    start_date=application.intended_move_in_date,
-                    end_date=end_date,
-                    monthly_rent=available_unit.get_rental_price(),
-                    security_deposit=available_unit.get_security_deposit(),
-                    status='PENDING_SIGNATURE'
-                )
-                
-                # Update property availability
-                property_obj.refresh_availability_status()
-                
-                # Notify tenant
-                Notification.objects.create(
-                    user=application.tenant,
-                    notification_type='APPLICATION',
-                    title='Application Approved! 🎉',
-                    message=f'Congratulations! Your application for {property_obj.title} - Unit {available_unit.unit_number} has been approved. Please review and sign the lease agreement.',
-                    related_object_type='application',
-                    related_object_id=str(application.id)
-                )
-                
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Application approved! Assigned to Unit {available_unit.unit_number}.',
-                    'redirect_url': reverse('tenants:lease_detail', kwargs={'pk': lease.pk})
-                })
-            else:
-                # No available units
-                application.status = 'REJECTED'
-                application.owner_notes = 'No available units at this time.'
-                application.save()
-                
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'No available units for this property.'
-                }, status=400)
+        # Calculate lease dates
+        start_date = application.intended_move_in_date
+        end_date = start_date + timedelta(days=365)
+        
+        # Determine monthly rent from unit or property
+        if unit:
+            monthly_rent = unit.get_rental_price()
+            security_deposit = unit.get_security_deposit()
+            service_charge = unit.get_service_charge()
         else:
-            # Single unit property - existing logic
-            end_date = application.intended_move_in_date + timedelta(days=365)
-            lease = Lease.objects.create(
-                tenant=application.tenant,
-                property=application.property,
-                start_date=application.intended_move_in_date,
-                end_date=end_date,
-                monthly_rent=application.property.rental_price,
-                security_deposit=application.property.security_deposit,
-                status='PENDING_SIGNATURE'
-            )
-            
-            # Update property status
-            property_obj.availability_status = 'BOOKED'
-            property_obj.save()
-            
-            # Notify tenant
-            Notification.objects.create(
-                user=application.tenant,
-                notification_type='APPLICATION',
-                title='Application Approved! 🎉',
-                message=f'Congratulations! Your application for {property_obj.title} has been approved. Please review and sign the lease agreement.',
-                related_object_type='application',
-                related_object_id=str(application.id)
-            )
-            
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Application approved successfully!',
-                'redirect_url': reverse('tenants:lease_detail', kwargs={'pk': lease.pk})
-            })
+            monthly_rent = application.property.rental_price
+            security_deposit = application.property.security_deposit
+            service_charge = application.property.service_charge
+        
+        # Create lease with the correct unit
+        lease = Lease.objects.create(
+            tenant=application.tenant,
+            property=application.property,
+            unit=unit,  # CRITICAL: Save the unit reference
+            start_date=start_date,
+            end_date=end_date,
+            monthly_rent=monthly_rent,
+            security_deposit=security_deposit,
+            status='PENDING_SIGNATURE'
+        )
+        
+        # Update property/unit status
+        if unit:
+            # Unit is already marked as BOOKED
+            # The unit will be marked as RENTED when lease is signed
+            pass
+        else:
+            # Single unit property
+            application.property.availability_status = 'BOOKED'
+            application.property.save()
+        
+        # Create notification for tenant
+        unit_info = f" (Unit {unit.unit_number})" if unit else ""
+        Notification.objects.create(
+            user=application.tenant,
+            notification_type='APPLICATION',
+            title='Application Approved! 🎉',
+            message=f'Congratulations! Your application for {application.property.title}{unit_info} has been approved. Please review and sign the lease agreement.',
+            related_object_type='application',
+            related_object_id=str(application.id)
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Application approved for {application.tenant.get_full_name()}! Lease created for {unit.unit_number if unit else "the property"}.',
+            'redirect_url': reverse('tenants:lease_detail', kwargs={'pk': lease.pk})
+        })
     
     elif action == 'reject':
         application.status = 'REJECTED'
@@ -1035,6 +1026,11 @@ def review_application(request, pk):
         application.reviewed_at = timezone.now()
         application.reviewed_by = request.user
         application.save()
+        
+        # If there was a unit, keep it available
+        if application.unit:
+            # Don't change unit status if rejected
+            pass
         
         # Notify tenant
         Notification.objects.create(

@@ -3,6 +3,40 @@
 
 {% block title %}Review Application - {{ application.tenant.get_full_name }} - Winda{% endblock %}
 
+{% block extra_css %}
+<style>
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 0.6s linear infinite;
+        margin-right: 0.5rem;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .btn-loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    .unit-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    .unit-card:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .unit-card.selected {
+        border-color: #3b82f6;
+        background-color: #eff6ff;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="bg-gray-50 min-h-screen py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -13,9 +47,12 @@
                     <h1 class="text-2xl font-bold text-gray-900">Review Application</h1>
                     <p class="text-gray-600">{{ application.property.title }}</p>
                     {% if application.unit %}
-                        <p class="text-sm text-blue-600">
+                        <p class="text-sm font-semibold text-blue-600 mt-1">
                             <i class="fas fa-door-open mr-1"></i>
-                            Unit {{ application.unit.unit_number }}
+                            Unit {{ application.unit.unit_number }} 
+                            <span class="text-gray-500 font-normal ml-2">
+                                ({{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath)
+                            </span>
                         </p>
                     {% endif %}
                 </div>
@@ -27,9 +64,68 @@
             </div>
         </div>
 
+        <!-- Hidden Inputs for JavaScript -->
+        <input type="hidden" id="applicationUnitId" value="{{ application.unit.id|default:'' }}">
+        <input type="hidden" id="applicationUnitNumber" value="{{ application.unit.unit_number|default:'N/A' }}">
+        <input type="hidden" id="applicationUnitStatus" value="{{ application.unit.status|default:'' }}">
+        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Main Content -->
             <div class="lg:col-span-2">
+                <!-- Unit Information Alert -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3 text-xl"></i>
+                        <div>
+                            <h4 class="font-semibold text-blue-800">Unit Information</h4>
+                            {% if application.unit %}
+                                <div class="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                    <div>
+                                        <span class="text-gray-600">Unit Number:</span>
+                                        <span class="font-semibold">Unit {{ application.unit.unit_number }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Monthly Rent:</span>
+                                        <span class="font-semibold text-blue-600">KES {{ application.unit.get_rental_price|intcomma }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Security Deposit:</span>
+                                        <span class="font-semibold">KES {{ application.unit.get_security_deposit|intcomma }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Bedrooms:</span>
+                                        <span class="font-semibold">{{ application.unit.bedrooms }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Bathrooms:</span>
+                                        <span class="font-semibold">{{ application.unit.bathrooms }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">Floor:</span>
+                                        <span class="font-semibold">{{ application.unit.floor_number|default:"N/A" }}</span>
+                                    </div>
+                                </div>
+                                {% if application.unit.status != 'AVAILABLE' %}
+                                    <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                        <p class="text-sm text-red-700">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            <strong>Warning:</strong> This unit is currently 
+                                            <span class="font-semibold">{{ application.unit.get_status_display }}</span>.
+                                            Approving this application may not be possible.
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <p class="text-sm text-yellow-700 mt-1">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    No specific unit selected (single unit property).
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Applicant Information -->
                 <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                     <h3 class="text-lg font-semibold mb-4">Applicant Information</h3>
@@ -130,7 +226,7 @@
                         {% if application.unit %}
                             <div>
                                 <p class="text-sm text-gray-500">Selected Unit</p>
-                                <p class="font-semibold">Unit {{ application.unit.unit_number }}</p>
+                                <p class="font-semibold text-blue-600">Unit {{ application.unit.unit_number }}</p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Unit Rent</p>
@@ -247,17 +343,37 @@
                 <!-- Review Actions -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h3 class="text-lg font-semibold mb-4">Review Application</h3>
+                    
+                    <!-- Unit Confirmation -->
+                    {% if application.unit %}
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                            <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-500 mt-1 mr-2"></i>
+                                <div>
+                                    <p class="text-sm font-semibold text-green-800">Unit Selected</p>
+                                    <p class="text-sm text-green-700">
+                                        Unit {{ application.unit.unit_number }}
+                                        ({{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath)
+                                    </p>
+                                    <p class="text-sm text-green-700">
+                                        Rent: KES {{ application.unit.get_rental_price|intcomma }}/month
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
                     <form id="reviewForm" class="space-y-4">
                         {% csrf_token %}
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
                             <div class="space-y-2">
                                 <button type="button" onclick="submitReview('approve')" 
-                                        class="w-full bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors">
+                                        class="w-full bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors" id="approveBtn">
                                     <i class="fas fa-check-circle mr-2"></i> Approve Application
                                 </button>
                                 <button type="button" onclick="submitReview('reject')" 
-                                        class="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition-colors">
+                                        class="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 transition-colors" id="rejectBtn">
                                     <i class="fas fa-times-circle mr-2"></i> Reject Application
                                 </button>
                             </div>
@@ -276,6 +392,9 @@
                                     <i class="fas fa-info-circle mr-1"></i>
                                     This application is for <strong>Unit {{ application.unit.unit_number }}</strong>
                                     ({{ application.unit.bedrooms }} bed, {{ application.unit.bathrooms }} bath)
+                                </p>
+                                <p class="text-xs text-blue-600 mt-1">
+                                    Lease will be created for this specific unit upon approval.
                                 </p>
                             </div>
                         {% endif %}
@@ -365,10 +484,15 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h3 class="text-lg font-semibold mb-4">Unit Availability</h3>
                         <div class="max-h-48 overflow-y-auto space-y-2">
-                            {% for unit in property.units.all|dictsort:"unit_number"|slice:":5" %}
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="font-medium">Unit {{ unit.unit_number }}</span>
-                                    <span class="px-2 py-1 text-xs rounded-full 
+                            {% for unit in property.units.all|dictsort:"unit_number" %}
+                                <div class="flex items-center justify-between text-sm py-1 px-2 rounded {% if unit == application.unit %}bg-blue-50 border border-blue-200{% endif %}">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="font-medium">Unit {{ unit.unit_number }}</span>
+                                        {% if unit == application.unit %}
+                                            <span class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Selected</span>
+                                        {% endif %}
+                                    </div>
+                                    <span class="px-2 py-0.5 text-xs rounded-full 
                                         {% if unit.status == 'AVAILABLE' %}bg-green-100 text-green-700
                                         {% elif unit.status == 'RENTED' %}bg-red-100 text-red-700
                                         {% elif unit.status == 'BOOKED' %}bg-yellow-100 text-yellow-700
@@ -377,9 +501,6 @@
                                     </span>
                                 </div>
                             {% endfor %}
-                            {% if property.units.count > 5 %}
-                                <p class="text-xs text-gray-500 text-center">+ {{ property.units.count|add:"-5" }} more units</p>
-                            {% endif %}
                         </div>
                     </div>
                 {% endif %}
@@ -389,25 +510,81 @@
 </div>
 
 <script>
+// CSRF Token Helper
+function getCSRFToken() {
+    const tokenInput = document.getElementById('csrfToken');
+    if (tokenInput && tokenInput.value) {
+        return tokenInput.value;
+    }
+    // Fallback: get from cookie
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+    return cookieValue ? decodeURIComponent(cookieValue.split('=')[1]) : '';
+}
+
 function submitReview(action) {
     const notes = document.getElementById('reviewNotes').value;
-    const confirmMessage = action === 'approve' 
-        ? 'Are you sure you want to APPROVE this application?'
-        : 'Are you sure you want to REJECT this application?';
+    const unitId = document.getElementById('applicationUnitId')?.value;
+    const unitNumber = document.getElementById('applicationUnitNumber')?.value;
+    const unitStatus = document.getElementById('applicationUnitStatus')?.value;
+    
+    let confirmMessage = '';
+    let warningMessage = '';
+    
+    if (action === 'approve') {
+        // Check if unit is available
+        if (unitStatus && unitStatus !== 'AVAILABLE') {
+            warningMessage = `\n\n⚠️ WARNING: Unit ${unitNumber} is currently ${unitStatus}. This may cause conflicts.`;
+        }
+        
+        if (unitNumber && unitNumber !== 'N/A') {
+            confirmMessage = `Are you sure you want to APPROVE this application for Unit ${unitNumber}?${warningMessage}\n\nThis will create a lease for this specific unit.`;
+        } else {
+            confirmMessage = `Are you sure you want to APPROVE this application?${warningMessage}`;
+        }
+    } else {
+        confirmMessage = 'Are you sure you want to REJECT this application?';
+    }
     
     if (confirm(confirmMessage)) {
         const formData = new FormData();
         formData.append('action', action);
         formData.append('notes', notes);
+        // Add unit_id to ensure it's passed correctly
+        if (unitId) {
+            formData.append('unit_id', unitId);
+        }
+        
+        // Show loading state on buttons
+        const approveBtn = document.getElementById('approveBtn');
+        const rejectBtn = document.getElementById('rejectBtn');
+        const buttons = [approveBtn, rejectBtn];
+        
+        buttons.forEach(btn => {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                btn.classList.add('btn-loading');
+            }
+        });
         
         fetch('/tenants/owner/tenants/pending/{{ application.id }}/review/', {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-CSRFToken': getCSRFToken(),
             },
         })
-        .then(response => response.json())
+        .then(response => {
+            // Check if response is ok
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Server error');
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 alert(data.message);
@@ -418,22 +595,55 @@ function submitReview(action) {
                 }
             } else {
                 alert(data.message || 'An error occurred');
+                // Re-enable buttons
+                buttons.forEach(btn => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = btn.innerHTML.replace('<span class="loading-spinner"></span> Processing...', 
+                            action === 'approve' ? '<i class="fas fa-check-circle mr-2"></i> Approve Application' : '<i class="fas fa-times-circle mr-2"></i> Reject Application');
+                        btn.classList.remove('btn-loading');
+                    }
+                });
             }
         })
         .catch(error => {
-            alert('An error occurred. Please try again.');
+            console.error('Error:', error);
+            alert('An error occurred: ' + error.message);
+            // Re-enable buttons
+            buttons.forEach(btn => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = action === 'approve' ? '<i class="fas fa-check-circle mr-2"></i> Approve Application' : '<i class="fas fa-times-circle mr-2"></i> Reject Application';
+                    btn.classList.remove('btn-loading');
+                }
+            });
         });
     }
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'a' && e.ctrlKey) {
+    if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         submitReview('approve');
-    } else if (e.key === 'r' && e.ctrlKey) {
+    } else if (e.key === 'r' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         submitReview('reject');
+    }
+});
+
+// Show warning if unit is not available
+document.addEventListener('DOMContentLoaded', function() {
+    const unitStatus = document.getElementById('applicationUnitStatus')?.value;
+    const unitNumber = document.getElementById('applicationUnitNumber')?.value;
+    
+    if (unitStatus && unitStatus !== 'AVAILABLE' && unitStatus !== '') {
+        const approveBtn = document.getElementById('approveBtn');
+        if (approveBtn) {
+            approveBtn.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Approve (Unit ' + unitNumber + ' is ' + unitStatus + ')';
+            approveBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+            approveBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        }
     }
 });
 </script>
