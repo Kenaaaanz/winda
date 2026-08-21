@@ -23,7 +23,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Tenant Option -->
             <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-transparent hover:border-blue-500">
-                <form method="POST" action="{% url 'accounts:register_wizard' %}">
+                <form method="POST" action="{% url 'accounts:register' %}">
                     {% csrf_token %}
                     <input type="hidden" name="user_type" value="TENANT">
                     <div class="p-8 text-center">
