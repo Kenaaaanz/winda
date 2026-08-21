@@ -75,12 +75,12 @@ def register_wizard(request):
         if request.method == 'POST':
             form = RegistrationStep1Form(request.POST)
             if form.is_valid():
-                # Store data in session
+                # Store data in session - convert phone to string
                 request.session['registration_data'] = {
                     'email': form.cleaned_data['email'],
                     'first_name': form.cleaned_data['first_name'],
                     'last_name': form.cleaned_data['last_name'],
-                    'phone': form.cleaned_data['phone'],
+                    'phone': str(form.cleaned_data['phone']),  # Convert to string
                     'password': form.cleaned_data['password1'],
                 }
                 
@@ -156,6 +156,7 @@ def register_wizard(request):
     messages.warning(request, 'Please start the registration process again.')
     return redirect('accounts:register')
 
+
 def create_tenant_account(request):
     """Create tenant account (auto-approved)"""
     data = request.session.get('registration_data', {})
@@ -170,6 +171,8 @@ def create_tenant_account(request):
                 user.is_active = True
                 user.is_email_verified = True
                 user.verification_status = 'VERIFIED'
+                user.user_type = 'TENANT'
+                user.phone = data.get('phone', '')  # Phone is already a string
                 user.save()
         except User.DoesNotExist:
             # Create new user
@@ -184,6 +187,9 @@ def create_tenant_account(request):
                 is_email_verified=True,
                 verification_status='VERIFIED',
             )
+            # Set phone separately - it's already a string
+            user.phone = data.get('phone', '')
+            user.save()
         
         # Create user profile if it doesn't exist
         UserProfile.objects.get_or_create(user=user)
@@ -213,13 +219,14 @@ def create_owner_account(request):
         user = None
         try:
             user = User.objects.get(email=data['email'])
-            # If user exists but is not active or not verified, update
+            # Update existing user
             if not user.is_active:
                 user.is_active = True
-            if user.verification_status == 'PENDING':
-                user.verification_status = 'PENDING'
-                user.is_email_verified = False
-                user.save()
+            user.user_type = 'HOUSE_OWNER'
+            user.is_email_verified = False
+            user.verification_status = 'PENDING'
+            user.phone = data.get('phone', '')  # Phone is already a string
+            user.save()
         except User.DoesNotExist:
             # Create new user
             user = User.objects.create_user(
@@ -233,6 +240,9 @@ def create_owner_account(request):
                 is_email_verified=False,
                 verification_status='PENDING',
             )
+            # Set phone separately - it's already a string
+            user.phone = data.get('phone', '')
+            user.save()
         
         # Create user profile if it doesn't exist
         UserProfile.objects.get_or_create(user=user)

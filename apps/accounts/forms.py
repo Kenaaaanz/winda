@@ -63,6 +63,13 @@ class RegistrationStep1Form(forms.ModelForm):
             raise forms.ValidationError("Passwords don't match")
         return password2
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone:
+            # Ensure phone is stored as a string
+            return str(phone)
+        return phone
+
 
 class RegistrationStep2Form(forms.ModelForm):
     """Step 2: Business Details (for owners)"""
