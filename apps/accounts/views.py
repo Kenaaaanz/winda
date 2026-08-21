@@ -56,7 +56,7 @@ def register_wizard(request):
             if user_type in ['TENANT', 'HOUSE_OWNER']:
                 request.session['registration_user_type'] = user_type
                 request.session['registration_step'] = 1
-                return redirect('accounts:register_wizard')
+                return redirect('accounts:register')
             else:
                 messages.error(request, 'Please select a user type.')
                 return render(request, 'accounts/register_type_select.html')
@@ -68,7 +68,7 @@ def register_wizard(request):
         if user_type in ['TENANT', 'HOUSE_OWNER']:
             request.session['registration_user_type'] = user_type
             request.session['registration_step'] = 1
-            return redirect('accounts:register_wizard')
+            return redirect('accounts:register')
     
     # Step 1: Basic Information
     if step == 1:
@@ -90,7 +90,7 @@ def register_wizard(request):
                 
                 # If owner, go to step 2
                 request.session['registration_step'] = 2
-                return redirect('accounts:register_wizard')
+                return redirect('accounts:register')
         else:
             form = RegistrationStep1Form()
         
@@ -113,7 +113,7 @@ def register_wizard(request):
                     'business_license': form.cleaned_data.get('business_license'),
                 }
                 request.session['registration_step'] = 3
-                return redirect('accounts:register_wizard')
+                return redirect('accounts:register')
         else:
             form = RegistrationStep2Form()
         
@@ -154,7 +154,7 @@ def register_wizard(request):
     request.session.pop('registration_step', None)
     request.session.pop('registration_user_type', None)
     messages.warning(request, 'Please start the registration process again.')
-    return redirect('accounts:register_wizard')
+    return redirect('accounts:register')
 
 def create_tenant_account(request):
     """Create tenant account (auto-approved)"""
