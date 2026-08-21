@@ -80,7 +80,7 @@ def register_wizard(request):
                     'email': form.cleaned_data['email'],
                     'first_name': form.cleaned_data['first_name'],
                     'last_name': form.cleaned_data['last_name'],
-                    'phone': str(form.cleaned_data['phone']),  # Convert to string
+                    'phone': str(form.cleaned_data['phone']),
                     'password': form.cleaned_data['password1'],
                 }
                 
@@ -106,12 +106,22 @@ def register_wizard(request):
         if request.method == 'POST':
             form = RegistrationStep2Form(request.POST, request.FILES)
             if form.is_valid():
+                # Store business data WITHOUT the file
                 request.session['registration_business_data'] = {
                     'company_name': form.cleaned_data['company_name'],
                     'company_registration_number': form.cleaned_data.get('company_registration_number', ''),
                     'tax_pin': form.cleaned_data.get('tax_pin', ''),
-                    'business_license': form.cleaned_data.get('business_license'),
                 }
+                
+                # Store the file in a temporary location or in memory
+                # Option 1: Store in request.FILES and pass to next step
+                if request.FILES.get('business_license'):
+                    # Store the file in the session using its name and content
+                    # But we'll handle it differently - store in a temporary variable
+                    request.session['has_business_license'] = True
+                    # Store the file temporarily (we'll process it in create_owner_account)
+                    request._business_license_file = request.FILES['business_license']
+                
                 request.session['registration_step'] = 3
                 return redirect('accounts:register')
         else:
@@ -155,7 +165,6 @@ def register_wizard(request):
     request.session.pop('registration_user_type', None)
     messages.warning(request, 'Please start the registration process again.')
     return redirect('accounts:register')
-
 
 def create_tenant_account(request):
     """Create tenant account (auto-approved)"""
@@ -214,6 +223,9 @@ def create_owner_account(request):
     business_data = request.session.get('registration_business_data', {})
     bank_data = request.session.get('registration_bank_data', {})
     
+    # Get the business license file from the request
+    business_license_file = getattr(request, '_business_license_file', None)
+    
     with transaction.atomic():
         # Check if user already exists
         user = None
@@ -225,7 +237,7 @@ def create_owner_account(request):
             user.user_type = 'HOUSE_OWNER'
             user.is_email_verified = False
             user.verification_status = 'PENDING'
-            user.phone = data.get('phone', '')  # Phone is already a string
+            user.phone = data.get('phone', '')
             user.save()
         except User.DoesNotExist:
             # Create new user
@@ -264,7 +276,15 @@ def create_owner_account(request):
             owner_profile.tax_pin = business_data.get('tax_pin', owner_profile.tax_pin)
             owner_profile.save()
         
-        # Create bank account (if we have the model)
+        # Handle business license file upload
+        if business_license_file:
+            from apps.common.utils.cloudinary_utils import CloudinaryService
+            result = CloudinaryService.upload_document(business_license_file, f'business_licenses/{user.id}')
+            if result:
+                owner_profile.business_license = result['secure_url']
+                owner_profile.save()
+        
+        # Create bank account if it doesn't exist
         try:
             from apps.payments.models import PaystackSubaccount
             # Check if bank account already exists
@@ -288,7 +308,6 @@ def create_owner_account(request):
                 bank_account.save()
         except Exception as e:
             print(f"Bank account creation error: {e}")
-            pass
         
         # Notify admins
         notify_admins_new_owner(user)
@@ -299,6 +318,11 @@ def create_owner_account(request):
         request.session.pop('registration_bank_data', None)
         request.session.pop('registration_step', None)
         request.session.pop('registration_user_type', None)
+        request.session.pop('has_business_license', None)
+        
+        # Clear the temporary file
+        if hasattr(request, '_business_license_file'):
+            delattr(request, '_business_license_file')
         
         messages.success(
             request,
@@ -306,7 +330,7 @@ def create_owner_account(request):
             'You will receive a notification once your account is verified.'
         )
         return redirect('accounts:owner_pending_approval')
-
+        
 def notify_admins_new_owner(user):
     """Notify admins about new owner registration"""
     from apps.notifications.models import Notification

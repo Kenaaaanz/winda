@@ -94,7 +94,23 @@ class RegistrationStep2Form(forms.ModelForm):
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
             }),
         }
-
+    
+    def clean_business_license(self):
+        """Validate business license file"""
+        file = self.cleaned_data.get('business_license')
+        if file:
+            # Check file size (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('File size must be less than 10MB.')
+            
+            # Check file extension
+            allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+            import os
+            ext = os.path.splitext(file.name)[1].lower()
+            if ext not in allowed_extensions:
+                raise forms.ValidationError('File must be PDF, JPG, JPEG, PNG, DOC, or DOCX.')
+        
+        return file
 
 class RegistrationStep3Form(forms.Form):
     """Step 3: Bank Account Details (for owners)"""
