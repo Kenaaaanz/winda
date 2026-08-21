@@ -134,31 +134,53 @@ def register_wizard(request):
             'total_steps': 3,
         })
     
-    # Step 3: Bank Details (Owner only)
+    # Step 3: Bank Details (Owner only) - Use existing template
     if step == 3 and user_type == 'HOUSE_OWNER':
         # Get bank choices from Paystack
         from .views import _get_paystack_bank_choices
         bank_choices, bank_error = _get_paystack_bank_choices()
         
         if request.method == 'POST':
-            form = RegistrationStep3Form(request.POST, bank_choices=bank_choices)
+            # Use the existing PaystackSubaccountForm
+            from .forms import PaystackSubaccountForm
+            form = PaystackSubaccountForm(request.POST, bank_choices=bank_choices)
             if form.is_valid():
+                # Store bank data in session
                 request.session['registration_bank_data'] = {
                     'bank_code': form.cleaned_data['bank_code'],
                     'account_number': form.cleaned_data['account_number'],
                     'account_name': form.cleaned_data['account_name'],
+                    'business_name': form.cleaned_data['business_name'],
                 }
                 return create_owner_account(request)
+            else:
+                # Re-render with errors using the existing template
+                return render(request, 'accounts/setup_bank_account.html', {
+                    'form': form,
+                    'bank_choices': bank_choices,
+                    'bank_error': bank_error,
+                    'is_wizard': True,
+                })
         else:
-            form = RegistrationStep3Form(bank_choices=bank_choices)
-        
-        return render(request, 'accounts/register_wizard_step3.html', {
-            'form': form,
-            'user_type': user_type,
-            'step': step,
-            'total_steps': 3,
-            'bank_choices': bank_choices,
-        })
+            # GET request - show the existing bank account template
+            initial_data = {}
+            if 'registration_bank_data' in request.session:
+                bank_data = request.session.get('registration_bank_data', {})
+                initial_data = {
+                    'bank_code': bank_data.get('bank_code', ''),
+                    'account_number': bank_data.get('account_number', ''),
+                    'account_name': bank_data.get('account_name', ''),
+                    'business_name': bank_data.get('business_name', ''),
+                }
+            
+            form = PaystackSubaccountForm(initial=initial_data, bank_choices=bank_choices)
+            
+            return render(request, 'accounts/setup_bank_account.html', {
+                'form': form,
+                'bank_choices': bank_choices,
+                'bank_error': bank_error,
+                'is_wizard': True,
+            })
     
     # Fallback - reset if something goes wrong
     request.session.pop('registration_step', None)
@@ -252,7 +274,6 @@ def create_owner_account(request):
                 is_email_verified=False,
                 verification_status='PENDING',
             )
-            # Set phone separately - it's already a string
             user.phone = data.get('phone', '')
             user.save()
         
@@ -284,7 +305,7 @@ def create_owner_account(request):
                 owner_profile.business_license = result['secure_url']
                 owner_profile.save()
         
-        # Create bank account if it doesn't exist
+        # Create bank account using the data from session
         try:
             from apps.payments.models import PaystackSubaccount
             # Check if bank account already exists
@@ -295,7 +316,7 @@ def create_owner_account(request):
                     bank_code=bank_data.get('bank_code', ''),
                     account_number=bank_data.get('account_number', ''),
                     account_name=bank_data.get('account_name', ''),
-                    business_name=business_data.get('company_name', ''),
+                    business_name=bank_data.get('business_name', business_data.get('company_name', '')),
                     verification_status='PENDING',
                     is_active=False,
                 )
@@ -304,7 +325,7 @@ def create_owner_account(request):
                 bank_account.bank_code = bank_data.get('bank_code', bank_account.bank_code)
                 bank_account.account_number = bank_data.get('account_number', bank_account.account_number)
                 bank_account.account_name = bank_data.get('account_name', bank_account.account_name)
-                bank_account.business_name = business_data.get('company_name', bank_account.business_name)
+                bank_account.business_name = bank_data.get('business_name', bank_account.business_name)
                 bank_account.save()
         except Exception as e:
             print(f"Bank account creation error: {e}")
@@ -330,7 +351,7 @@ def create_owner_account(request):
             'You will receive a notification once your account is verified.'
         )
         return redirect('accounts:owner_pending_approval')
-        
+            
 def notify_admins_new_owner(user):
     """Notify admins about new owner registration"""
     from apps.notifications.models import Notification

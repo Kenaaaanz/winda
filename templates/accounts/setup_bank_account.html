@@ -11,6 +11,9 @@
             <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8">
                 <h1 class="text-2xl font-bold text-white">Setup Bank Account</h1>
                 <p class="text-blue-100 mt-1">Add your bank account to receive rent payments directly</p>
+                {% if is_wizard %}
+                    <p class="text-blue-200 text-sm mt-2">Step 3 of 3</p>
+                {% endif %}
             </div>
             
             <div class="p-6">
@@ -95,9 +98,14 @@
                     <!-- Submit -->
                     <div class="mt-6 flex space-x-3">
                         <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
-                            <i class="fas fa-plus-circle mr-2"></i> Add Bank Account
+                            <i class="fas fa-plus-circle mr-2"></i> 
+                            {% if is_wizard %}
+                                Complete Registration
+                            {% else %}
+                                Add Bank Account
+                            {% endif %}
                         </button>
-                        <a href="{% url 'accounts:profile' %}" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 transition-colors">
+                        <a href="{% if is_wizard %}{% url 'accounts:register' %}{% else %}{% url 'accounts:profile' %}{% endif %}" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 transition-colors">
                             Cancel
                         </a>
                     </div>
