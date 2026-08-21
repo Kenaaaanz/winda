@@ -31,92 +31,195 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        
+        /* Logo Animation */
+        .logo-icon {
+            transition: all 0.3s ease;
+        }
+        .logo-icon:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Gradient Text */
+        .logo-text {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Navbar Glass Effect */
+        .nav-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* Button Gradient Animation */
+        .btn-gradient {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Mobile Menu Slide */
+        #mobile-menu {
+            transition: all 0.3s ease;
+        }
+        
+        /* Profile Avatar Ring */
+        .avatar-ring {
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .avatar-ring:hover {
+            border-color: #3B82F6;
+        }
     </style>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg border-b border-gray-200 fixed w-full z-50 top-0">
+    <nav class="nav-glass shadow-sm border-b border-gray-200/80 fixed w-full z-50 top-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <!-- Logo -->
                 <div class="flex items-center">
-                    <a href="{% url 'home' %}" class="flex items-center space-x-2">
-                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                            <span class="text-white font-bold text-xl">W</span>
+                    <a href="{% url 'home' %}" class="flex items-center space-x-3 group">
+                        <!-- Logo Icon -->
+                        <svg class="logo-icon w-10 h-10" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            
+                            <!-- Outer Circle -->
+                            <circle cx="40" cy="40" r="38" fill="#EFF6FF" stroke="url(#logoGradient)" stroke-width="2"/>
+                            
+                            <!-- Roof -->
+                            <path d="M40 8 L12 35 L68 35 L40 8Z" fill="url(#logoGradient)"/>
+                            
+                            <!-- House Body -->
+                            <rect x="17" y="35" width="46" height="35" fill="url(#logoGradient)" rx="3"/>
+                            
+                            <!-- Window - The "Winda" window -->
+                            <rect x="28" y="42" width="24" height="18" fill="white" rx="2"/>
+                            <line x1="40" y1="42" x2="40" y2="60" stroke="#2563EB" stroke-width="2"/>
+                            <line x1="28" y1="51" x2="52" y2="51" stroke="#2563EB" stroke-width="2"/>
+                            
+                            <!-- Window Glow -->
+                            <rect x="30" y="44" width="8" height="5" fill="#93C5FD" rx="1" opacity="0.5"/>
+                            
+                            <!-- Door -->
+                            <rect x="34" y="57" width="12" height="13" fill="#1E3A5F" rx="1"/>
+                            <circle cx="44" cy="63" r="1.5" fill="#FCD34D"/>
+                        </svg>
+                        
+                        <!-- Logo Text -->
+                        <div class="flex flex-col leading-tight">
+                            <span class="text-2xl font-extrabold logo-text tracking-tight">
+                                Winda
+                            </span>
+                            <span class="text-[9px] text-gray-400 tracking-[0.25em] hidden sm:block uppercase font-medium">
+                                Your Home, Directly
+                            </span>
                         </div>
-                        <span class="text-2xl font-bold bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">Winda</span>
                     </a>
                 </div>
                 
                 <!-- Main Navigation -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="{% url 'properties:list' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                        <i class="fas fa-search"></i> Browse
+                <div class="hidden md:flex items-center space-x-1">
+                    <a href="{% url 'properties:list' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                        <i class="fas fa-search mr-2"></i> Browse
                     </a>
+                    
                     {% if user.is_authenticated %}
                         {% if user.is_owner %}
-                            <a href="{% url 'properties:create' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                                <i class="fas fa-plus-circle"></i> List Property
+                            <a href="{% url 'properties:create' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-plus-circle mr-2"></i> List Property
                             </a>
                         {% endif %}
-                        <a href="{% url 'dashboard' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        
+                        <a href="{% url 'dashboard' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
                         </a>
 
                         {% if user.is_owner %}
-                        <a href="{% url 'properties:owner_properties' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                            <i class="fas fa-home"></i> My Properties
-                        </a>
+                            <a href="{% url 'properties:owner_properties' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-home mr-2"></i> My Properties
+                            </a>
 
-                        <a href="{% url 'tenants:pending_tenants' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                            <i class="fas fa-clock"></i> Pending
-                            {% if pending_count > 0 %}
-                                <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full ml-1">{{ pending_count }}</span>
-                            {% endif %}
-                        </a>
+                            <a href="{% url 'tenants:pending_tenants' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium relative">
+                                <i class="fas fa-clock mr-2"></i> Pending
+                                {% if pending_count > 0 %}
+                                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[20px] text-center">
+                                        {{ pending_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
 
-                        <a href="{% url 'tenants:tenant_list' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                            <i class="fas fa-users"></i> Tenants
-                        </a>
+                            <a href="{% url 'tenants:tenant_list' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-users mr-2"></i> Tenants
+                            </a>
                         {% endif %}
 
                         {% if user.is_authenticated and user.is_owner %}
-                            <a href="{% url 'accounts:caretaker_list' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                                <i class="fas fa-users-cog"></i> Caretakers
+                            <a href="{% url 'accounts:caretaker_list' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-users-cog mr-2"></i> Caretakers
                             </a>
                         {% endif %}
 
                         {% if user.is_authenticated and user.user_type == 'CARETAKER' %}
-                            <a href="{% url 'accounts:caretaker_dashboard' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                                <i class="fas fa-tools"></i> Dashboard
+                            <a href="{% url 'accounts:caretaker_dashboard' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-tools mr-2"></i> Dashboard
                             </a>
                         {% endif %}
                         
-                        <a href="{% url 'accounts:profile' %}" class="flex items-center space-x-2">
-                            {% if user.profile_picture %}
-                                <img src="{{ user.profile_picture.url }}" class="w-8 h-8 rounded-full object-cover">
-                            {% else %}
-                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
-                                    <span class="text-white text-sm font-medium">{{ user.get_full_name|slice:":1"|upper }}</span>
+                        <!-- Profile Dropdown -->
+                        <div class="relative group">
+                            <button class="flex items-center space-x-2 ml-2 focus:outline-none">
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" class="w-9 h-9 rounded-full object-cover avatar-ring">
+                                {% else %}
+                                    <div class="w-9 h-9 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center avatar-ring">
+                                        <span class="text-white text-sm font-semibold">{{ user.get_full_name|slice:":1"|upper }}</span>
+                                    </div>
+                                {% endif %}
+                            </button>
+                            
+                            <!-- Dropdown Menu -->
+                            <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                <div class="p-3 border-b border-gray-100">
+                                    <p class="text-sm font-semibold text-gray-900">{{ user.get_full_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ user.email }}</p>
                                 </div>
-                            {% endif %}
-                        </a>
-                        <a href="{% url 'accounts:logout' %}" class="text-gray-700 hover:text-red-600 transition-colors duration-200">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
+                                <div class="py-1">
+                                    <a href="{% url 'accounts:profile' %}" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                        <i class="fas fa-user mr-3 w-4 text-gray-400"></i> Profile
+                                    </a>
+                                    <a href="{% url 'accounts:logout' %}" class="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                                        <i class="fas fa-sign-out-alt mr-3 w-4 text-red-400"></i> Logout
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     {% else %}
-                        <a href="{% url 'accounts:login' %}" class="text-gray-700 hover:text-blue-600 transition-colors duration-200">
-                            <i class="fas fa-sign-in-alt"></i> Login
+                        <a href="{% url 'accounts:login' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Login
                         </a>
-                        <a href="{% url 'accounts:register' %}" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all duration-200">
-                            <i class="fas fa-user-plus"></i> Sign Up
+                        <a href="{% url 'accounts:register' %}" class="btn-gradient text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 ml-1">
+                            <i class="fas fa-user-plus mr-2"></i> Sign Up
                         </a>
                     {% endif %}
                 </div>
                 
                 <!-- Mobile menu button -->
                 <div class="md:hidden flex items-center">
-                    <button onclick="toggleMobileMenu()" class="text-gray-700 hover:text-blue-600 focus:outline-none">
+                    <button onclick="toggleMobileMenu()" class="text-gray-700 hover:text-blue-600 focus:outline-none p-2 rounded-lg hover:bg-blue-50 transition-colors">
                         <i class="fas fa-bars text-2xl"></i>
                     </button>
                 </div>
@@ -124,15 +227,57 @@
         </div>
         
         <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
-            <div class="px-2 pt-2 pb-3 space-y-1">
-                <a href="{% url 'properties:list' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Browse Properties</a>
+        <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-lg">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="{% url 'properties:list' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                    <i class="fas fa-search mr-3 w-5 text-gray-400"></i> Browse Properties
+                </a>
+                
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Dashboard</a>
-                    <a href="{% url 'accounts:logout' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-red-50 hover:text-red-600">Logout</a>
+                    <a href="{% url 'dashboard' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                        <i class="fas fa-tachometer-alt mr-3 w-5 text-gray-400"></i> Dashboard
+                    </a>
+                    
+                    {% if user.is_owner %}
+                        <a href="{% url 'properties:create' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-plus-circle mr-3 w-5 text-gray-400"></i> List Property
+                        </a>
+                        <a href="{% url 'properties:owner_properties' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-home mr-3 w-5 text-gray-400"></i> My Properties
+                        </a>
+                        <a href="{% url 'tenants:pending_tenants' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors relative">
+                            <i class="fas fa-clock mr-3 w-5 text-gray-400"></i> Pending
+                            {% if pending_count > 0 %}
+                                <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{{ pending_count }}</span>
+                            {% endif %}
+                        </a>
+                        <a href="{% url 'tenants:tenant_list' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-users mr-3 w-5 text-gray-400"></i> Tenants
+                        </a>
+                        <a href="{% url 'accounts:caretaker_list' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-users-cog mr-3 w-5 text-gray-400"></i> Caretakers
+                        </a>
+                    {% endif %}
+                    
+                    {% if user.user_type == 'CARETAKER' %}
+                        <a href="{% url 'accounts:caretaker_dashboard' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-tools mr-3 w-5 text-gray-400"></i> Caretaker Dashboard
+                        </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'accounts:profile' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                        <i class="fas fa-user mr-3 w-5 text-gray-400"></i> Profile
+                    </a>
+                    <a href="{% url 'accounts:logout' %}" class="flex items-center px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+                        <i class="fas fa-sign-out-alt mr-3 w-5 text-red-400"></i> Logout
+                    </a>
                 {% else %}
-                    <a href="{% url 'accounts:login' %}" class="block px-3 py-2 rounded-md text-gray-700 hover:bg-blue-50 hover:text-blue-600">Login</a>
-                    <a href="{% url 'accounts:register' %}" class="block px-3 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">Sign Up</a>
+                    <a href="{% url 'accounts:login' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                        <i class="fas fa-sign-in-alt mr-3 w-5 text-gray-400"></i> Login
+                    </a>
+                    <a href="{% url 'accounts:register' %}" class="flex items-center justify-center px-4 py-3 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:shadow-lg transition-all duration-200">
+                        <i class="fas fa-user-plus mr-2"></i> Sign Up
+                    </a>
                 {% endif %}
             </div>
         </div>
@@ -144,10 +289,10 @@
         {% if messages %}
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
                 {% for message in messages %}
-                    <div class="rounded-lg p-4 mb-4 {% if message.tags == 'success' %}bg-green-100 text-green-800 border border-green-300{% elif message.tags == 'error' %}bg-red-100 text-red-800 border border-red-300{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800 border border-yellow-300{% else %}bg-blue-100 text-blue-800 border border-blue-300{% endif %}">
+                    <div class="rounded-xl p-4 mb-4 shadow-sm {% if message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% elif message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'warning' %}bg-yellow-50 text-yellow-800 border border-yellow-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %} animate-slide-down">
                         <div class="flex items-center">
-                            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-2"></i>
-                            {{ message }}
+                            <i class="fas {% if message.tags == 'success' %}fa-check-circle text-green-500{% elif message.tags == 'error' %}fa-exclamation-circle text-red-500{% elif message.tags == 'warning' %}fa-exclamation-triangle text-yellow-500{% else %}fa-info-circle text-blue-500{% endif %} mr-3 text-lg"></i>
+                            <span>{{ message }}</span>
                         </div>
                     </div>
                 {% endfor %}
@@ -162,39 +307,41 @@
     {% if user.is_authenticated %}
         <div class="fixed bottom-6 right-6 z-40">
             <button onclick="toggleFloatingChat()" 
-                    class="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110">
-                <i class="fas fa-comment-dots text-2xl"></i>
+                    class="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center hover:scale-110 group">
+                <i class="fas fa-comment-dots text-2xl group-hover:rotate-12 transition-transform"></i>
                 {% if unread_total > 0 %}
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold">
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-md">
                         {{ unread_total }}
                     </span>
                 {% endif %}
             </button>
             
             <!-- Quick Chat Popup -->
-            <div id="floatingChatPopup" class="absolute bottom-16 right-0 bg-white rounded-xl shadow-2xl w-80 hidden">
-                <div class="p-4 border-b border-gray-200">
+            <div id="floatingChatPopup" class="absolute bottom-16 right-0 bg-white rounded-xl shadow-2xl w-80 hidden border border-gray-100">
+                <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white rounded-t-xl">
                     <div class="flex justify-between items-center">
-                        <h4 class="font-semibold text-gray-900">Quick Chat</h4>
-                        <button onclick="toggleFloatingChat()" class="text-gray-400 hover:text-gray-600">
+                        <h4 class="font-semibold text-gray-900"><i class="fas fa-comment-dots text-blue-500 mr-2"></i>Quick Chat</h4>
+                        <button onclick="toggleFloatingChat()" class="text-gray-400 hover:text-gray-600 transition-colors">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
                 <div class="p-4 max-h-96 overflow-y-auto">
                     <!-- Recent Conversations -->
-                    <p class="text-sm text-gray-500 mb-3">Recent Conversations</p>
+                    <p class="text-sm text-gray-500 mb-3 flex items-center">
+                        <i class="fas fa-clock mr-2 text-gray-400"></i> Recent Conversations
+                    </p>
                     <div id="recentChats">
                         <!-- Will be populated by JavaScript -->
                     </div>
                     
                     <!-- Quick Actions -->
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <a href="{% url 'communications:chat_list' %}" class="block text-center text-blue-600 hover:text-blue-500 text-sm">
-                            <i class="fas fa-comment-dots mr-1"></i> View All Messages
+                    <div class="mt-4 pt-4 border-t border-gray-200 space-y-1">
+                        <a href="{% url 'communications:chat_list' %}" class="flex items-center justify-center text-blue-600 hover:text-blue-500 text-sm font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">
+                            <i class="fas fa-comment-dots mr-2"></i> View All Messages
                         </a>
-                        <a href="{% url 'properties:list' %}" class="block text-center text-gray-600 hover:text-gray-800 text-sm mt-1">
-                            <i class="fas fa-search mr-1"></i> Find Properties to Chat About
+                        <a href="{% url 'properties:list' %}" class="flex items-center justify-center text-gray-600 hover:text-gray-800 text-sm py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-search mr-2"></i> Find Properties to Chat About
                         </a>
                     </div>
                 </div>
@@ -202,12 +349,14 @@
         </div>
     {% endif %}
 
-    <!-- Chat Modal (for starting new conversations) -->
-    <div id="chatModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+    <!-- Chat Modal -->
+    <div id="chatModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 animate-fade-in">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900" id="chatModalTitle">Start Conversation</h3>
-                <button onclick="closeChatModal()" class="text-gray-400 hover:text-gray-600">
+                <h3 class="text-xl font-bold text-gray-900" id="chatModalTitle">
+                    <i class="fas fa-comment-dots text-blue-500 mr-2"></i>Start Conversation
+                </h3>
+                <button onclick="closeChatModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-100">
                     <i class="fas fa-times text-xl"></i>
                 </button>
             </div>
@@ -218,156 +367,110 @@
                 <input type="hidden" name="user_id" id="chatUserId">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                    <textarea name="initial_message" id="chatInitialMessage" rows="3" 
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    <textarea name="initial_message" id="chatInitialMessage" rows="4" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             placeholder="Hi, I'm interested in this property..."></textarea>
                 </div>
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 rounded-lg hover:shadow-lg transition-all duration-200">
+                <button type="submit" class="w-full btn-gradient text-white py-3 rounded-xl font-medium shadow-sm hover:shadow-lg transition-all duration-200">
                     <i class="fas fa-paper-plane mr-2"></i> Start Chat
                 </button>
             </form>
         </div>
     </div>
 
-    <script>
-    // Floating Chat
-    function toggleFloatingChat() {
-        const popup = document.getElementById('floatingChatPopup');
-        popup.classList.toggle('hidden');
-        if (!popup.classList.contains('hidden')) {
-            loadRecentChats();
-        }
-    }
-
-    function loadRecentChats() {
-        fetch('/communications/recent-chats/')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('recentChats');
-                if (data.chats && data.chats.length > 0) {
-                    container.innerHTML = data.chats.map(chat => `
-                        <a href="/communications/${chat.id}/" class="block p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                    <span class="text-blue-600 font-bold text-sm">${chat.other_participant_initials}</span>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium truncate">${chat.other_participant_name}</p>
-                                    <p class="text-xs text-gray-500 truncate">${chat.last_message || 'No messages yet'}</p>
-                                </div>
-                                ${chat.unread_count > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">${chat.unread_count}</span>` : ''}
-                            </div>
-                        </a>
-                    `).join('');
-                } else {
-                    container.innerHTML = `
-                        <p class="text-sm text-gray-500 text-center py-4">No recent conversations</p>
-                        <a href="{% url 'properties:list' %}" class="block text-center text-blue-600 hover:text-blue-500 text-sm">
-                            Start a conversation
-                        </a>
-                    `;
-                }
-            });
-    }
-
-    // Chat Modal functions
-    function startChatFromCard(propertyId, propertyTitle, ownerName) {
-        document.getElementById('chatPropertyId').value = propertyId;
-        document.getElementById('chatUserId').value = '';
-        document.getElementById('chatModalTitle').textContent = `Chat about ${propertyTitle}`;
-        document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
-        document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
-        document.getElementById('chatModal').classList.remove('hidden');
-    }
-
-    function startChatFromDetail(propertyId, propertyTitle, ownerName) {
-        document.getElementById('chatPropertyId').value = propertyId;
-        document.getElementById('chatUserId').value = '';
-        document.getElementById('chatModalTitle').textContent = `Chat about ${propertyTitle}`;
-        document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
-        document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
-        document.getElementById('chatModal').classList.remove('hidden');
-    }
-
-    function closeChatModal() {
-        document.getElementById('chatModal').classList.add('hidden');
-    }
-
-    // Close modal on click outside
-    document.getElementById('chatModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeChatModal();
-        }
-    });
-
-    // Close modal on escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeChatModal();
-        }
-    });
-
-    // Close floating chat on escape key
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const popup = document.getElementById('floatingChatPopup');
-            if (!popup.classList.contains('hidden')) {
-                popup.classList.add('hidden');
-            }
-        }
-    });
-    </script>
-    
     <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer class="bg-gray-900 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                 <div>
                     <div class="flex items-center space-x-2 mb-4">
-                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                            <span class="text-white font-bold text-xl">W</span>
-                        </div>
-                        <span class="text-2xl font-bold text-white">Winda</span>
+                        <svg class="w-10 h-10" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="footerLogoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M40 8 L12 35 L68 35 L40 8Z" fill="url(#footerLogoGradient)"/>
+                            <rect x="17" y="35" width="46" height="35" fill="url(#footerLogoGradient)" rx="3"/>
+                            <rect x="28" y="42" width="24" height="18" fill="white" rx="2"/>
+                            <line x1="40" y1="42" x2="40" y2="60" stroke="#2563EB" stroke-width="2"/>
+                            <line x1="28" y1="51" x2="52" y2="51" stroke="#2563EB" stroke-width="2"/>
+                            <rect x="34" y="57" width="12" height="13" fill="#1E3A5F" rx="1"/>
+                            <circle cx="44" cy="63" r="1.5" fill="#FCD34D"/>
+                        </svg>
+                        <span class="text-2xl font-extrabold text-white">Winda</span>
                     </div>
-                    <p class="text-gray-400">Your window to direct property renting. No agents, just direct connections.</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">Your window to direct property renting. No agents, just direct connections between property owners and tenants.</p>
+                    <div class="mt-4 flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">
+                            <i class="fab fa-facebook-f text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">
+                            <i class="fab fa-twitter text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">
+                            <i class="fab fa-instagram text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-blue-400 transition-colors">
+                            <i class="fab fa-linkedin-in text-xl"></i>
+                        </a>
+                    </div>
                 </div>
                 
                 <div>
-                    <h3 class="font-semibold mb-4">Quick Links</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="{% url 'properties:list' %}" class="hover:text-blue-400 transition-colors">Browse Properties</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">About Us</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">Contact</a></li>
+                    <h3 class="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Quick Links</h3>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="{% url 'properties:list' %}" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> Browse Properties</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> About Us</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> Contact</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> Blog</a></li>
                     </ul>
                 </div>
                 
                 <div>
-                    <h3 class="font-semibold mb-4">For Owners</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">How it Works</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">Pricing</a></li>
-                        <li><a href="#" class="hover:text-blue-400 transition-colors">Resources</a></li>
+                    <h3 class="font-semibold text-white mb-4 text-sm uppercase tracking-wider">For Owners</h3>
+                    <ul class="space-y-2 text-gray-400 text-sm">
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> How it Works</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> Pricing</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> Resources</a></li>
+                        <li><a href="#" class="hover:text-blue-400 transition-colors flex items-center"><i class="fas fa-chevron-right text-[10px] mr-2"></i> FAQ</a></li>
                     </ul>
                 </div>
                 
                 <div>
-                    <h3 class="font-semibold mb-4">Contact Us</h3>
-                    <ul class="space-y-2 text-gray-400">
-                        <li><i class="fas fa-envelope mr-2"></i> support@winda.co.ke</li>
-                        <li><i class="fas fa-phone mr-2"></i> +254 700 123 456</li>
-                        <li><i class="fas fa-map-marker-alt mr-2"></i> Nairobi, Kenya</li>
+                    <h3 class="font-semibold text-white mb-4 text-sm uppercase tracking-wider">Contact Us</h3>
+                    <ul class="space-y-3 text-gray-400 text-sm">
+                        <li class="flex items-start">
+                            <i class="fas fa-envelope text-blue-400 mr-3 mt-0.5"></i>
+                            <span>support@winda.co.ke</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-phone text-blue-400 mr-3 mt-0.5"></i>
+                            <span>+254 700 123 456</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt text-blue-400 mr-3 mt-0.5"></i>
+                            <span>Nairobi, Kenya</span>
+                        </li>
                     </ul>
                 </div>
             </div>
             
-            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-                <p>&copy; 2024 Winda. All rights reserved.</p>
+            <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
+                <p>&copy; {% now "Y" %} Winda. All rights reserved.</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-blue-400 transition-colors">Privacy Policy</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Terms of Service</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Cookie Policy</a>
+                </div>
             </div>
         </div>
     </footer>
     
     <!-- Scripts -->
     <script>
+        // Mobile Menu
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
@@ -381,14 +484,109 @@
         });
         
         // Auto-hide messages after 5 seconds
-        document.querySelectorAll('.alert').forEach(alert => {
+        document.querySelectorAll('.alert, .rounded-xl.p-4.mb-4').forEach(alert => {
             setTimeout(() => {
-                alert.style.transition = 'opacity 0.5s ease';
+                alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                 alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-10px)';
                 setTimeout(() => {
                     alert.remove();
                 }, 500);
             }, 5000);
+        });
+
+        // Floating Chat
+        function toggleFloatingChat() {
+            const popup = document.getElementById('floatingChatPopup');
+            popup.classList.toggle('hidden');
+            if (!popup.classList.contains('hidden')) {
+                loadRecentChats();
+            }
+        }
+
+        function loadRecentChats() {
+            fetch('/communications/recent-chats/')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('recentChats');
+                    if (data.chats && data.chats.length > 0) {
+                        container.innerHTML = data.chats.map(chat => `
+                            <a href="/communications/${chat.id}/" class="block p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-100 to-blue-50 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-blue-600 font-bold text-sm">${chat.other_participant_initials}</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium truncate">${chat.other_participant_name}</p>
+                                        <p class="text-xs text-gray-500 truncate">${chat.last_message || 'No messages yet'}</p>
+                                    </div>
+                                    ${chat.unread_count > 0 ? `<span class="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">${chat.unread_count}</span>` : ''}
+                                </div>
+                            </a>
+                        `).join('');
+                    } else {
+                        container.innerHTML = `
+                            <p class="text-sm text-gray-500 text-center py-4">No recent conversations</p>
+                            <a href="{% url 'properties:list' %}" class="block text-center text-blue-600 hover:text-blue-500 text-sm font-medium">
+                                Start a conversation
+                            </a>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chats:', error);
+                });
+        }
+
+        // Chat Modal functions
+        function startChatFromCard(propertyId, propertyTitle, ownerName) {
+            document.getElementById('chatPropertyId').value = propertyId;
+            document.getElementById('chatUserId').value = '';
+            document.getElementById('chatModalTitle').textContent = `💬 Chat about ${propertyTitle}`;
+            document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
+            document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
+            document.getElementById('chatModal').classList.remove('hidden');
+        }
+
+        function startChatFromDetail(propertyId, propertyTitle, ownerName) {
+            document.getElementById('chatPropertyId').value = propertyId;
+            document.getElementById('chatUserId').value = '';
+            document.getElementById('chatModalTitle').textContent = `💬 Chat about ${propertyTitle}`;
+            document.getElementById('chatModalMessage').textContent = `Send a message to ${ownerName} about this property.`;
+            document.getElementById('chatInitialMessage').value = `Hi, I'm interested in ${propertyTitle}. Is it still available?`;
+            document.getElementById('chatModal').classList.remove('hidden');
+        }
+
+        function closeChatModal() {
+            document.getElementById('chatModal').classList.add('hidden');
+        }
+
+        // Close modal on click outside
+        document.getElementById('chatModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeChatModal();
+            }
+        });
+
+        // Close modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeChatModal();
+                const popup = document.getElementById('floatingChatPopup');
+                if (!popup.classList.contains('hidden')) {
+                    popup.classList.add('hidden');
+                }
+            }
+        });
+
+        // Keyboard shortcut for chat (Ctrl+Shift+C)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                if (document.getElementById('floatingChatPopup')) {
+                    toggleFloatingChat();
+                }
+            }
         });
     </script>
     
