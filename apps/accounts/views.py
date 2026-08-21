@@ -45,11 +45,24 @@ def register_wizard(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
     
-    # Get current step from session
+    # Get current step from session or default to 1
     step = request.session.get('registration_step', 1)
-    user_type = request.session.get('registration_user_type', 'TENANT')
+    user_type = request.session.get('registration_user_type', None)
     
-    # Handle user type selection
+    # If no user_type is set, show the type selection page
+    if not user_type:
+        if request.method == 'POST':
+            user_type = request.POST.get('user_type')
+            if user_type in ['TENANT', 'HOUSE_OWNER']:
+                request.session['registration_user_type'] = user_type
+                request.session['registration_step'] = 1
+                return redirect('accounts:register_wizard')
+            else:
+                messages.error(request, 'Please select a user type.')
+                return render(request, 'accounts/register_type_select.html')
+        return render(request, 'accounts/register_type_select.html')
+    
+    # Handle user type change via GET parameter
     if request.method == 'GET' and 'type' in request.GET:
         user_type = request.GET.get('type')
         if user_type in ['TENANT', 'HOUSE_OWNER']:
@@ -113,8 +126,12 @@ def register_wizard(request):
     
     # Step 3: Bank Details (Owner only)
     if step == 3 and user_type == 'HOUSE_OWNER':
+        # Get bank choices from Paystack
+        from .views import _get_paystack_bank_choices
+        bank_choices, bank_error = _get_paystack_bank_choices()
+        
         if request.method == 'POST':
-            form = RegistrationStep3Form(request.POST)
+            form = RegistrationStep3Form(request.POST, bank_choices=bank_choices)
             if form.is_valid():
                 request.session['registration_bank_data'] = {
                     'bank_code': form.cleaned_data['bank_code'],
@@ -123,18 +140,21 @@ def register_wizard(request):
                 }
                 return create_owner_account(request)
         else:
-            form = RegistrationStep3Form()
+            form = RegistrationStep3Form(bank_choices=bank_choices)
         
         return render(request, 'accounts/register_wizard_step3.html', {
             'form': form,
             'user_type': user_type,
             'step': step,
             'total_steps': 3,
+            'bank_choices': bank_choices,
         })
     
-    # Fallback
+    # Fallback - reset if something goes wrong
+    request.session.pop('registration_step', None)
+    request.session.pop('registration_user_type', None)
+    messages.warning(request, 'Please start the registration process again.')
     return redirect('accounts:register_wizard')
-
 
 def create_tenant_account(request):
     """Create tenant account (auto-approved)"""

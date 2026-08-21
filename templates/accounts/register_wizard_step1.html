@@ -22,6 +22,9 @@
             <p class="mt-2 text-center text-sm text-gray-600">
                 Step {{ step }} of {{ total_steps }}
             </p>
+            <p class="mt-1 text-center text-sm text-gray-500">
+                {{ user_type|title }} Account
+            </p>
         </div>
         
         <!-- Progress Bar -->
@@ -84,14 +87,13 @@
                         Continue to Business Details →
                     {% endif %}
                 </button>
+                
+                <div class="mt-4 text-center">
+                    <a href="{% url 'accounts:register_wizard' %}?type={% if user_type == 'TENANT' %}HOUSE_OWNER{% else %}TENANT{% endif %}" class="text-sm text-blue-600 hover:text-blue-500">
+                        Switch to {% if user_type == 'TENANT' %}Owner{% else %}Tenant{% endif %} Account
+                    </a>
+                </div>
             </form>
-        </div>
-        
-        <div class="text-center">
-            <p class="text-sm text-gray-600">
-                Already have an account? 
-                <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:text-blue-500">Sign in</a>
-            </p>
         </div>
     </div>
 </div>

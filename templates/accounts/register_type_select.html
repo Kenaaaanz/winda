@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Choose Account Type - Winda{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full space-y-8">
+        <div>
+            <div class="flex justify-center">
+                <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center">
+                    <span class="text-white font-bold text-3xl">W</span>
+                </div>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Choose Your Account Type
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Select how you want to use Winda
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Tenant Option -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-transparent hover:border-blue-500">
+                <form method="POST" action="{% url 'accounts:register_wizard' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_type" value="TENANT">
+                    <div class="p-8 text-center">
+                        <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user text-3xl text-blue-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900">Tenant</h3>
+                        <p class="text-gray-600 mt-2">Find and rent properties directly from owners</p>
+                        <ul class="mt-4 text-sm text-gray-500 space-y-2">
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Browse thousands of properties</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Apply directly to owners</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Manage your rentals</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Pay rent securely</li>
+                        </ul>
+                        <button type="submit" class="mt-6 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            Continue as Tenant
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Owner Option -->
+            <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-transparent hover:border-blue-500">
+                <form method="POST" action="{% url 'accounts:register_wizard' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_type" value="HOUSE_OWNER">
+                    <div class="p-8 text-center">
+                        <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-home text-3xl text-green-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900">Property Owner</h3>
+                        <p class="text-gray-600 mt-2">List and manage your properties</p>
+                        <ul class="mt-4 text-sm text-gray-500 space-y-2">
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> List your properties</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Manage tenants directly</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Collect rent payments</li>
+                            <li><i class="fas fa-check text-green-500 mr-2"></i> Track property analytics</li>
+                        </ul>
+                        <button type="submit" class="mt-6 w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                            Continue as Owner
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="text-center">
+            <p class="text-sm text-gray-600">
+                Already have an account? 
+                <a href="{% url 'accounts:login' %}" class="text-blue-600 hover:text-blue-500">Sign in</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
