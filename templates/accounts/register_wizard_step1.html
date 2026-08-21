@@ -89,7 +89,7 @@
                 </button>
                 
                 <div class="mt-4 text-center">
-                    <a href="{% url 'accounts:register_wizard' %}?type={% if user_type == 'TENANT' %}HOUSE_OWNER{% else %}TENANT{% endif %}" class="text-sm text-blue-600 hover:text-blue-500">
+                    <a href="{% url 'accounts:register' %}?type={% if user_type == 'TENANT' %}HOUSE_OWNER{% else %}TENANT{% endif %}" class="text-sm text-blue-600 hover:text-blue-500">
                         Switch to {% if user_type == 'TENANT' %}Owner{% else %}Tenant{% endif %} Account
                     </a>
                 </div>
