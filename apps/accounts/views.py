@@ -142,7 +142,6 @@ def register_wizard(request):
         
         if request.method == 'POST':
             # Use the existing PaystackSubaccountForm
-            from .forms import PaystackSubaccountForm
             form = PaystackSubaccountForm(request.POST, bank_choices=bank_choices)
             if form.is_valid():
                 # Store bank data in session
