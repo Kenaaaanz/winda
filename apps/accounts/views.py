@@ -141,8 +141,7 @@ def register_wizard(request):
         bank_choices, bank_error = _get_paystack_bank_choices()
         
         if request.method == 'POST':
-            # Use the existing PaystackSubaccountForm
-            from .forms import PaystackSubaccountForm
+            # Use the imported PaystackSubaccountForm (no need to import again)
             form = PaystackSubaccountForm(request.POST, bank_choices=bank_choices)
             if form.is_valid():
                 # Store bank data in session
@@ -181,7 +180,7 @@ def register_wizard(request):
                 'bank_error': bank_error,
                 'is_wizard': True,
             })
-    
+        
     # Fallback - reset if something goes wrong
     request.session.pop('registration_step', None)
     request.session.pop('registration_user_type', None)
