@@ -47,7 +47,7 @@
             
             <!-- Owner Option -->
             <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-transparent hover:border-blue-500">
-                <form method="POST" action="{% url 'accounts:register_wizard' %}">
+                <form method="POST" action="{% url 'accounts:register' %}">
                     {% csrf_token %}
                     <input type="hidden" name="user_type" value="HOUSE_OWNER">
                     <div class="p-8 text-center">
