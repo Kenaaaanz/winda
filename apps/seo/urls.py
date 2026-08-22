@@ -11,4 +11,5 @@ urlpatterns = [
     
     # Robots
     path('robots.txt', views.robots_txt, name='robots'),
-]
+    
+    ]

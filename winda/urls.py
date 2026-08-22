@@ -85,7 +85,6 @@ urlpatterns = [
 
     # SEO
     path('', include('apps.seo.urls')),
-    path('seo/', include('apps.seo.urls')),
 ]
 
 if settings.DEBUG:
