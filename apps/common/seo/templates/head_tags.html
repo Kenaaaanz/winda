@@ -1,0 +1,128 @@
+{% load static %}
+
+<!-- ========================================
+     SEO & META TAGS
+     ======================================== -->
+
+<!-- Primary Meta Tags -->
+<title>{{ seo.meta_title|default:"Winda - Your Home, Directly" }}</title>
+<meta name="title" content="{{ seo.meta_title|default:'Winda - Your Home, Directly' }}">
+<meta name="description" content="{{ seo.meta_description|default:'Find and rent properties directly from owners. No agents, just direct connections.' }}">
+<meta name="keywords" content="{{ seo.meta_keywords|default:'property rental, house hunting, direct renting, Kenya properties, Winda' }}">
+<meta name="robots" content="{{ seo.robots|default:'index, follow' }}">
+{% if seo.canonical_url %}
+    <link rel="canonical" href="{{ seo.canonical_url }}">
+{% endif %}
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="{{ seo.og_type|default:'website' }}">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:title" content="{{ seo.og_title|default:seo.meta_title }}">
+<meta property="og:description" content="{{ seo.og_description|default:seo.meta_description }}">
+{% if seo.og_image %}
+    <meta property="og:image" content="{{ seo.og_image }}">
+{% else %}
+    <meta property="og:image" content="{% static 'images/og-image.jpg' %}">
+{% endif %}
+<meta property="og:site_name" content="Winda">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="{{ seo.twitter_card|default:'summary_large_image' }}">
+<meta name="twitter:url" content="{{ request.build_absolute_uri }}">
+<meta name="twitter:title" content="{{ seo.twitter_title|default:seo.meta_title }}">
+<meta name="twitter:description" content="{{ seo.twitter_description|default:seo.meta_description }}">
+{% if seo.twitter_image %}
+    <meta name="twitter:image" content="{{ seo.twitter_image }}">
+{% else %}
+    <meta name="twitter:image" content="{% static 'images/twitter-card.jpg' %}">
+{% endif %}
+
+<!-- ========================================
+     GOOGLE ANALYTICS (GA4)
+     ======================================== -->
+{% if ga_measurement_id %}
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ G-6YCKKHPFZW }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '{{ G-6YCKKHPFZW }}');
+        
+        // Enhanced measurement
+        gtag('config', '{{ G-6YCKKHPFZW }}', {
+            'send_page_view': true,
+            'allow_google_signals': true,
+            'allow_ad_personalization_signals': true
+        });
+    </script>
+{% endif %}
+
+<!-- ========================================
+     GOOGLE TAG MANAGER (GTM)
+     ======================================== -->
+{% if gtm_container_id %}
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','{{ GTM-KBLR478M }}');</script>
+    <!-- End Google Tag Manager -->
+    
+    <!-- Google Tag Manager (noscript) - For body -->
+    <noscript>
+        <iframe src="https://www.googletagmanager.com/ns.html?id={{ GTM-KBLR478M }}"
+        height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+{% endif %}
+
+<!-- ========================================
+     SCHEMA.ORG STRUCTURED DATA
+     ======================================== -->
+{% if seo.structured_data %}
+    <script type="application/ld+json">
+        {{ seo.structured_data|safe }}
+    </script>
+{% else %}
+    <!-- Default Organization Schema -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Winda",
+            "description": "Direct property rental platform connecting owners and tenants",
+            "url": "{{ site_url }}",
+            "logo": "{{ site_url }}{% static 'images/logo.png' %}",
+            "contactPoint": {
+                "@type": "ContactPoint",
+                "email": "support@winda.co.ke",
+                "contactType": "customer service",
+                "availableLanguage": ["English"]
+            },
+            "sameAs": [
+                "https://twitter.com/windahomes",
+                "https://facebook.com/windahomes",
+                "https://instagram.com/windahomes",
+                "https://linkedin.com/company/windahomes"
+            ]
+        }
+    </script>
+{% endif %}
+
+<!-- ========================================
+     ADDITIONAL SEO META
+     ======================================== -->
+<meta name="author" content="Winda">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="language" content="English">
+<meta name="revisit-after" content="7 days">
+<meta name="distribution" content="global">
+<meta name="rating" content="general">
+
+<!-- Geo Tags -->
+<meta name="geo.region" content="KE">
+<meta name="geo.placename" content="Nairobi">
+<meta name="geo.position" content="-1.292066;36.821946">
+<meta name="ICBM" content="-1.292066, 36.821946">

@@ -1,13 +1,16 @@
 {% load static %}
 {% load humanize %}
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{% block title %}Winda - Your Home, Directly{% endblock %}</title>
+    {% include 'seo/head_tags.html' %}
+
+    <title>{% block title %}{{ seo.meta_title|default:"Winda - Your Home, Directly" }}{% endblock %}</title>    
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'apps.maintenance',
     'apps.analytics',
     'apps.notifications',
+    'apps.seo',
 ]
 
 MIDDLEWARE = [
@@ -68,6 +69,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'apps.seo.middleware.SeoMiddleware',
+
 ]
 
 ROOT_URLCONF = 'winda.urls'
@@ -85,6 +88,8 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.unread_chat_count',
                 'apps.accounts.context_processors.pending_applications_count',
+                'apps.seo.context_processors.seo_settings',
+
             ],
         },
     },
@@ -284,3 +289,24 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Cloudinary URL prefix for media
 MEDIA_URL = f'https://res.cloudinary.com/{CLOUDINARY_STORAGE["CLOUD_NAME"]}/'
+
+# ========================================
+# SEO & ANALYTICS SETTINGS
+# ========================================
+
+# Google Analytics 4 Measurement ID
+GA_MEASUREMENT_ID = os.getenv('GA_MEASUREMENT_ID', '')
+
+# Google Tag Manager Container ID
+GTM_CONTAINER_ID = os.getenv('GTM_CONTAINER_ID', '')
+
+# Site URL
+SITE_URL = os.getenv('SITE_URL', 'https://www.winda.africa')
+
+# SEO Settings
+SEO_DEFAULT_TITLE = 'Winda - Your Home, Directly'
+SEO_DEFAULT_DESCRIPTION = 'Find and rent properties directly from owners. No agents, just direct connections.'
+SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya properties, Winda'
+
+
+

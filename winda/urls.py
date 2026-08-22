@@ -82,6 +82,10 @@ urlpatterns = [
     path('maintenance/', include('apps.maintenance.urls')),
     path('analytics/', include('apps.analytics.urls')),
     path('notifications/', include('apps.notifications.urls')),
+
+    # SEO
+    path('', include('apps.seo.urls')),
+    path('seo/', include('apps.seo.urls')),
 ]
 
 if settings.DEBUG:
