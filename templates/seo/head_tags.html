@@ -42,15 +42,15 @@
      ======================================== -->
 {% if ga_measurement_id %}
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ G-6YCKKHPFZW }}"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', '{{ G-6YCKKHPFZW }}');
+        gtag('config', '{{ ga_measurement_id }}');
         
         // Enhanced measurement
-        gtag('config', '{{ G-6YCKKHPFZW }}', {
+        gtag('config', '{{ ga_measurement_id }}', {
             'send_page_view': true,
             'allow_google_signals': true,
             'allow_ad_personalization_signals': true
@@ -67,12 +67,12 @@
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','{{ GTM-KBLR478M }}');</script>
+    })(window,document,'script','dataLayer','{{ gtm_container_id }}');</script>
     <!-- End Google Tag Manager -->
     
     <!-- Google Tag Manager (noscript) - For body -->
     <noscript>
-        <iframe src="https://www.googletagmanager.com/ns.html?id={{ GTM-KBLR478M }}"
+        <iframe src="https://www.googletagmanager.com/ns.html?id={{ gtm_container_id }}"
         height="0" width="0" style="display:none;visibility:hidden"></iframe>
     </noscript>
 {% endif %}
