@@ -23,6 +23,8 @@ from apps.properties.models import Property
 from apps.tenants.models import TenantApplication
 
 
+from django.db import ProgrammingError
+
 @login_required
 def analytics_dashboard(request):
     """Main analytics dashboard"""
@@ -53,8 +55,15 @@ def owner_analytics_dashboard(request):
     end_date = timezone.now()
     start_date = end_date - timedelta(days=days)
     
-    # Get saved reports
-    reports = AnalyticsReport.objects.filter(user=request.user).order_by('-created_at')[:5]
+    # Get saved reports - with error handling
+    reports = []
+    try:
+        reports = AnalyticsReport.objects.filter(user=request.user).order_by('-created_at')[:5]
+    except ProgrammingError:
+        # Table doesn't exist yet - this is fine
+        pass
+    except Exception as e:
+        print(f"Error fetching reports: {e}")
     
     context = {
         'stats': stats,
@@ -64,7 +73,6 @@ def owner_analytics_dashboard(request):
     }
     
     return render(request, 'analytics/owner_dashboard.html', context)
-
 
 @login_required
 def admin_analytics_dashboard(request):

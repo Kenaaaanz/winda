@@ -21,7 +21,7 @@ class UserActivity(models.Model):
         ('MAINTENANCE', 'Maintenance'),
     )
     
-    id = models.AutoField(primary_key=True)
+    id = models.BigAutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
     description = models.TextField()
@@ -116,6 +116,7 @@ class AnalyticsMetric(models.Model):
         ('USER_ENGAGEMENT', 'User Engagement'),
     )
     
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     metric_type = models.CharField(max_length=20, choices=METRIC_TYPES)
     property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, null=True, blank=True)
     owner = models.ForeignKey('accounts.OwnerProfile', on_delete=models.CASCADE, null=True, blank=True)
@@ -141,28 +142,23 @@ class DailyAnalyticsReport(models.Model):
     """Daily analytics report for quick reference"""
     date = models.DateField(unique=True)
     
-    # General statistics
     total_users = models.PositiveIntegerField(default=0)
     active_users = models.PositiveIntegerField(default=0)
     new_users = models.PositiveIntegerField(default=0)
     
-    # Property statistics
     total_properties = models.PositiveIntegerField(default=0)
     new_properties = models.PositiveIntegerField(default=0)
     properties_views = models.PositiveIntegerField(default=0)
     
-    # Transaction statistics
     total_payments = models.PositiveIntegerField(default=0)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     platform_fees = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     new_applications = models.PositiveIntegerField(default=0)
     
-    # Engagement
     messages_sent = models.PositiveIntegerField(default=0)
     maintenance_requests = models.PositiveIntegerField(default=0)
     chat_rooms_created = models.PositiveIntegerField(default=0)
     
-    # Metadata
     data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
