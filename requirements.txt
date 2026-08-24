@@ -40,6 +40,7 @@ django-ckeditor-5
 python-decouple
 cloudinary
 django-cloudinary-storage
+reportlab
 # Windows-specific packages
 # pywin32==306  # For Windows services
 
