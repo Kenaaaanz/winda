@@ -4,23 +4,20 @@
 {% block title %}Analytics Dashboard - Winda{% endblock %}
 
 {% block extra_css %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     .stat-card {
         transition: all 0.3s ease;
-        border-left: 4px solid #3b82f6;
     }
     .stat-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
     }
-    .stat-card .stat-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    .progress-bar {
+        transition: width 1s ease;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
     }
 </style>
 {% endblock %}
@@ -29,40 +26,37 @@
 <div class="bg-gray-50 min-h-screen py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
-        <div class="flex flex-wrap items-center justify-between mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-                <p class="text-gray-600">Comprehensive insights into your property portfolio</p>
-            </div>
-            <div class="flex space-x-3">
-                <a href="{% url 'analytics:generate_report' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-                    <i class="fas fa-plus mr-2"></i> Generate Report
-                </a>
-                <select onchange="window.location.href='?range='+this.value" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                    <option value="7" {% if date_range == 7 %}selected{% endif %}>Last 7 Days</option>
-                    <option value="30" {% if date_range == 30 %}selected{% endif %}>Last 30 Days</option>
-                    <option value="90" {% if date_range == 90 %}selected{% endif %}>Last 90 Days</option>
-                    <option value="365" {% if date_range == 365 %}selected{% endif %}>Last Year</option>
-                </select>
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+                    <p class="text-gray-600">Performance insights for your properties</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="exportData()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                        <i class="fas fa-download mr-2"></i> Export
+                    </button>
+                    <select id="timeRange" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-blue-500 focus:border-blue-500" onchange="updateTimeRange()">
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 90 days</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last year</option>
+                    </select>
+                </div>
             </div>
         </div>
 
-        <!-- Stats Grid -->
+        <!-- Property Stats -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-blue-500">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-600">Occupancy Rate</p>
-                        <p class="text-2xl font-bold">{{ stats.occupancy_rate|floatformat:1 }}%</p>
-                        <p class="text-xs text-gray-500">{{ stats.occupied_units }} of {{ stats.total_units }} units occupied</p>
+                        <p class="text-sm text-gray-600">Total Properties</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.properties.total }}</p>
+                        <p class="text-sm text-green-600">{{ stats.properties.available }} available</p>
                     </div>
-                    <div class="stat-icon bg-blue-100">
-                        <i class="fas fa-building text-blue-500 text-xl"></i>
-                    </div>
-                </div>
-                <div class="mt-2">
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-500 rounded-full h-2" style="width: {{ stats.occupancy_rate }}%"></div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-home text-blue-500 text-xl"></i>
                     </div>
                 </div>
             </div>
@@ -70,154 +64,240 @@
             <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-green-500">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-600">Monthly Revenue</p>
-                        <p class="text-2xl font-bold">KES {{ stats.total_revenue|intcomma }}</p>
-                        <p class="text-xs text-green-600">Total: KES {{ stats.total_revenue|intcomma }}</p>
+                        <p class="text-sm text-gray-600">Occupancy Rate</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.properties.occupancy_rate }}%</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                            <div class="bg-green-500 h-2 rounded-full progress-bar" style="width: {{ stats.properties.occupancy_rate }}%"></div>
+                        </div>
                     </div>
-                    <div class="stat-icon bg-green-100">
-                        <i class="fas fa-money-bill-wave text-green-500 text-xl"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-purple-500">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600">Total Tenants</p>
-                        <p class="text-2xl font-bold">{{ stats.total_tenants }}</p>
-                        <p class="text-xs text-purple-600">{{ stats.pending_applications }} pending applications</p>
-                    </div>
-                    <div class="stat-icon bg-purple-100">
-                        <i class="fas fa-users text-purple-500 text-xl"></i>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-users text-green-500 text-xl"></i>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-orange-500">
+            <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-yellow-500">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-600">Maintenance</p>
-                        <p class="text-2xl font-bold">{{ stats.pending_maintenance }}</p>
-                        <p class="text-xs text-orange-600">{{ stats.resolved_maintenance }} resolved</p>
+                        <p class="text-sm text-gray-600">Total Revenue</p>
+                        <p class="text-2xl font-bold text-gray-900">KES {{ stats.revenue.total|intcomma }}</p>
+                        <p class="text-sm text-gray-500">This month: KES {{ stats.revenue.monthly_current|intcomma }}</p>
                     </div>
-                    <div class="stat-icon bg-orange-100">
-                        <i class="fas fa-tools text-orange-500 text-xl"></i>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-money-bill-wave text-yellow-500 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6 stat-card border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">Pending Maintenance</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ stats.maintenance.pending }}</p>
+                        <p class="text-sm text-red-600">{{ stats.maintenance.total }} total requests</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-tools text-red-500 text-xl"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts -->
+        <!-- Charts Row -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Revenue Chart -->
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <h3 class="text-lg font-semibold mb-4">Revenue Trends</h3>
-                <canvas id="revenueChart" height="250"></canvas>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
             </div>
 
-            <!-- Property Performance -->
+            <!-- Applications Chart -->
             <div class="bg-white rounded-xl shadow-sm p-6">
-                <h3 class="text-lg font-semibold mb-4">Property Performance</h3>
-                <div class="space-y-4">
-                    {% for prop in stats.property_performance %}
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div>
-                                <p class="font-medium">{{ prop.title }}</p>
-                                <p class="text-sm text-gray-600">
-                                    {% if prop.occupancy %}
-                                        <span class="text-green-600">● Occupied</span>
-                                    {% else %}
-                                        <span class="text-yellow-600">● Available</span>
-                                    {% endif %}
-                                    • {{ prop.tenants }} tenants
-                                </p>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-semibold text-blue-600">KES {{ prop.revenue|intcomma }}</p>
-                                <p class="text-xs text-gray-500">{{ prop.maintenance }} maintenance requests</p>
-                            </div>
-                        </div>
-                    {% empty %}
-                        <p class="text-gray-500 text-center py-4">No properties to display</p>
-                    {% endfor %}
+                <h3 class="text-lg font-semibold mb-4">Application Trends</h3>
+                <div class="chart-container">
+                    <canvas id="applicationsChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Reports -->
-        {% if reports %}
-            <div class="bg-white rounded-xl shadow-sm p-6">
+        <!-- Details Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Recent Activities -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Recent Reports</h3>
-                    <a href="{% url 'analytics:generate_report' %}" class="text-sm text-blue-600 hover:text-blue-500">
-                        Generate New Report
-                    </a>
+                    <h3 class="text-lg font-semibold">Recent Activities</h3>
+                    <span class="text-sm text-gray-500">Last 10 activities</span>
                 </div>
-                <div class="space-y-3">
-                    {% for report in reports %}
-                        <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-                            <div>
-                                <p class="font-medium">{{ report.title }}</p>
-                                <p class="text-sm text-gray-600">{{ report.get_report_type_display }} • {{ report.created_at|timesince }} ago</p>
+                <div class="space-y-4">
+                    {% for activity in stats.recent_activities %}
+                        <div class="flex items-start space-x-3 border-b border-gray-100 pb-3">
+                            <div class="bg-blue-50 p-2 rounded-full">
+                                <i class="fas fa-{{ activity.icon }} text-blue-500"></i>
                             </div>
-                            <div class="flex space-x-2">
-                                <a href="{% url 'analytics:report_detail' report.id %}" class="text-blue-600 hover:text-blue-500 text-sm">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if report.file %}
-                                    <a href="{% url 'analytics:download_report' report.id %}" class="text-green-600 hover:text-green-500 text-sm">
-                                        <i class="fas fa-download"></i>
-                                    </a>
-                                {% endif %}
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-800">{{ activity.description }}</p>
+                                <p class="text-xs text-gray-500">{{ activity.time_ago }}</p>
                             </div>
                         </div>
+                    {% empty %}
+                        <p class="text-gray-500 text-center py-4">No recent activities</p>
                     {% endfor %}
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Quick Stats</h3>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Total Tenants</span>
+                            <span class="font-semibold">{{ stats.tenants.total_tenants }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Active Leases</span>
+                            <span class="font-semibold text-green-600">{{ stats.tenants.active_leases }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Expiring Soon (30 days)</span>
+                            <span class="font-semibold text-yellow-600">{{ stats.tenants.expiring_soon }}</span>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Total Units</span>
+                            <span class="font-semibold">{{ stats.properties.total_units }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Available Units</span>
+                            <span class="font-semibold text-green-600">{{ stats.properties.available_units }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Occupied Units</span>
+                            <span class="font-semibold text-blue-600">{{ stats.properties.occupied_units }}</span>
+                        </div>
+                    </div>
+                    <div class="border-t border-gray-200 pt-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Pending Applications</span>
+                            <span class="font-semibold text-yellow-600">{{ stats.applications.pending }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Approved Applications</span>
+                            <span class="font-semibold text-green-600">{{ stats.applications.approved }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm mt-2">
+                            <span class="text-gray-600">Rejected Applications</span>
+                            <span class="font-semibold text-red-600">{{ stats.applications.rejected }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Property Performance (if multi-unit) -->
+        {% if stats.properties.total_units > stats.properties.total %}
+            <div class="mt-6 bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Property Performance</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <p class="text-sm text-blue-600">Total Units</p>
+                        <p class="text-2xl font-bold text-blue-900">{{ stats.properties.total_units }}</p>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <p class="text-sm text-green-600">Occupied Units</p>
+                        <p class="text-2xl font-bold text-green-900">{{ stats.properties.occupied_units }}</p>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg p-4">
+                        <p class="text-sm text-yellow-600">Available Units</p>
+                        <p class="text-2xl font-bold text-yellow-900">{{ stats.properties.available_units }}</p>
+                    </div>
                 </div>
             </div>
         {% endif %}
     </div>
 </div>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Revenue Chart
-    const revenueData = {{ stats.monthly_revenue|safe }};
-    
-    if (revenueData && revenueData.length > 0) {
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: revenueData.map(d => d.month),
-                datasets: [{
-                    label: 'Revenue (KES)',
-                    data: revenueData.map(d => d.revenue),
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return 'KES ' + value.toLocaleString();
-                            }
-                        }
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ stats.revenue.monthly|map(attribute='month')|safe }},
+        datasets: [{
+            label: 'Revenue (KES)',
+            data: {{ stats.revenue.monthly|map(attribute='amount')|safe }},
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + value.toLocaleString();
                     }
                 }
             }
-        });
+        }
     }
 });
+
+// Applications Chart
+const appCtx = document.getElementById('applicationsChart').getContext('2d');
+new Chart(appCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ stats.applications.trend|map(attribute='month')|safe }},
+        datasets: [{
+            label: 'Applications',
+            data: {{ stats.applications.trend|map(attribute='count')|safe }},
+            backgroundColor: '#3b82f6',
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+function exportData() {
+    window.location.href = '{% url "analytics:export" %}';
+}
+
+function updateTimeRange() {
+    const days = document.getElementById('timeRange').value;
+    window.location.href = `?days=${days}`;
+}
 </script>
 {% endblock %}
