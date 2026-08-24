@@ -21,7 +21,7 @@ class UserActivity(models.Model):
         ('MAINTENANCE', 'Maintenance'),
     )
     
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
     description = models.TextField()
