@@ -307,7 +307,7 @@ SITE_URL = os.getenv('SITE_URL', 'https://www.winda.africa')
 # SEO Settings
 SEO_DEFAULT_TITLE = 'Winda - Your Home, Directly'
 SEO_DEFAULT_DESCRIPTION = 'Find and rent properties directly from owners. No agents, just direct connections.'
-SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya properties, Winda'
+SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya properties, Winda, Winda Africa, winda.africa'
 
 
 
