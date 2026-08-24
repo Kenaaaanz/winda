@@ -446,11 +446,11 @@
                     <ul class="space-y-3 text-gray-400 text-sm">
                         <li class="flex items-start">
                             <i class="fas fa-envelope text-blue-400 mr-3 mt-0.5"></i>
-                            <span>support@winda.co.ke</span>
+                            <span>windaafricasupport@gmail.com</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-phone text-blue-400 mr-3 mt-0.5"></i>
-                            <span>+254 700 123 456</span>
+                            <span>+254 102 009 171</span>
                         </li>
                         <li class="flex items-start">
                             <i class="fas fa-map-marker-alt text-blue-400 mr-3 mt-0.5"></i>
@@ -463,8 +463,8 @@
             <div class="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
                 <p>&copy; {% now "Y" %} Winda. All rights reserved.</p>
                 <div class="flex space-x-6 mt-4 md:mt-0">
-                    <a href="#" class="hover:text-blue-400 transition-colors">Privacy Policy</a>
-                    <a href="#" class="hover:text-blue-400 transition-colors">Terms of Service</a>
+                    <a href="{% url 'legal:terms_of_service' %}" class="hover:text-blue-400 transition-colors">Terms of Service</a>
+                    <a href="{% url 'legal:privacy_policy' %}" class="hover:text-blue-400 transition-colors">Privacy Policy</a>
                     <a href="#" class="hover:text-blue-400 transition-colors">Cookie Policy</a>
                 </div>
             </div>

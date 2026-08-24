@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Terms of Service - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
+                <h1 class="text-3xl font-bold text-white">Terms of Service</h1>
+                <p class="text-blue-100 mt-2">Last Updated: August 22, 2026</p>
+            </div>
+            
+            <div class="p-8 space-y-8">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                    <p class="text-sm text-yellow-700">
+                        <strong>⚠️ Important:</strong> By accessing or using the Winda Platform, you agree to be bound by these Terms. 
+                        If you do not agree, please discontinue use immediately.
+                    </p>
+                </div>
+
+                <!-- Section 1: Nature of Platform -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">1. Nature of the Platform</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">1.1 Marketplace Facilitator</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Winda is an online marketplace facilitator that allows registered property owners or authorized managers 
+                        ("Landlords") to list real estate properties, manage tenancies, and collect payments, and allows registered 
+                        tenants ("Tenants") to apply for properties, communicate with Landlords, track maintenance, and remit payments.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">1.2 No Real Estate Brokerage</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Winda is <strong>not</strong> a real estate broker, property management company, insurer, or land agent. 
+                        We do not own, buy, sell, lease, or manage the properties listed on the Platform. 
+                        Any lease agreement or contractual arrangement entered into through the Platform is strictly between 
+                        the Landlord and the Tenant.
+                    </p>
+                </section>
+
+                <!-- Section 2: Account Registration -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">2. Account Registration & Admin Approval</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">2.1 Account Creation</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        To access the dashboard and use the Platform's core functionalities, Users must create an account by 
+                        providing accurate, current, and complete registration information, including full legal names, 
+                        National ID or Passport numbers, phone numbers, and active email addresses.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">2.2 Admin Verification</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        The Platform utilizes a mandatory review process to maintain system integrity:
+                    </p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed mt-2 space-y-1 ml-4">
+                        <li><strong>Account Approval:</strong> Landlord accounts must be reviewed and approved by the Platform administrator before accessing the Landlord dashboard.</li>
+                        <li><strong>Listing & Unit Approval:</strong> No property listing or unit profile will become public until explicitly reviewed and approved by the Platform administrator.</li>
+                    </ul>
+                    
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4 mt-4 rounded-r-lg">
+                        <h4 class="font-semibold text-red-800">⚠️ Limitation of Verification Liability</h4>
+                        <p class="text-sm text-red-700 mt-2">
+                            Admin approval is an operational, facial verification check aimed at reducing explicit platform spam. 
+                            <strong>Admin approval does not guarantee, verify, or certify:</strong>
+                        </p>
+                        <ul class="list-disc list-inside text-sm text-red-700 mt-2 space-y-1 ml-4">
+                            <li>The legal title, ownership, or authorization of the Landlord regarding the listed property.</li>
+                            <li>The physical condition, safety, suitability, or legality of the property.</li>
+                            <li>The creditworthiness, identity validity, or character of any Tenant or Landlord.</li>
+                        </ul>
+                        <p class="text-sm text-red-700 mt-2 font-semibold">
+                            Users acknowledge that they interact, lease, and transact at their own risk.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 3: Payments -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">3. Payments, Subaccounts, and Fees</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.1 Payment Processing</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Winda utilizes Paystack as its third-party payment gateway. Landlords are required to connect a 
+                        Paystack subaccount through the Platform dashboard to receive funds.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.2 Platform Fee (3%)</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        By using the Platform, Landlords authorize the following automated transaction mechanism:
+                    </p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed mt-2 space-y-1 ml-4">
+                        <li>When a Tenant initiates a payment through the Platform, funds are routed via Paystack.</li>
+                        <li><strong>Platform Fee:</strong> Winda automatically deducts a non-refundable marketplace facilitation fee equal to <strong>three percent (3%)</strong> of the total gross transaction value.</li>
+                        <li><strong>Payout:</strong> The remaining ninety-seven percent (97%) is settled directly into the Landlord's designated bank account.</li>
+                    </ul>
+                    
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mt-4 rounded-r-lg">
+                        <h4 class="font-semibold text-blue-800">🔒 Zero-Trust Funds Policy</h4>
+                        <p class="text-sm text-blue-700 mt-2">
+                            Winda does <strong>not</strong> hold, store, or escrow rent payments or security deposits within 
+                            its operational business accounts. Financial routing is executed immediately at the gateway provider layer. 
+                            Winda is not a bank, trust company, or money transmitter.
+                        </p>
+                    </div>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.3 Chargebacks and Reversals</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        In the event that a Tenant or financial institution initiates a chargeback or disputes a payment:
+                    </p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed mt-2 space-y-1 ml-4">
+                        <li>The Landlord is fully liable for the full amount of the disputed transaction.</li>
+                        <li>Winda reserves the right to instruct Paystack to claw back disputed funds from the Landlord's subaccount.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 4: Taxes -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">4. Taxes and Regulatory Compliance</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">4.1 Landlord Tax Liabilities</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Landlords bear sole legal responsibility for declaring and paying all applicable local taxes to the 
+                        Kenya Revenue Authority (KRA), including Monthly Rental Income (MRI) Tax, Corporate Income Tax, or VAT. 
+                        The 97% split represents gross income before individual tax obligations.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">4.2 Electronic Tax Invoicing</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Winda will issue eTIMS-compliant electronic invoices specifically covering its earned 3% Platform Fee. 
+                        The Platform does not generate or file tax declarations on behalf of individual Landlords or Tenants.
+                    </p>
+                </section>
+
+                <!-- Section 5: Data Protection -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">5. Data Protection & Privacy</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">5.1 Compliance with the Law</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        All data collection and processing activities are governed strictly by the 
+                        <strong>Kenya Data Protection Act, 2019</strong> and overseen by the Office of the Data Protection 
+                        Commissioner (ODPC). See our <a href="{% url 'privacy_policy' %}" class="text-blue-600 hover:underline">Privacy Policy</a> for details.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">5.2 User Data Consent</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        By creating an account, Users grant explicit consent to Winda to process their information for 
+                        verification, onboarding, transaction facilitation, and communication purposes.
+                    </p>
+                </section>
+
+                <!-- Section 6: Maintenance -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">6. Maintenance Requests & Communications</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">6.1 Platform Communication</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        Winda provides a communication facility for Tenants to submit maintenance logs and messages to Landlords. 
+                        The Platform acts solely as a passive delivery pipeline.
+                    </p>
+                    
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4 mt-4 rounded-r-lg">
+                        <h4 class="font-semibold text-red-800">🚨 Emergency Disclaimer</h4>
+                        <p class="text-sm text-red-700 mt-2">
+                            Winda <strong>must not</strong> be used for life-threatening or utility-related emergencies. 
+                            In the event of fire, severe flooding, structural hazards, or criminal activity, Users must immediately 
+                            contact official emergency services or local authorities directly.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 7: Intellectual Property -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">7. Intellectual Property</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        All content, source code, data architectures, proprietary dashboards, software codebases, graphics, logos, 
+                        and UI/UX layouts found on the Platform are the exclusive intellectual property of Winda. 
+                        Users are granted a limited, non-transferable, revocable license to access the dashboard solely for 
+                        standard property management use. Any unauthorized scraping, reverse-engineering, duplication, or 
+                        exploitation of the software is strictly prohibited.
+                    </p>
+                </section>
+
+                <!-- Section 8: Liability -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">8. Limitation of Liability and Indemnification</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">8.1 Exclusion of Damages</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        To the maximum extent permitted by Kenyan law, Winda, its directors, employees, or tech partners 
+                        shall not be held liable for any direct, indirect, consequential, exemplary, incidental, special, or 
+                        punitive damages arising out of your use of the Platform, fraudulent listings, tenant behavior, or 
+                        network outages.
+                    </p>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">8.2 Indemnification</h3>
+                    <p class="text-gray-700 leading-relaxed">
+                        You agree to defend, indemnify, and hold Winda harmless from and against any claims, liabilities, damages, 
+                        losses, and expenses, including reasonable legal fees, arising out of or in any way connected with your 
+                        breach of these Terms, your property operations, or your violations of third-party rights.
+                    </p>
+                </section>
+
+                <!-- Section 9: Governing Law -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">9. Governing Law and Dispute Resolution</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        These Terms shall be governed by, construed, and enforced in accordance with the <strong>Laws of the Republic of Kenya</strong>. 
+                        Any dispute arising out of or in connection with these Terms shall first be subjected to amicable mutual resolution. 
+                        If unresolved within thirty (30) days, the dispute shall be referred to and finally resolved by arbitration 
+                        under the rules of the <strong>Chartered Institute of Arbitrators (Kenya Branch)</strong>.
+                    </p>
+                </section>
+
+                <!-- Section 10: Modifications -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">10. Modifications and Termination</h2>
+                    <p class="text-gray-700 leading-relaxed">
+                        We reserve the right, in our sole discretion, to modify or replace these Terms at any time. 
+                        Changes become effective immediately upon posting to the website. Your continued use of the Platform 
+                        following updates constitutes agreement to the modified Terms. We reserve the full right to suspend, 
+                        terminate, or delete any account that violates these Terms or engages in fraudulent activity without prior notice.
+                    </p>
+                </section>
+
+                <!-- Section 11: Contact -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">11. Contact Information</h2>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <p class="text-gray-700">For any questions, compliance concerns, or data requests regarding these Terms, please contact us:</p>
+                        <ul class="mt-4 space-y-2 text-gray-700">
+                            <li><strong>Email:</strong> <a href="mailto:legal@winda.africa" class="text-blue-600 hover:underline">legal@winda.africa</a></li>
+                            <li><strong>Phone:</strong> +254 700 123 456</li>
+                            <li><strong>Address:</strong> Nairobi, Kenya</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <div class="border-t border-gray-200 pt-6 mt-8 text-center">
+                    <p class="text-sm text-gray-500">
+                        © {% now "Y" %} Winda. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

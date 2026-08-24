@@ -34,11 +34,12 @@
         </div>
         
         <div class="bg-white rounded-xl shadow-md p-6">
-            <form method="POST">
+            <form method="POST" action="{% url 'accounts:register' %}">
                 {% csrf_token %}
                 
                 {% if form.errors %}
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <p class="text-red-600 font-semibold">Please fix the following errors:</p>
                         <ul class="list-disc list-inside text-red-600 text-sm">
                             {% for field in form %}
                                 {% for error in field.errors %}
@@ -76,6 +77,30 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
                         {{ form.password2 }}
+                    </div>
+                    
+                    <!-- Terms and Conditions Checkbox -->
+                    <div class="border-t border-gray-200 pt-4 mt-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="flex items-center h-5">
+                                {{ form.accept_terms }}
+                            </div>
+                            <div class="text-sm">
+                                <label for="{{ form.accept_terms.id_for_label }}" class="text-gray-700">
+                                    I have read and agree to the 
+                                    <a href="{% url 'legal:terms_of_service' %}" target="_blank" class="text-blue-600 hover:text-blue-500 underline font-medium">
+                                        Terms of Service
+                                    </a>
+                                    and 
+                                    <a href="{% url 'legal:privacy_policy' %}" target="_blank" class="text-blue-600 hover:text-blue-500 underline font-medium">
+                                        Privacy Policy
+                                    </a>
+                                </label>
+                                {% if form.accept_terms.errors %}
+                                    <div class="text-red-500 text-xs mt-1">{{ form.accept_terms.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

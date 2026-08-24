@@ -27,6 +27,15 @@ class RegistrationStep1Form(forms.ModelForm):
         }),
         label='Confirm Password'
     )
+
+    accept_terms = forms.BooleanField(
+        required=True,
+        label='I accept the Terms of Service and Privacy Policy',
+        error_messages={'required': 'You must accept the Terms of Service and Privacy Policy to create an account.'},
+        widget=forms.CheckboxInput(attrs={
+            'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'
+        })
+    )
     
     class Meta:
         model = User

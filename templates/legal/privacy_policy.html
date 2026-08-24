@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Privacy Policy - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
+                <h1 class="text-3xl font-bold text-white">Privacy Policy</h1>
+                <p class="text-blue-100 mt-2">Last Updated: August 22, 2026</p>
+            </div>
+            
+            <div class="p-8 space-y-8">
+                <!-- Introduction -->
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <p class="text-sm text-blue-800">
+                        <strong>📋 Overview:</strong> This Privacy Policy explains how Winda ("we", "us", "our") collects, uses, 
+                        stores, shares, and protects personal data from Landlords, Property Owners, and Tenants in the Republic of Kenya. 
+                        We operate in strict compliance with the <strong>Kenya Data Protection Act, 2019</strong>.
+                    </p>
+                </div>
+
+                <!-- Section 1: Data We Collect -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">1. Data We Collect</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">1.1 Landlords & Property Owners</h3>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-1 ml-4">
+                        <li><strong>Identity Data:</strong> Full legal name, National ID card number or Passport copy, corporate registration documents.</li>
+                        <li><strong>Contact Data:</strong> Physical address, phone number, and email address.</li>
+                        <li><strong>Property Verification Data:</strong> Title Deeds, Share Certificates, Sectional Properties documentation, or recent utility bills.</li>
+                        <li><strong>Financial Data:</strong> Bank account details and Paystack subaccount credentials.</li>
+                    </ul>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">1.2 Tenants</h3>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-1 ml-4">
+                        <li><strong>Identity Data:</strong> Full legal name, National ID number, Passport number, and photographs.</li>
+                        <li><strong>Contact Data:</strong> Active mobile number, physical address, and email address.</li>
+                        <li><strong>Screening Data:</strong> Employment status, place of work, monthly income statements, and previous landlord references.</li>
+                        <li><strong>Transaction Data:</strong> Rent payments, service charges, utilities, and transaction references.</li>
+                        <li><strong>Operational Data:</strong> Maintenance requests, structural defect images, in-app messaging logs.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 2: Lawful Basis -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">2. Lawful Basis for Processing Data</h2>
+                    <p class="text-gray-700 leading-relaxed">We process your personal data only when a legal basis under Section 30 of the Kenya Data Protection Act applies:</p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-2 mt-2 ml-4">
+                        <li><strong>Consent:</strong> You give us explicit, unambiguous consent during registration or tenant vetting.</li>
+                        <li><strong>Performance of a Contract:</strong> The processing is necessary to execute platform services, route payments, or manage tenancy workflows.</li>
+                        <li><strong>Legal Obligation:</strong> To comply with statutory declarations required by KRA via eTIMS.</li>
+                        <li><strong>Legitimate Interests:</strong> To prevent fraud, verify property listing authenticity, and maintain platform security.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 3: Tenant Vetting -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">3. Tenant Vetting & Screening Workflow</h2>
+                    <p class="text-gray-700 leading-relaxed">By submitting an application for a listed property, Tenants explicitly acknowledge and consent to:</p>
+                    
+                    <div class="mt-4 bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-800 mb-2">Application Workflow:</h4>
+                        <ol class="list-decimal list-inside text-gray-700 space-y-2 ml-4">
+                            <li><strong>Onboarding:</strong> Tenants register an account providing basic identity and contact metrics.</li>
+                            <li><strong>Application Submission:</strong> Tenants submit employment details, income metrics, and verification files.</li>
+                            <li><strong>Admin & Landlord Review:</strong> Platform Admin conducts an operational check before routing the application to the Landlord.</li>
+                            <li><strong>Automated Status Triggers:</strong> System webhooks update the application status (e.g., "Pending Review", "Approved", "Declined").</li>
+                        </ol>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4 rounded-r-lg">
+                        <p class="text-sm text-yellow-700">
+                            <strong>⚠️ Important:</strong> We do not conduct non-consensual background checks. All vetting metrics are restricted to 
+                            information directly provided by the Tenant. Landlords are strictly prohibited from utilizing vetting data for 
+                            discriminatory, unlawful, or unconstitutional tenant exclusion.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Section 4: Data Sharing -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">4. Data Sharing and Third-Party Disclosures</h2>
+                    <p class="text-gray-700 leading-relaxed">We do not sell, rent, or trade your personal data. Your data is shared exclusively with:</p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-2 mt-2 ml-4">
+                        <li><strong>Landlords:</strong> Authorized landlords gain access to tenant screening metrics strictly to evaluate tenancy applications.</li>
+                        <li><strong>Paystack:</strong> Financial data and split-payment configurations are securely transferred to Paystack.</li>
+                        <li><strong>Kenya Revenue Authority (KRA):</strong> Transaction metadata is transmitted via eTIMS integration.</li>
+                        <li><strong>Law Enforcement:</strong> Data may be disclosed if required by a court order or official mandate.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 5: Revenue Management -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">5. Revenue Management and Data Separation</h2>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-2 mt-2 ml-4">
+                        <li><strong>Subaccount Data Safety:</strong> Cardholder data and raw banking access keys are never processed or retained within our infrastructure.</li>
+                        <li><strong>Cross-Border Transfers:</strong> Paystack may process data via secure cloud regional hubs, in compliance with Section 41 of the Data Protection Act.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 6: Security and Retention -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">6. Data Security and Retention</h2>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">6.1 Security Standards</h3>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-1 ml-4">
+                        <li>End-to-end transport layer security (HTTPS/TLS) across all application endpoints.</li>
+                        <li>Role-Based Access Controls (RBAC) preventing unauthorized data access.</li>
+                        <li>Encrypted database arrays for user passwords and verification files.</li>
+                    </ul>
+                    
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">6.2 Data Retention</h3>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-1 ml-4">
+                        <li><strong>Active Tenancy:</strong> Data is maintained for the complete duration of an active tenancy.</li>
+                        <li><strong>Post-Tenancy:</strong> Data is archived after 3 years, except where required for accounting or tax audits.</li>
+                        <li><strong>Rejected Applications:</strong> Vetting documents are automatically deleted within 90 days of refusal.</li>
+                    </ul>
+                </section>
+
+                <!-- Section 7: Your Rights -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">7. Your Data Privacy Rights</h2>
+                    <p class="text-gray-700 leading-relaxed">Under the Kenya Data Protection Act, 2019, you have the right to:</p>
+                    <ul class="list-disc list-inside text-gray-700 leading-relaxed space-y-2 mt-2 ml-4">
+                        <li><strong>Access:</strong> Request a copy of all personal data held about you.</li>
+                        <li><strong>Rectification:</strong> Demand correction of inaccurate, outdated, or incomplete profiles.</li>
+                        <li><strong>Objection:</strong> Object to the processing of your data (may result in termination of access).</li>
+                        <li><strong>Erasure:</strong> Request the complete deletion of your data files (subject to KRA transaction logging).</li>
+                        <li><strong>Lodge a Complaint:</strong> File a dispute with the Office of the Data Protection Commissioner (ODPC).</li>
+                    </ul>
+                </section>
+
+                <!-- Section 8: Contact -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">8. Contact and Data Protection Compliance</h2>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <p class="text-gray-700">For any privacy inquiries, right-of-access requests, or to contact our Data Protection Compliance lead:</p>
+                        <ul class="mt-4 space-y-2 text-gray-700">
+                            <li><strong>Email:</strong> <a href="mailto:privacy@winda.africa" class="text-blue-600 hover:underline">privacy@winda.africa</a></li>
+                            <li><strong>Phone:</strong> +254 700 123 456</li>
+                            <li><strong>Address:</strong> Nairobi, Kenya</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Footer -->
+                <div class="border-t border-gray-200 pt-6 mt-8 text-center">
+                    <p class="text-sm text-gray-500">
+                        © {% now "Y" %} Winda. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

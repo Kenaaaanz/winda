@@ -83,6 +83,9 @@ urlpatterns = [
     path('analytics/', include('apps.analytics.urls')),
     path('notifications/', include('apps.notifications.urls')),
 
+    # Legal
+    path('legal/', include('apps.legal.urls')),
+    
     # SEO
     path('', include('apps.seo.urls')),
 ]
