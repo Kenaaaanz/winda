@@ -214,55 +214,53 @@ class WindaAdminSite(AdminSite):
     
     def get_quick_actions(self):
         """Get quick actions for admin dashboard with correct URL names"""
-        # Get the admin namespace
-        admin_namespace = self.name
-        
+        # Use the correct Django admin URL names
         return [
             {
                 'name': 'Add Property',
-                'url': reverse(f'{admin_namespace}:properties_property_add'),
+                'url': reverse('admin:properties_property_add'),
                 'icon': 'fa-plus-circle',
                 'color': 'blue',
             },
             {
                 'name': 'View Properties',
-                'url': reverse(f'{admin_namespace}:properties_property_changelist'),
+                'url': reverse('admin:properties_property_changelist'),
                 'icon': 'fa-home',
                 'color': 'green',
             },
             {
                 'name': 'View Users',
-                'url': reverse(f'{admin_namespace}:accounts_user_changelist'),
+                'url': reverse('admin:accounts_user_changelist'),
                 'icon': 'fa-users',
                 'color': 'purple',
             },
             {
                 'name': 'Pending Verifications',
-                'url': reverse(f'{admin_namespace}:properties_property_changelist') + '?verification_status__exact=PENDING',
+                'url': reverse('admin:properties_property_changelist') + '?verification_status__exact=PENDING',
                 'icon': 'fa-clock',
                 'color': 'yellow',
             },
             {
                 'name': 'View Payments',
-                'url': reverse(f'{admin_namespace}:payments_payment_changelist'),
+                'url': reverse('admin:payments_payment_changelist'),
                 'icon': 'fa-credit-card',
                 'color': 'green',
             },
             {
                 'name': 'Maintenance Requests',
-                'url': reverse(f'{admin_namespace}:maintenance_maintenancerequest_changelist'),
+                'url': reverse('admin:maintenance_maintenancerequest_changelist'),
                 'icon': 'fa-tools',
                 'color': 'red',
             },
             {
                 'name': 'View Tenants',
-                'url': reverse(f'{admin_namespace}:accounts_tenantprofile_changelist'),
+                'url': reverse('admin:accounts_tenantprofile_changelist'),
                 'icon': 'fa-user-friends',
                 'color': 'teal',
             },
             {
                 'name': 'View Leases',
-                'url': reverse(f'{admin_namespace}:tenants_lease_changelist'),
+                'url': reverse('admin:tenants_lease_changelist'),
                 'icon': 'fa-file-contract',
                 'color': 'purple',
             },
@@ -291,4 +289,4 @@ class WindaAdminSite(AdminSite):
 
 
 # Create admin site instance
-admin_site = WindaAdminSite(name='winda_admin')
+admin_site = WindaAdminSite(name='admin')
