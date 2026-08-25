@@ -12,6 +12,7 @@ from apps.properties.models import Property
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Sum
 from django.shortcuts import render
+from apps.admin_extended.admin import admin_site
 
 User = get_user_model()
 
@@ -64,7 +65,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     # Admin
-    path('admin/', admin_site.urls),  # Changed from admin.site.urls
+    path('admin/', admin_site.urls),
     
     # Home
     path('', home_view, name='home'),
