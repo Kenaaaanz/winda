@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load humanize %}
+{% load analytics_filters %}
 
 {% block title %}Analytics Dashboard - Winda{% endblock %}
 
@@ -228,10 +229,10 @@ const revenueCtx = document.getElementById('revenueChart').getContext('2d');
 new Chart(revenueCtx, {
     type: 'line',
     data: {
-        labels: {{ stats.revenue.monthly|map(attribute='month')|safe }},
+        labels: {{ chart_data.revenue_labels|safe }},
         datasets: [{
             label: 'Revenue (KES)',
-            data: {{ stats.revenue.monthly|map(attribute='amount')|safe }},
+            data: {{ chart_data.revenue_data|safe }},
             borderColor: '#3b82f6',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,
@@ -264,10 +265,10 @@ const appCtx = document.getElementById('applicationsChart').getContext('2d');
 new Chart(appCtx, {
     type: 'bar',
     data: {
-        labels: {{ stats.applications.trend|map(attribute='month')|safe }},
+        labels: {{ chart_data.application_labels|safe }},
         datasets: [{
             label: 'Applications',
-            data: {{ stats.applications.trend|map(attribute='count')|safe }},
+            data: {{ chart_data.application_data|safe }},
             backgroundColor: '#3b82f6',
             borderRadius: 4
         }]

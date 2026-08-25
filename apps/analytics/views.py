@@ -31,13 +31,21 @@ def owner_analytics(request):
     owner = request.user.owner_profile
     stats = AnalyticsService.get_owner_dashboard_stats(owner)
     
+    # Prepare chart data for templates
+    chart_data = {
+        'revenue_labels': [item['month'] for item in stats['revenue']['monthly']],
+        'revenue_data': [float(item['amount']) for item in stats['revenue']['monthly']],
+        'application_labels': [item['month'] for item in stats['applications']['trend']],
+        'application_data': [item['count'] for item in stats['applications']['trend']],
+    }
+    
     context = {
         'stats': stats,
+        'chart_data': chart_data,
         'user_type': 'owner',
         'property_count': stats['properties']['total'],
     }
     return render(request, 'analytics/owner_dashboard.html', context)
-
 
 @login_required
 def admin_analytics(request):
@@ -48,12 +56,18 @@ def admin_analytics(request):
     
     stats = AnalyticsService.get_platform_stats()
     
+    # Prepare chart data for templates
+    chart_data = {
+        'revenue_labels': [item['month'] for item in stats['revenue']['monthly']],
+        'revenue_data': [float(item['amount']) for item in stats['revenue']['monthly']],
+    }
+    
     context = {
         'stats': stats,
+        'chart_data': chart_data,
         'user_type': 'admin',
     }
     return render(request, 'analytics/admin_dashboard.html', context)
-
 
 @login_required
 @owner_required
