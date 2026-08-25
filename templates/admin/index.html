@@ -9,11 +9,22 @@
        WINDA ADMIN CUSTOM STYLES
        ======================================== */
     
-    /* Import Inter font */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     
     body, #container, #content {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    #header {
+        background: linear-gradient(135deg, #1e293b, #0f172a) !important;
+    }
+    
+    #header a:link, #header a:visited {
+        color: #f8fafc !important;
+    }
+    
+    .module h2, .module caption, .inline-group h2 {
+        background: #1e293b !important;
     }
     
     /* Dashboard Layout */
@@ -60,6 +71,8 @@
     .stat-card .stat-icon.red { background: #fef2f2; color: #ef4444; }
     .stat-card .stat-icon.purple { background: #f5f3ff; color: #8b5cf6; }
     .stat-card .stat-icon.teal { background: #ecfeff; color: #14b8a6; }
+    .stat-card .stat-icon.pink { background: #fdf2f8; color: #ec4899; }
+    .stat-card .stat-icon.indigo { background: #eef2ff; color: #6366f1; }
     
     .stat-card .stat-label {
         font-size: 13px;
@@ -99,6 +112,17 @@
     
     .stats-row-2 .stat-card .stat-row:last-child {
         border-bottom: none;
+    }
+    
+    .stat-row .stat-label-sm {
+        color: #6b7280;
+        font-size: 13px;
+    }
+    
+    .stat-row .stat-value-sm {
+        font-weight: 600;
+        color: #111827;
+        font-size: 14px;
     }
     
     /* Quick Actions */
@@ -220,28 +244,22 @@
     .recent-activities .activity-content .badge.yellow { background: #fffbeb; color: #92400e; }
     .recent-activities .activity-content .badge.red { background: #fef2f2; color: #991b1b; }
     .recent-activities .activity-content .badge.blue { background: #eff6ff; color: #1e40af; }
+    .recent-activities .activity-content .badge.purple { background: #f5f3ff; color: #5b21b6; }
     
-    /* Badge styling for admin list */
-    .badge {
-        display: inline-block;
-        padding: 3px 12px;
-        border-radius: 20px;
-        font-size: 11px;
+    /* Section Headers */
+    .section-header {
+        font-size: 18px;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
+        color: #111827;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
     
-    .badge-green { background: #ecfdf5; color: #065f46; }
-    .badge-blue { background: #eff6ff; color: #1e40af; }
-    .badge-yellow { background: #fffbeb; color: #92400e; }
-    .badge-red { background: #fef2f2; color: #991b1b; }
-    .badge-purple { background: #f5f3ff; color: #5b21b6; }
-    .badge-gray { background: #f3f4f6; color: #4b5563; }
-    .badge-orange { background: #fff7ed; color: #9a3412; }
-    .badge-pink { background: #fdf2f8; color: #9d174d; }
-    .badge-teal { background: #ecfeff; color: #115e59; }
-    .badge-indigo { background: #eef2ff; color: #3730a3; }
+    .section-header i {
+        color: #f59e0b;
+    }
     
     /* Responsive */
     @media (max-width: 768px) {
@@ -270,93 +288,129 @@
 {% block content %}
 <div id="content-main" class="winda-dashboard">
     
-    <!-- Stats Grid -->
+    <!-- ========================================
+         STATS GRID
+         ======================================== -->
     <div class="stats-grid">
+        <!-- Users -->
         <div class="stat-card">
             <div class="stat-icon blue"><i class="fas fa-users"></i></div>
             <div class="stat-label">Total Users</div>
-            <div class="stat-value">{{ stats.users.total }}</div>
-            <div class="stat-change positive">+{{ stats.users.new }} this week</div>
+            <div class="stat-value">{{ stats.users.total|intcomma }}</div>
+            <div class="stat-change positive">+{{ stats.users.new_week }} this week</div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                <span>{{ stats.users.owners }} owners</span> • 
+                <span>{{ stats.users.tenants }} tenants</span>
+            </div>
         </div>
         
+        <!-- Properties -->
         <div class="stat-card">
             <div class="stat-icon green"><i class="fas fa-home"></i></div>
             <div class="stat-label">Properties</div>
-            <div class="stat-value">{{ stats.properties.total }}</div>
+            <div class="stat-value">{{ stats.properties.total|intcomma }}</div>
             <div class="stat-change" style="color:#6b7280;">
-                {{ stats.properties.verified }} verified • {{ stats.properties.pending_verification }} pending
+                {{ stats.properties.verified }} verified • {{ stats.properties.pending }} pending
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                <span>{{ stats.properties.multi_unit }} multi-unit</span> • 
+                <span>{{ stats.properties.total_units }} units</span>
             </div>
         </div>
         
+        <!-- Applications -->
         <div class="stat-card">
             <div class="stat-icon yellow"><i class="fas fa-file-signature"></i></div>
-            <div class="stat-label">Pending Applications</div>
-            <div class="stat-value">{{ stats.applications.pending }}</div>
+            <div class="stat-label">Applications</div>
+            <div class="stat-value">{{ stats.applications.pending|intcomma }}</div>
             <div class="stat-change" style="color:#6b7280;">
-                {{ stats.applications.total }} total applications
+                {{ stats.applications.this_month }} this month
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                <span>{{ stats.applications.approved }} approved</span> • 
+                <span>{{ stats.applications.rejected }} rejected</span>
             </div>
         </div>
         
+        <!-- Revenue -->
         <div class="stat-card">
             <div class="stat-icon purple"><i class="fas fa-money-bill-wave"></i></div>
             <div class="stat-label">Revenue (30 days)</div>
             <div class="stat-value">KES {{ stats.payments.monthly_revenue|floatformat:0|intcomma }}</div>
             <div class="stat-change positive">Total: KES {{ stats.payments.total_revenue|floatformat:0|intcomma }}</div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">
+                <span>Platform fees: KES {{ stats.payments.platform_fees|floatformat:0|intcomma }}</span>
+            </div>
         </div>
     </div>
     
-    <!-- Stats Row 2 -->
+    <!-- ========================================
+         STATS ROW 2
+         ======================================== -->
     <div class="stats-row-2">
+        <!-- Units & Properties -->
         <div class="stat-card">
             <div class="stat-icon teal"><i class="fas fa-building"></i></div>
             <div class="stat-label">Units</div>
-            <div class="stat-value">{{ stats.properties.total_units }}</div>
+            <div class="stat-value">{{ stats.properties.total_units|intcomma }}</div>
             <div class="stat-row">
-                <span>Available</span>
-                <span><strong>{{ stats.properties.available_units }}</strong></span>
+                <span class="stat-label-sm">Available</span>
+                <span class="stat-value-sm">{{ stats.properties.available_units|intcomma }}</span>
             </div>
             <div class="stat-row">
-                <span>Multi-unit buildings</span>
-                <span><strong>{{ stats.properties.multi_unit }}</strong></span>
+                <span class="stat-label-sm">Rented</span>
+                <span class="stat-value-sm">{{ stats.properties.rented_units|intcomma }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label-sm">Under Maintenance</span>
+                <span class="stat-value-sm">{{ stats.properties.under_maintenance_units|intcomma }}</span>
             </div>
         </div>
         
+        <!-- Maintenance -->
         <div class="stat-card">
             <div class="stat-icon red"><i class="fas fa-tools"></i></div>
             <div class="stat-label">Maintenance</div>
-            <div class="stat-value">{{ stats.maintenance.pending }}</div>
+            <div class="stat-value">{{ stats.maintenance.pending|intcomma }}</div>
             <div class="stat-row">
-                <span>Pending requests</span>
-                <span><strong>{{ stats.maintenance.pending }}</strong></span>
+                <span class="stat-label-sm">Pending requests</span>
+                <span class="stat-value-sm">{{ stats.maintenance.pending|intcomma }}</span>
             </div>
             <div class="stat-row">
-                <span>Total requests</span>
-                <span><strong>{{ stats.maintenance.total }}</strong></span>
+                <span class="stat-label-sm">Resolved</span>
+                <span class="stat-value-sm">{{ stats.maintenance.resolved|intcomma }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label-sm">Avg. resolution</span>
+                <span class="stat-value-sm">{{ stats.maintenance.avg_resolution_time }} hrs</span>
             </div>
         </div>
         
+        <!-- Leases -->
         <div class="stat-card">
-            <div class="stat-icon blue"><i class="fas fa-handshake"></i></div>
+            <div class="stat-icon indigo"><i class="fas fa-handshake"></i></div>
             <div class="stat-label">Leases</div>
-            <div class="stat-value">{{ stats.leases.active }}</div>
+            <div class="stat-value">{{ stats.leases.active|intcomma }}</div>
             <div class="stat-row">
-                <span>Active leases</span>
-                <span><strong>{{ stats.leases.active }}</strong></span>
+                <span class="stat-label-sm">Active leases</span>
+                <span class="stat-value-sm">{{ stats.leases.active|intcomma }}</span>
             </div>
             <div class="stat-row">
-                <span>Owners</span>
-                <span><strong>{{ stats.users.owners }}</strong></span>
+                <span class="stat-label-sm">Pending signature</span>
+                <span class="stat-value-sm">{{ stats.leases.pending_signature|intcomma }}</span>
             </div>
             <div class="stat-row">
-                <span>Tenants</span>
-                <span><strong>{{ stats.users.tenants }}</strong></span>
+                <span class="stat-label-sm">Expiring soon (30 days)</span>
+                <span class="stat-value-sm">{{ stats.leases.expiring_soon|intcomma }}</span>
             </div>
         </div>
     </div>
     
-    <!-- Quick Actions -->
-    <h2 style="font-size:18px;font-weight:600;color:#111827;margin-bottom:16px;">
-        <i class="fas fa-bolt" style="color:#f59e0b;margin-right:8px;"></i> Quick Actions
+    <!-- ========================================
+         QUICK ACTIONS
+         ======================================== -->
+    <h2 class="section-header">
+        <i class="fas fa-bolt"></i> Quick Actions
     </h2>
     <div class="quick-actions-grid">
         {% for action in quick_actions %}
@@ -367,7 +421,9 @@
         {% endfor %}
     </div>
     
-    <!-- Recent Activities -->
+    <!-- ========================================
+         RECENT ACTIVITIES
+         ======================================== -->
     <div class="recent-activities">
         <div class="activity-header">
             <span><i class="fas fa-clock" style="color:#6b7280;margin-right:8px;"></i> Recent Activities</span>
@@ -381,7 +437,7 @@
                 <div class="activity-content">
                     <div class="desc">
                         {{ activity.description }}
-                        <span class="badge {{ activity.color }}">{{ activity.type|title }}</span>
+                        <span class="badge {{ activity.color }}">{{ activity.badge }}</span>
                     </div>
                     <div class="time">{{ activity.time_ago }}</div>
                 </div>
@@ -393,7 +449,9 @@
         {% endfor %}
     </div>
     
-    <!-- App List (Original Admin) -->
+    <!-- ========================================
+         APP LIST (Original Admin)
+         ======================================== -->
     <div style="margin-top:30px;">
         {{ block.super }}
     </div>
