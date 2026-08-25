@@ -6,21 +6,20 @@ from apps.properties.models import Property, Unit
 from apps.tenants.models import TenantApplication, Lease
 from apps.payments.models import Payment
 from apps.maintenance.models import MaintenanceRequest
-from apps.communications.models import Message
 from django.contrib.auth import get_user_model
+import calendar
+from collections import defaultdict
 
 User = get_user_model()
 
 class AnalyticsService:
-    """Service for generating analytics data"""
+    """Comprehensive analytics service for property owners"""
     
     @staticmethod
-    def get_owner_dashboard_stats(owner):
-        """Get comprehensive stats for an owner"""
-        from apps.properties.models import Property
-        from apps.tenants.models import TenantApplication, Lease
-        from apps.payments.models import Payment
-        from apps.maintenance.models import MaintenanceRequest
+    def get_owner_dashboard_stats(owner, days=30):
+        """Get comprehensive stats for an owner with date filtering"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
         
         # Properties
         properties = Property.objects.filter(owner=owner)
@@ -46,21 +45,24 @@ class AnalyticsService:
         
         occupancy_rate = (occupied_units / total_units * 100) if total_units > 0 else 0
         
-        # Revenue
+        # Revenue with date filter
         payments = Payment.objects.filter(
             property__owner=owner,
-            status='COMPLETED'
+            status='COMPLETED',
+            paid_at__date__gte=start_date,
+            paid_at__date__lte=end_date
         )
         total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
         
         # Monthly revenue (last 6 months)
         monthly_revenue = []
-        today = timezone.now().date()
         for i in range(6):
-            month_start = today.replace(day=1) - timedelta(days=30 * i)
-            month_end = month_start.replace(day=28) + timedelta(days=4)
+            month_start = end_date.replace(day=1) - timedelta(days=30 * i)
             month_start = month_start.replace(day=1)
-            revenue = payments.filter(
+            month_end = month_start.replace(day=28) + timedelta(days=4)
+            revenue = Payment.objects.filter(
+                property__owner=owner,
+                status='COMPLETED',
                 paid_at__date__gte=month_start,
                 paid_at__date__lt=month_end
             ).aggregate(total=Sum('amount'))['total'] or 0
@@ -71,63 +73,33 @@ class AnalyticsService:
         monthly_revenue.reverse()
         
         # Applications
-        applications = TenantApplication.objects.filter(property__owner=owner)
+        applications = TenantApplication.objects.filter(
+            property__owner=owner,
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
         total_applications = applications.count()
         pending_applications = applications.filter(status='PENDING').count()
         approved_applications = applications.filter(status='APPROVED').count()
         rejected_applications = applications.filter(status='REJECTED').count()
         
-        application_trend = []
-        for i in range(12):
-            month_start = today.replace(day=1) - timedelta(days=30 * i)
-            month_start = month_start.replace(day=1)
-            count = applications.filter(
-                created_at__date__gte=month_start,
-                created_at__date__lt=month_start + timedelta(days=32)
-            ).count()
-            application_trend.append({
-                'month': month_start.strftime('%b'),
-                'count': count
-            })
-        application_trend.reverse()
-        
         # Maintenance
-        maintenance = MaintenanceRequest.objects.filter(property__owner=owner)
+        maintenance = MaintenanceRequest.objects.filter(
+            property__owner=owner,
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
         total_maintenance = maintenance.count()
         pending_maintenance = maintenance.filter(
             status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
         ).count()
         resolved_maintenance = maintenance.filter(status='RESOLVED').count()
         
-        # Recent activities
-        recent_activities = AnalyticsService.get_recent_activities(owner)
-        
-        # Payment stats
-        payment_stats = {
-            'total': total_revenue,
-            'monthly': monthly_revenue[-1]['amount'] if monthly_revenue else 0,
-            'pending': Payment.objects.filter(
-                property__owner=owner,
-                status='PENDING'
-            ).count(),
-        }
-        
         # Tenant stats
-        tenant_stats = {
-            'total_tenants': Lease.objects.filter(
-                property__owner=owner,
-                status='ACTIVE'
-            ).count(),
-            'active_leases': Lease.objects.filter(
-                property__owner=owner,
-                status='ACTIVE'
-            ).count(),
-            'expiring_soon': Lease.objects.filter(
-                property__owner=owner,
-                status='ACTIVE',
-                end_date__lte=timezone.now().date() + timedelta(days=30)
-            ).count(),
-        }
+        active_leases = Lease.objects.filter(
+            property__owner=owner,
+            status='ACTIVE'
+        )
         
         return {
             'properties': {
@@ -142,135 +114,7 @@ class AnalyticsService:
             'revenue': {
                 'total': float(total_revenue),
                 'monthly': monthly_revenue,
-                'monthly_current': payment_stats['monthly'],
-                'pending_payments': payment_stats['pending'],
-            },
-            'applications': {
-                'total': total_applications,
-                'pending': pending_applications,
-                'approved': approved_applications,
-                'rejected': rejected_applications,
-                'trend': application_trend,
-            },
-            'maintenance': {
-                'total': total_maintenance,
-                'pending': pending_maintenance,
-                'resolved': resolved_maintenance,
-            },
-            'tenants': tenant_stats,
-            'recent_activities': recent_activities,
-        }
-    
-    @staticmethod
-    def get_platform_stats():
-        """Get platform-wide statistics for superadmin"""
-        from apps.properties.models import Property
-        from apps.tenants.models import TenantApplication, Lease
-        from apps.payments.models import Payment
-        from apps.maintenance.models import MaintenanceRequest
-        
-        # User stats
-        total_users = User.objects.filter(is_active=True).count()
-        owners = User.objects.filter(user_type='HOUSE_OWNER', is_active=True).count()
-        tenants = User.objects.filter(user_type='TENANT', is_active=True).count()
-        caretakers = User.objects.filter(user_type='CARETAKER', is_active=True).count()
-        
-        # New users (last 30 days)
-        last_30_days = timezone.now() - timedelta(days=30)
-        new_users = User.objects.filter(date_joined__gte=last_30_days).count()
-        new_owners = User.objects.filter(
-            user_type='HOUSE_OWNER',
-            date_joined__gte=last_30_days
-        ).count()
-        new_tenants = User.objects.filter(
-            user_type='TENANT',
-            date_joined__gte=last_30_days
-        ).count()
-        
-        # Property stats
-        total_properties = Property.objects.count()
-        verified_properties = Property.objects.filter(verification_status='VERIFIED').count()
-        pending_properties = Property.objects.filter(verification_status='PENDING').count()
-        multi_unit_properties = Property.objects.filter(is_multi_unit=True).count()
-        
-        total_units = Unit.objects.count()
-        available_units = Unit.objects.filter(is_available=True).count()
-        rented_units = Unit.objects.filter(status='RENTED').count()
-        
-        # Revenue
-        payments = Payment.objects.filter(status='COMPLETED')
-        total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
-        platform_fees = payments.aggregate(total=Sum('amount'))['total'] or 0
-        # Assuming 3% platform fee
-        platform_revenue = platform_fees * Decimal('0.03')
-        
-        # Monthly revenue (last 12 months)
-        monthly_revenue = []
-        today = timezone.now().date()
-        for i in range(12):
-            month_start = today.replace(day=1) - timedelta(days=30 * i)
-            month_start = month_start.replace(day=1)
-            revenue = payments.filter(
-                paid_at__date__gte=month_start,
-                paid_at__date__lt=month_start + timedelta(days=32)
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            monthly_revenue.append({
-                'month': month_start.strftime('%b %Y'),
-                'amount': float(revenue)
-            })
-        monthly_revenue.reverse()
-        
-        # Application stats
-        applications = TenantApplication.objects.all()
-        total_applications = applications.count()
-        pending_applications = applications.filter(status='PENDING').count()
-        approved_applications = applications.filter(status='APPROVED').count()
-        rejected_applications = applications.filter(status='REJECTED').count()
-        
-        # Lease stats
-        active_leases = Lease.objects.filter(status='ACTIVE').count()
-        total_leases = Lease.objects.count()
-        
-        # Maintenance stats
-        maintenance = MaintenanceRequest.objects.all()
-        total_maintenance = maintenance.count()
-        pending_maintenance = maintenance.filter(
-            status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
-        ).count()
-        resolved_maintenance = maintenance.filter(status='RESOLVED').count()
-        
-        # Growth metrics
-        growth = {
-            'user_growth': new_users,
-            'owner_growth': new_owners,
-            'tenant_growth': new_tenants,
-            'property_growth': Property.objects.filter(created_at__gte=last_30_days).count(),
-        }
-        
-        return {
-            'users': {
-                'total': total_users,
-                'owners': owners,
-                'tenants': tenants,
-                'caretakers': caretakers,
-                'new_users': new_users,
-                'new_owners': new_owners,
-                'new_tenants': new_tenants,
-                'growth': growth,
-            },
-            'properties': {
-                'total': total_properties,
-                'verified': verified_properties,
-                'pending': pending_properties,
-                'multi_unit': multi_unit_properties,
-                'total_units': total_units,
-                'available_units': available_units,
-                'rented_units': rented_units,
-            },
-            'revenue': {
-                'total': float(total_revenue),
-                'platform_fees': float(platform_revenue),
-                'monthly': monthly_revenue,
+                'period': f'{start_date.strftime("%b %d")} - {end_date.strftime("%b %d, %Y")}',
             },
             'applications': {
                 'total': total_applications,
@@ -278,185 +122,331 @@ class AnalyticsService:
                 'approved': approved_applications,
                 'rejected': rejected_applications,
             },
-            'leases': {
-                'total': total_leases,
-                'active': active_leases,
-            },
             'maintenance': {
                 'total': total_maintenance,
                 'pending': pending_maintenance,
                 'resolved': resolved_maintenance,
             },
-        }
-    
-    @staticmethod
-    def get_property_analytics(property_obj):
-        """Get detailed analytics for a specific property"""
-        from apps.tenants.models import TenantApplication
-        from apps.payments.models import Payment
-        from apps.maintenance.models import MaintenanceRequest
-        
-        # Views and engagement
-        views = property_obj.view_count
-        favorites = property_obj.favorites.count()
-        
-        # Applications
-        applications = TenantApplication.objects.filter(property=property_obj)
-        total_applications = applications.count()
-        pending = applications.filter(status='PENDING').count()
-        approved = applications.filter(status='APPROVED').count()
-        rejected = applications.filter(status='REJECTED').count()
-        conversion_rate = (approved / total_applications * 100) if total_applications > 0 else 0
-        
-        # Revenue
-        payments = Payment.objects.filter(property=property_obj, status='COMPLETED')
-        total_revenue = payments.aggregate(total=Sum('amount'))['total'] or 0
-        
-        # Monthly revenue
-        monthly_revenue = []
-        today = timezone.now().date()
-        for i in range(6):
-            month_start = today.replace(day=1) - timedelta(days=30 * i)
-            month_start = month_start.replace(day=1)
-            revenue = payments.filter(
-                paid_at__date__gte=month_start,
-                paid_at__date__lt=month_start + timedelta(days=32)
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            monthly_revenue.append({
-                'month': month_start.strftime('%B'),
-                'amount': float(revenue)
-            })
-        monthly_revenue.reverse()
-        
-        # Maintenance
-        maintenance = MaintenanceRequest.objects.filter(property=property_obj)
-        total_maintenance = maintenance.count()
-        pending_maintenance = maintenance.filter(
-            status__in=['PENDING', 'IN_PROGRESS']
-        ).count()
-        
-        # Unit stats (if multi-unit)
-        unit_stats = None
-        if property_obj.is_multi_unit:
-            units = property_obj.units.all()
-            unit_stats = {
-                'total': units.count(),
-                'available': units.filter(is_available=True).count(),
-                'rented': units.filter(status='RENTED').count(),
-                'occupancy_rate': (units.filter(is_available=False).count() / units.count() * 100) if units.count() > 0 else 0,
+            'tenants': {
+                'total': active_leases.count(),
+                'active_leases': active_leases.count(),
+                'expiring_soon': active_leases.filter(
+                    end_date__lte=end_date + timedelta(days=30)
+                ).count(),
+            },
+            'date_range': {
+                'start': start_date.isoformat(),
+                'end': end_date.isoformat(),
+                'days': days,
             }
-        
-        return {
-            'property': {
-                'id': str(property_obj.id),
-                'title': property_obj.title,
-                'views': views,
-                'favorites': favorites,
-            },
-            'applications': {
-                'total': total_applications,
-                'pending': pending,
-                'approved': approved,
-                'rejected': rejected,
-                'conversion_rate': round(conversion_rate, 1),
-            },
-            'revenue': {
-                'total': float(total_revenue),
-                'monthly': monthly_revenue,
-            },
-            'maintenance': {
-                'total': total_maintenance,
-                'pending': pending_maintenance,
-            },
-            'units': unit_stats,
         }
     
     @staticmethod
-    def get_recent_activities(owner, limit=10):
-        """Get recent activities for an owner"""
-        from apps.properties.models import Property
-        from apps.tenants.models import TenantApplication
-        from apps.payments.models import Payment
-        from apps.maintenance.models import MaintenanceRequest
+    def get_tenant_trends(owner, days=90):
+        """Get detailed tenant trends data"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
         
-        activities = []
-        
-        # Recent properties added
-        recent_properties = Property.objects.filter(owner=owner).order_by('-created_at')[:5]
-        for prop in recent_properties:
-            activities.append({
-                'type': 'property_created',
-                'icon': 'home',
-                'description': f'Listed new property: {prop.title}',
-                'timestamp': prop.created_at,
-                'time_ago': prop.created_at.strftime('%b %d, %Y'),
-            })
-        
-        # Recent applications
-        recent_applications = TenantApplication.objects.filter(
-            property__owner=owner
-        ).order_by('-created_at')[:5]
-        for app in recent_applications:
-            activities.append({
-                'type': 'application_received',
-                'icon': 'file-signature',
-                'description': f'New application from {app.tenant.get_full_name()} for {app.property.title}',
-                'timestamp': app.created_at,
-                'time_ago': app.created_at.strftime('%b %d, %Y'),
-            })
-        
-        # Recent payments
-        recent_payments = Payment.objects.filter(
+        # New tenants over time
+        tenant_applications = TenantApplication.objects.filter(
             property__owner=owner,
-            status='COMPLETED'
-        ).order_by('-paid_at')[:5]
-        for payment in recent_payments:
-            activities.append({
-                'type': 'payment_received',
-                'icon': 'money-bill-wave',
-                'description': f'Payment of KES {payment.amount:,.0f} received from {payment.payer.get_full_name()}',
-                'timestamp': payment.paid_at,
-                'time_ago': payment.paid_at.strftime('%b %d, %Y'),
-            })
+            created_at__date__gte=start_date
+        )
         
-        # Sort by timestamp and return top N
-        activities.sort(key=lambda x: x['timestamp'], reverse=True)
-        return activities[:limit]
+        approved_tenants = tenant_applications.filter(status='APPROVED')
+        
+        # Monthly tenant growth
+        monthly_trend = []
+        current_date = start_date
+        while current_date <= end_date:
+            month_start = current_date.replace(day=1)
+            month_end = month_start.replace(day=28) + timedelta(days=4)
+            
+            new_tenants = approved_tenants.filter(
+                created_at__date__gte=month_start,
+                created_at__date__lt=month_end
+            ).count()
+            
+            monthly_trend.append({
+                'period': month_start.strftime('%b %Y'),
+                'new_tenants': new_tenants,
+                'total': TenantApplication.objects.filter(
+                    property__owner=owner,
+                    status='APPROVED',
+                    created_at__date__lte=month_end
+                ).count()
+            })
+            
+            current_date = month_end + timedelta(days=1)
+        
+        # Tenant demographics
+        tenant_demographics = {
+            'by_property': {},
+            'by_unit_type': {},
+        }
+        
+        # Group tenants by property
+        for prop in Property.objects.filter(owner=owner):
+            count = TenantApplication.objects.filter(
+                property=prop,
+                status='APPROVED'
+            ).count()
+            if count > 0:
+                tenant_demographics['by_property'][prop.title] = count
+        
+        # Group tenants by unit type (bedrooms)
+        for prop in Property.objects.filter(owner=owner):
+            if prop.is_multi_unit:
+                for unit in prop.units.all():
+                    key = f"{unit.bedrooms}br/{unit.bathrooms}ba"
+                    count = TenantApplication.objects.filter(
+                        unit=unit,
+                        status='APPROVED'
+                    ).count()
+                    if count > 0:
+                        tenant_demographics['by_unit_type'][key] = tenant_demographics['by_unit_type'].get(key, 0) + count
+        
+        return {
+            'monthly_trend': monthly_trend,
+            'demographics': tenant_demographics,
+            'total_tenants': TenantApplication.objects.filter(
+                property__owner=owner,
+                status='APPROVED'
+            ).count(),
+            'growth_rate': AnalyticsService._calculate_growth_rate(monthly_trend),
+        }
     
     @staticmethod
-    def get_unit_performance(property_obj):
-        """Get performance metrics for units in a multi-unit property"""
-        if not property_obj.is_multi_unit:
-            return None
+    def get_payment_trends(owner, days=90):
+        """Get detailed payment trends data"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
         
-        units = property_obj.units.all()
-        performance = []
+        payments = Payment.objects.filter(
+            property__owner=owner,
+            status='COMPLETED',
+            paid_at__date__gte=start_date,
+            paid_at__date__lte=end_date
+        )
         
-        for unit in units:
-            # Get unit's payment history
-            payments = Payment.objects.filter(
-                unit=unit,
-                status='COMPLETED'
+        # Monthly payment trends
+        monthly_trend = []
+        current_date = start_date
+        while current_date <= end_date:
+            month_start = current_date.replace(day=1)
+            month_end = month_start.replace(day=28) + timedelta(days=4)
+            
+            month_payments = payments.filter(
+                paid_at__date__gte=month_start,
+                paid_at__date__lt=month_end
             )
-            total_rent = payments.aggregate(total=Sum('amount'))['total'] or 0
             
-            # Get maintenance requests
-            maintenance = MaintenanceRequest.objects.filter(unit=unit)
+            monthly_trend.append({
+                'period': month_start.strftime('%b %Y'),
+                'total_amount': float(month_payments.aggregate(total=Sum('amount'))['total'] or 0),
+                'count': month_payments.count(),
+                'average': float(month_payments.aggregate(avg=Avg('amount'))['avg'] or 0),
+            })
             
-            # Get lease history
-            leases = Lease.objects.filter(unit=unit)
-            current_lease = leases.filter(status='ACTIVE').first()
+            current_date = month_end + timedelta(days=1)
+        
+        # Payment by type
+        payment_by_type = {}
+        for payment_type, _ in Payment.PAYMENT_TYPES:
+            count = payments.filter(payment_type=payment_type).count()
+            if count > 0:
+                amount = payments.filter(payment_type=payment_type).aggregate(
+                    total=Sum('amount')
+                )['total'] or 0
+                payment_by_type[payment_type] = {
+                    'count': count,
+                    'amount': float(amount),
+                }
+        
+        # Payment by property
+        payment_by_property = {}
+        for prop in Property.objects.filter(owner=owner):
+            prop_payments = payments.filter(property=prop)
+            amount = prop_payments.aggregate(total=Sum('amount'))['total'] or 0
+            if amount > 0:
+                payment_by_property[prop.title] = {
+                    'amount': float(amount),
+                    'count': prop_payments.count(),
+                }
+        
+        return {
+            'monthly_trend': monthly_trend,
+            'by_type': payment_by_type,
+            'by_property': payment_by_property,
+            'total': {
+                'amount': float(payments.aggregate(total=Sum('amount'))['total'] or 0),
+                'count': payments.count(),
+                'average': float(payments.aggregate(avg=Avg('amount'))['avg'] or 0),
+            },
+            'date_range': {
+                'start': start_date.isoformat(),
+                'end': end_date.isoformat(),
+            }
+        }
+    
+    @staticmethod
+    def get_property_trends(owner, days=90):
+        """Get detailed property trends data"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        properties = Property.objects.filter(owner=owner)
+        
+        # Property performance
+        property_performance = []
+        for prop in properties:
+            views = prop.view_count
+            applications = prop.applications.count()
+            revenue = Payment.objects.filter(
+                property=prop,
+                status='COMPLETED'
+            ).aggregate(total=Sum('amount'))['total'] or 0
             
-            performance.append({
-                'unit_number': unit.unit_number,
-                'status': unit.get_status_display(),
-                'bedrooms': unit.bedrooms,
-                'bathrooms': unit.bathrooms,
-                'rental_price': float(unit.get_rental_price()),
-                'total_revenue': float(total_rent),
-                'maintenance_count': maintenance.count(),
-                'current_tenant': current_lease.tenant.get_full_name() if current_lease else None,
-                'is_available': unit.is_available,
+            property_performance.append({
+                'title': prop.title,
+                'views': views,
+                'applications': applications,
+                'revenue': float(revenue),
+                'status': prop.availability_status,
+                'is_multi_unit': prop.is_multi_unit,
+                'unit_count': prop.units.count() if prop.is_multi_unit else 1,
             })
         
-        return performance
+        # Sort by revenue
+        property_performance.sort(key=lambda x: x['revenue'], reverse=True)
+        
+        # Property type distribution
+        property_types = {}
+        for prop_type, _ in Property.PROPERTY_TYPES:
+            count = properties.filter(property_type=prop_type).count()
+            if count > 0:
+                property_types[prop_type] = count
+        
+        return {
+            'performance': property_performance,
+            'property_types': property_types,
+            'total_properties': properties.count(),
+            'multi_unit_count': properties.filter(is_multi_unit=True).count(),
+        }
+    
+    @staticmethod
+    def get_maintenance_trends(owner, days=90):
+        """Get detailed maintenance trends data"""
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        maintenance = MaintenanceRequest.objects.filter(
+            property__owner=owner,
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        
+        # Monthly trends
+        monthly_trend = []
+        current_date = start_date
+        while current_date <= end_date:
+            month_start = current_date.replace(day=1)
+            month_end = month_start.replace(day=28) + timedelta(days=4)
+            
+            month_maintenance = maintenance.filter(
+                created_at__date__gte=month_start,
+                created_at__date__lt=month_end
+            )
+            
+            resolved = month_maintenance.filter(status='RESOLVED').count()
+            
+            monthly_trend.append({
+                'period': month_start.strftime('%b %Y'),
+                'total': month_maintenance.count(),
+                'resolved': resolved,
+                'pending': month_maintenance.count() - resolved,
+            })
+            
+            current_date = month_end + timedelta(days=1)
+        
+        # By category
+        category_stats = {}
+        for category, _ in MaintenanceRequest.CATEGORIES:
+            count = maintenance.filter(category=category).count()
+            if count > 0:
+                category_stats[category] = count
+        
+        # By priority
+        priority_stats = {}
+        for priority, _ in MaintenanceRequest.PRIORITY_LEVELS:
+            count = maintenance.filter(priority=priority).count()
+            if count > 0:
+                priority_stats[priority] = count
+        
+        # Average resolution time
+        resolved_maintenance = maintenance.filter(status='RESOLVED', resolved_at__isnull=False)
+        total_time = 0
+        for req in resolved_maintenance:
+            if req.resolved_at and req.created_at:
+                time_diff = req.resolved_at - req.created_at
+                total_time += time_diff.total_seconds() / 3600  # hours
+        
+        avg_resolution_time = total_time / resolved_maintenance.count() if resolved_maintenance.count() > 0 else 0
+        
+        return {
+            'monthly_trend': monthly_trend,
+            'by_category': category_stats,
+            'by_priority': priority_stats,
+            'total': maintenance.count(),
+            'pending': maintenance.filter(
+                status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
+            ).count(),
+            'resolved': maintenance.filter(status='RESOLVED').count(),
+            'avg_resolution_time': round(avg_resolution_time, 1),
+        }
+    
+    @staticmethod
+    def generate_custom_report(owner, report_config):
+        """Generate a custom report based on configuration"""
+        report_type = report_config.get('report_type', 'CUSTOM')
+        date_from = report_config.get('date_from')
+        date_to = report_config.get('date_to')
+        metrics = report_config.get('metrics', [])
+        filters = report_config.get('filters', {})
+        
+        data = {}
+        
+        if 'revenue' in metrics:
+            data['revenue'] = AnalyticsService.get_payment_trends(owner)
+        if 'tenants' in metrics:
+            data['tenants'] = AnalyticsService.get_tenant_trends(owner)
+        if 'properties' in metrics:
+            data['properties'] = AnalyticsService.get_property_trends(owner)
+        if 'maintenance' in metrics:
+            data['maintenance'] = AnalyticsService.get_maintenance_trends(owner)
+        
+        return {
+            'title': report_config.get('title', 'Custom Report'),
+            'report_type': report_type,
+            'generated_at': timezone.now().isoformat(),
+            'date_range': {
+                'from': date_from,
+                'to': date_to,
+            },
+            'data': data,
+            'filters': filters,
+        }
+    
+    @staticmethod
+    def _calculate_growth_rate(monthly_trend):
+        """Calculate growth rate from monthly trend data"""
+        if len(monthly_trend) < 2:
+            return 0
+        
+        first = monthly_trend[0]['total'] if 'total' in monthly_trend[0] else 0
+        last = monthly_trend[-1]['total'] if 'total' in monthly_trend[-1] else 0
+        
+        if first == 0:
+            return 100 if last > 0 else 0
+        
+        return round(((last - first) / first) * 100, 1)
