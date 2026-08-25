@@ -64,7 +64,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     # Admin
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),  # Changed from admin.site.urls
     
     # Home
     path('', home_view, name='home'),

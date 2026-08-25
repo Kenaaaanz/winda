@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.seo',
     'apps.legal',
+    'apps.admin_extended',
 ]
 
 MIDDLEWARE = [
@@ -309,5 +310,7 @@ SEO_DEFAULT_TITLE = 'Winda - Your Home, Directly'
 SEO_DEFAULT_DESCRIPTION = 'Find and rent properties directly from owners. No agents, just direct connections.'
 SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya properties, Winda, Winda Africa, winda.africa'
 
+# custom admin site
+ADMIN_SITE_CLASS = 'apps.admin_extended.admin.admin_site'
 
 
