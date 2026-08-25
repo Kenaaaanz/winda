@@ -16,32 +16,35 @@ from apps.accounts.models import User as CustomUser, OwnerProfile, TenantProfile
 from apps.communications.models import ChatRoom, Message
 
 
-class WindaAdminSite(admin.AdminSite):
-    """Custom admin site with Winda branding and comprehensive dashboard"""
+class WindaAdminSite(AdminSite):
+    """Custom admin site for Superadmin with platform-wide analytics"""
     
-    site_header = 'Winda Administration'
+    site_header = 'Winda Super Admin'
     site_title = 'Winda Admin'
-    index_title = 'Dashboard'
+    index_title = 'Platform Dashboard'
     site_url = '/'
     
     def index(self, request, extra_context=None):
-        """Custom admin dashboard with stats cards"""
+        """Custom admin dashboard with platform stats for superadmin only"""
+        # Only superusers can access this
+        if not request.user.is_superuser:
+            return super().index(request, extra_context)
+        
         context = {
             'app_list': self.get_app_list(request),
             'title': self.index_title,
-            'subtitle': 'Property Management Dashboard',
+            'subtitle': 'Platform Overview & Analytics',
         }
         
-        # Get all stats
-        context['stats'] = self.get_admin_stats()
+        # Get all platform stats
+        context['stats'] = self.get_platform_stats()
         context['recent_activities'] = self.get_recent_activities()
         context['quick_actions'] = self.get_quick_actions()
-        context['chart_data'] = self.get_chart_data()
         
         return super().index(request, context)
     
-    def get_admin_stats(self):
-        """Get comprehensive statistics for admin dashboard"""
+    def get_platform_stats(self):
+        """Get platform-wide statistics for superadmin"""
         today = timezone.now().date()
         last_week = today - timedelta(days=7)
         last_month = today - timedelta(days=30)
@@ -57,8 +60,6 @@ class WindaAdminSite(admin.AdminSite):
         owners = CustomUser.objects.filter(user_type='HOUSE_OWNER', is_active=True).count()
         tenants = CustomUser.objects.filter(user_type='TENANT', is_active=True).count()
         caretakers = CustomUser.objects.filter(user_type='CARETAKER', is_active=True).count()
-        
-        # Pending verifications
         pending_verifications = CustomUser.objects.filter(
             user_type='HOUSE_OWNER',
             verification_status='PENDING'
@@ -72,16 +73,7 @@ class WindaAdminSite(admin.AdminSite):
         verified_properties = Property.objects.filter(verification_status='VERIFIED').count()
         rejected_properties = Property.objects.filter(verification_status='REJECTED').count()
         
-        # Property types
-        property_types = {}
-        for prop_type, _ in Property.PROPERTY_TYPES:
-            count = Property.objects.filter(property_type=prop_type).count()
-            if count > 0:
-                property_types[prop_type] = count
-        
-        # Multi-unit stats
         multi_unit_buildings = Property.objects.filter(is_multi_unit=True).count()
-        single_units = Property.objects.filter(is_multi_unit=False).count()
         
         # Unit stats
         total_units = Unit.objects.count()
@@ -98,8 +90,6 @@ class WindaAdminSite(admin.AdminSite):
         under_review_applications = TenantApplication.objects.filter(status='UNDER_REVIEW').count()
         approved_applications = TenantApplication.objects.filter(status='APPROVED').count()
         rejected_applications = TenantApplication.objects.filter(status='REJECTED').count()
-        
-        # Applications this month
         applications_this_month = TenantApplication.objects.filter(
             created_at__date__gte=last_month
         ).count()
@@ -120,24 +110,9 @@ class WindaAdminSite(admin.AdminSite):
             paid_at__date__gte=last_week
         ).aggregate(total=Sum('amount'))['total'] or 0
         
-        # Platform fees (3%)
         platform_fees = total_revenue * Decimal('0.03')
-        
         pending_payments = Payment.objects.filter(status='PENDING').count()
         failed_payments = Payment.objects.filter(status='FAILED').count()
-        
-        # Payment by type
-        payment_types = {}
-        for pay_type, _ in Payment.PAYMENT_TYPES:
-            count = Payment.objects.filter(payment_type=pay_type, status='COMPLETED').count()
-            amount = Payment.objects.filter(payment_type=pay_type, status='COMPLETED').aggregate(
-                total=Sum('amount')
-            )['total'] or 0
-            if count > 0:
-                payment_types[pay_type] = {
-                    'count': count,
-                    'amount': float(amount)
-                }
         
         # ========================================
         # MAINTENANCE STATS
@@ -147,34 +122,6 @@ class WindaAdminSite(admin.AdminSite):
             status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
         ).count()
         resolved_maintenance = MaintenanceRequest.objects.filter(status='RESOLVED').count()
-        closed_maintenance = MaintenanceRequest.objects.filter(status='CLOSED').count()
-        
-        # Maintenance by category
-        maintenance_categories = {}
-        for category, _ in MaintenanceRequest.CATEGORIES:
-            count = MaintenanceRequest.objects.filter(category=category).count()
-            if count > 0:
-                maintenance_categories[category] = count
-        
-        # Maintenance by priority
-        maintenance_priorities = {}
-        for priority, _ in MaintenanceRequest.PRIORITY_LEVELS:
-            count = MaintenanceRequest.objects.filter(priority=priority).count()
-            if count > 0:
-                maintenance_priorities[priority] = count
-        
-        # Average resolution time (in hours)
-        resolved_requests = MaintenanceRequest.objects.filter(
-            status='RESOLVED',
-            resolved_at__isnull=False
-        )
-        total_hours = 0
-        for req in resolved_requests:
-            if req.resolved_at and req.created_at:
-                time_diff = req.resolved_at - req.created_at
-                total_hours += time_diff.total_seconds() / 3600
-        
-        avg_resolution_time = total_hours / resolved_requests.count() if resolved_requests.count() > 0 else 0
         
         # ========================================
         # LEASE STATS
@@ -182,10 +129,6 @@ class WindaAdminSite(admin.AdminSite):
         total_leases = Lease.objects.count()
         active_leases = Lease.objects.filter(status='ACTIVE').count()
         pending_signature = Lease.objects.filter(status='PENDING_SIGNATURE').count()
-        expired_leases = Lease.objects.filter(status='EXPIRED').count()
-        terminated_leases = Lease.objects.filter(status='TERMINATED').count()
-        
-        # Leases expiring soon (next 30 days)
         expiring_soon = Lease.objects.filter(
             status='ACTIVE',
             end_date__lte=today + timedelta(days=30)
@@ -200,28 +143,6 @@ class WindaAdminSite(admin.AdminSite):
             created_at__date__gte=last_week,
             is_deleted=False
         ).count()
-        
-        # ========================================
-        # GROWTH STATS
-        # ========================================
-        growth = {
-            'users': {
-                'total': total_users,
-                'new_week': new_users_week,
-                'new_month': new_users_month,
-            },
-            'properties': {
-                'new_month': Property.objects.filter(created_at__date__gte=last_month).count(),
-                'new_week': Property.objects.filter(created_at__date__gte=last_week).count(),
-            },
-            'applications': {
-                'new_month': applications_this_month,
-            },
-            'revenue': {
-                'monthly': float(monthly_revenue),
-                'weekly': float(weekly_revenue),
-            }
-        }
         
         return {
             'users': {
@@ -238,14 +159,12 @@ class WindaAdminSite(admin.AdminSite):
                 'pending': pending_properties,
                 'verified': verified_properties,
                 'rejected': rejected_properties,
-                'types': property_types,
                 'multi_unit': multi_unit_buildings,
-                'single_units': single_units,
                 'total_units': total_units,
                 'available_units': available_units,
                 'rented_units': rented_units,
                 'booked_units': booked_units,
-                'under_maintenance_units': under_maintenance_units,
+                'under_maintenance': under_maintenance_units,
             },
             'applications': {
                 'total': total_applications,
@@ -262,23 +181,16 @@ class WindaAdminSite(admin.AdminSite):
                 'platform_fees': float(platform_fees),
                 'pending': pending_payments,
                 'failed': failed_payments,
-                'types': payment_types,
             },
             'maintenance': {
                 'total': total_maintenance,
                 'pending': pending_maintenance,
                 'resolved': resolved_maintenance,
-                'closed': closed_maintenance,
-                'categories': maintenance_categories,
-                'priorities': maintenance_priorities,
-                'avg_resolution_time': round(avg_resolution_time, 1),
             },
             'leases': {
                 'total': total_leases,
                 'active': active_leases,
                 'pending_signature': pending_signature,
-                'expired': expired_leases,
-                'terminated': terminated_leases,
                 'expiring_soon': expiring_soon,
             },
             'communications': {
@@ -286,104 +198,96 @@ class WindaAdminSite(admin.AdminSite):
                 'messages': total_messages,
                 'messages_this_week': messages_this_week,
             },
-            'growth': growth,
+            'growth': {
+                'new_users': new_users_month,
+                'new_properties': Property.objects.filter(created_at__date__gte=last_month).count(),
+                'new_applications': applications_this_month,
+            }
         }
     
     def get_recent_activities(self):
-        """Get recent activities for admin dashboard"""
+        """Get recent platform activities for superadmin"""
         activities = []
         
         # Recent users
-        recent_users = CustomUser.objects.order_by('-date_joined')[:5]
+        recent_users = CustomUser.objects.order_by('-date_joined')[:3]
         for user in recent_users:
             activities.append({
-                'type': 'user',
+                'type': 'New User',
                 'icon': 'user-plus',
                 'color': 'blue',
-                'description': f'New user registered: {user.get_full_name()}',
+                'description': f'{user.get_full_name()} registered as {user.get_user_type_display()}',
                 'time': user.date_joined,
                 'time_ago': self.get_time_ago(user.date_joined),
-                'badge': user.get_user_type_display() if hasattr(user, 'get_user_type_display') else 'User'
             })
         
         # Recent properties
-        recent_properties = Property.objects.order_by('-created_at')[:5]
+        recent_properties = Property.objects.order_by('-created_at')[:3]
         for prop in recent_properties:
-            status_text = 'listed' if prop.verification_status == 'PENDING' else 'verified'
+            status = 'verified' if prop.verification_status == 'VERIFIED' else 'listed'
             activities.append({
-                'type': 'property',
+                'type': 'Property',
                 'icon': 'home',
-                'color': 'green' if prop.verification_status == 'VERIFIED' else 'yellow',
-                'description': f'Property {status_text}: {prop.title}',
+                'color': 'green',
+                'description': f'Property "{prop.title}" {status} by {prop.owner.user.get_full_name()}',
                 'time': prop.created_at,
                 'time_ago': self.get_time_ago(prop.created_at),
-                'badge': prop.get_property_type_display() if hasattr(prop, 'get_property_type_display') else 'Property'
             })
         
         # Recent payments
-        recent_payments = Payment.objects.filter(
-            status='COMPLETED'
-        ).order_by('-paid_at')[:5]
+        recent_payments = Payment.objects.filter(status='COMPLETED').order_by('-paid_at')[:3]
         for payment in recent_payments:
             activities.append({
-                'type': 'payment',
+                'type': 'Payment',
                 'icon': 'money-bill-wave',
-                'color': 'green',
-                'description': f'Payment of KES {payment.amount:,.2f} received from {payment.payer.get_full_name()}',
+                'color': 'yellow',
+                'description': f'Payment of KES {payment.amount:,.2f} from {payment.payer.get_full_name()}',
                 'time': payment.paid_at,
                 'time_ago': self.get_time_ago(payment.paid_at),
-                'badge': payment.get_payment_type_display() if hasattr(payment, 'get_payment_type_display') else 'Payment'
             })
         
         # Recent applications
-        recent_apps = TenantApplication.objects.order_by('-created_at')[:5]
+        recent_apps = TenantApplication.objects.order_by('-created_at')[:3]
         for app in recent_apps:
             activities.append({
-                'type': 'application',
+                'type': 'Application',
                 'icon': 'file-signature',
                 'color': 'purple',
-                'description': f'New application from {app.tenant.get_full_name()} for {app.property.title}',
+                'description': f'{app.tenant.get_full_name()} applied for {app.property.title}',
                 'time': app.created_at,
                 'time_ago': self.get_time_ago(app.created_at),
-                'badge': app.get_status_display() if hasattr(app, 'get_status_display') else 'Application'
             })
         
-        # Sort by time and return top 10
         activities.sort(key=lambda x: x['time'], reverse=True)
         return activities[:10]
     
     def get_quick_actions(self):
-        """Get quick actions for admin dashboard"""
+        """Get quick actions for superadmin"""
+        # Use direct URLs for admin actions
         return [
             {
-                'name': 'Add Property',
-                'url': '/admin/properties/property/add/',
-                'icon': 'fa-plus-circle',
+                'name': 'Manage Users',
+                'url': '/admin/accounts/user/',
+                'icon': 'fa-users-cog',
                 'color': 'blue',
             },
             {
-                'name': 'View Properties',
+                'name': 'Verify Properties',
+                'url': '/admin/properties/property/?verification_status__exact=PENDING',
+                'icon': 'fa-check-circle',
+                'color': 'yellow',
+            },
+            {
+                'name': 'View All Properties',
                 'url': '/admin/properties/property/',
                 'icon': 'fa-home',
                 'color': 'green',
             },
             {
-                'name': 'View Users',
-                'url': '/admin/accounts/user/',
-                'icon': 'fa-users',
-                'color': 'purple',
-            },
-            {
-                'name': 'Pending Verifications',
-                'url': '/admin/properties/property/?verification_status__exact=PENDING',
-                'icon': 'fa-clock',
-                'color': 'yellow',
-            },
-            {
                 'name': 'View Payments',
                 'url': '/admin/payments/payment/',
                 'icon': 'fa-credit-card',
-                'color': 'green',
+                'color': 'purple',
             },
             {
                 'name': 'Maintenance Requests',
@@ -392,69 +296,12 @@ class WindaAdminSite(admin.AdminSite):
                 'color': 'red',
             },
             {
-                'name': 'View Tenants',
-                'url': '/admin/accounts/tenantprofile/',
-                'icon': 'fa-user-friends',
-                'color': 'teal',
-            },
-            {
-                'name': 'View Leases',
-                'url': '/admin/tenants/lease/',
-                'icon': 'fa-file-contract',
-                'color': 'purple',
+                'name': 'Platform Settings',
+                'url': '/admin/',
+                'icon': 'fa-cog',
+                'color': 'gray',
             },
         ]
-    
-    def get_chart_data(self):
-        """Get data for charts"""
-        today = timezone.now().date()
-        last_30_days = today - timedelta(days=30)
-        
-        # Revenue by day (last 30 days)
-        revenue_by_day = []
-        for i in range(30):
-            date = today - timedelta(days=i)
-            revenue = Payment.objects.filter(
-                status='COMPLETED',
-                paid_at__date=date
-            ).aggregate(total=Sum('amount'))['total'] or 0
-            revenue_by_day.append({
-                'date': date.strftime('%b %d'),
-                'amount': float(revenue)
-            })
-        revenue_by_day.reverse()
-        
-        # New users by day (last 30 days)
-        users_by_day = []
-        for i in range(30):
-            date = today - timedelta(days=i)
-            count = CustomUser.objects.filter(
-                date_joined__date=date
-            ).count()
-            users_by_day.append({
-                'date': date.strftime('%b %d'),
-                'count': count
-            })
-        users_by_day.reverse()
-        
-        # Applications by day (last 30 days)
-        apps_by_day = []
-        for i in range(30):
-            date = today - timedelta(days=i)
-            count = TenantApplication.objects.filter(
-                created_at__date=date
-            ).count()
-            apps_by_day.append({
-                'date': date.strftime('%b %d'),
-                'count': count
-            })
-        apps_by_day.reverse()
-        
-        return {
-            'revenue': revenue_by_day,
-            'users': users_by_day,
-            'applications': apps_by_day,
-        }
     
     def get_time_ago(self, time):
         """Get time ago string"""
