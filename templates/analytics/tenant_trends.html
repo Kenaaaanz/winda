@@ -1,0 +1,206 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load analytics_filters %}
+
+{% block title %}Tenant Trends - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Tenant Trends</h1>
+                    <p class="text-gray-600">Track tenant growth, demographics, and trends</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <select id="timeRange" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" onchange="updateTimeRange()">
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                        <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                        <option value="180" {% if days == 180 %}selected{% endif %}>Last 6 months</option>
+                        <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                    </select>
+                    <a href="{% url 'analytics:custom_report' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                        <i class="fas fa-file-alt mr-2"></i> Custom Report
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-blue-500">
+                <p class="text-sm text-gray-600">Total Tenants</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.total_tenants }}</p>
+                <p class="text-xs text-green-600">+{{ data.growth_rate|floatformat:1 }}% growth</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-green-500">
+                <p class="text-sm text-gray-600">New Tenants (30 days)</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.monthly_trend|slice:":-1"|last|default:0 }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-yellow-500">
+                <p class="text-sm text-gray-600">Properties with Tenants</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.demographics.by_property|length }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-purple-500">
+                <p class="text-sm text-gray-600">Unit Types</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.demographics.by_unit_type|length }}</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Tenant Growth Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Tenant Growth</h3>
+                <div class="chart-container">
+                    <canvas id="tenantGrowthChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Tenants Chart -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">New Tenants</h3>
+                <div class="chart-container">
+                    <canvas id="newTenantsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demographics -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- By Property -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Tenants by Property</h3>
+                <div class="space-y-3">
+                    {% for property, count in data.demographics.by_property.items %}
+                        <div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">{{ property }}</span>
+                                <span class="font-semibold">{{ count }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-blue-500 h-1.5 rounded-full" style="width: {% widthratio count data.total_tenants 100 %}%"></div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-gray-500 text-center py-4">No tenant data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- By Unit Type -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Tenants by Unit Type</h3>
+                <div class="space-y-3">
+                    {% for unit_type, count in data.demographics.by_unit_type.items %}
+                        <div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">{{ unit_type }}</span>
+                                <span class="font-semibold">{{ count }}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                <div class="bg-green-500 h-1.5 rounded-full" style="width: {% widthratio count data.total_tenants 100 %}%"></div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-gray-500 text-center py-4">No unit type data available</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-6">
+            <a href="{% url 'analytics:dashboard' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Tenant Growth Chart
+const growthCtx = document.getElementById('tenantGrowthChart').getContext('2d');
+new Chart(growthCtx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_data.labels|safe }},
+        datasets: [{
+            label: 'Total Tenants',
+            data: {{ chart_data.total_tenants|safe }},
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+
+// New Tenants Chart
+const newCtx = document.getElementById('newTenantsChart').getContext('2d');
+new Chart(newCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_data.labels|safe }},
+        datasets: [{
+            label: 'New Tenants',
+            data: {{ chart_data.new_tenants|safe }},
+            backgroundColor: '#10b981',
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+
+function updateTimeRange() {
+    const days = document.getElementById('timeRange').value;
+    window.location.href = `?days=${days}`;
+}
+</script>
+{% endblock %}

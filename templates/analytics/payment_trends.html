@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load analytics_filters %}
+
+{% block title %}Payment Trends - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Payment Trends</h1>
+                    <p class="text-gray-600">Track revenue, payment types, and trends</p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <select id="timeRange" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" onchange="updateTimeRange()">
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                        <option value="60" {% if days == 60 %}selected{% endif %}>Last 60 days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                        <option value="180" {% if days == 180 %}selected{% endif %}>Last 6 months</option>
+                        <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                    </select>
+                    <a href="{% url 'analytics:custom_report' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                        <i class="fas fa-file-alt mr-2"></i> Custom Report
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-blue-500">
+                <p class="text-sm text-gray-600">Total Revenue</p>
+                <p class="text-2xl font-bold text-gray-900">KES {{ data.total.amount|intcomma }}</p>
+                <p class="text-xs text-gray-500">{{ data.date_range.start|date:"M d" }} - {{ data.date_range.end|date:"M d, Y" }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-green-500">
+                <p class="text-sm text-gray-600">Total Payments</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.total.count }}</p>
+                <p class="text-xs text-gray-500">Average: KES {{ data.total.average|intcomma }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-yellow-500">
+                <p class="text-sm text-gray-600">Monthly Average</p>
+                <p class="text-2xl font-bold text-gray-900">KES {{ data.monthly_trend|slice:":-1"|last|default:0|intcomma }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 stat-card border-l-4 border-purple-500">
+                <p class="text-sm text-gray-600">Payment Types</p>
+                <p class="text-2xl font-bold text-gray-900">{{ data.by_type|length }}</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Revenue Trend -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Revenue Trend</h3>
+                <div class="chart-container">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Payment Types -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold mb-4">Payment Types</h3>
+                <div class="chart-container">
+                    <canvas id="paymentTypesChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment by Property -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4">Revenue by Property</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 text-sm font-semibold text-gray-600">Property</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Amount</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Payments</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Average</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for property, stats in data.by_property.items %}
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 text-sm text-gray-700">{{ property }}</td>
+                                <td class="py-2 text-sm font-semibold text-right">KES {{ stats.amount|intcomma }}</td>
+                                <td class="py-2 text-sm text-right">{{ stats.count }}</td>
+                                <td class="py-2 text-sm text-right">KES {{ stats.amount|divisibleby:stats.count|intcomma }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-gray-500">No payment data available</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Monthly Breakdown -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h3 class="text-lg font-semibold mb-4">Monthly Breakdown</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 text-sm font-semibold text-gray-600">Month</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Amount</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Payments</th>
+                            <th class="text-right py-2 text-sm font-semibold text-gray-600">Average</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for month in data.monthly_trend %}
+                            <tr class="border-b border-gray-100">
+                                <td class="py-2 text-sm text-gray-700">{{ month.period }}</td>
+                                <td class="py-2 text-sm font-semibold text-right">KES {{ month.total_amount|intcomma }}</td>
+                                <td class="py-2 text-sm text-right">{{ month.count }}</td>
+                                <td class="py-2 text-sm text-right">KES {{ month.average|intcomma }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-gray-500">No data available</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-6">
+            <a href="{% url 'analytics:dashboard' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: {{ chart_data.labels|safe }},
+        datasets: [{
+            label: 'Revenue (KES)',
+            data: {{ chart_data.amounts|safe }},
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Payment Types Chart
+const typesCtx = document.getElementById('paymentTypesChart').getContext('2d');
+new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ pie_data.labels|safe }},
+        datasets: [{
+            data: {{ pie_data.values|safe }},
+            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+function updateTimeRange() {
+    const days = document.getElementById('timeRange').value;
+    window.location.href = `?days=${days}`;
+}
+</script>
+{% endblock %}

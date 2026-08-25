@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ report.title }} - Winda{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+    }
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ report.title }}</h1>
+                    <p class="text-gray-600">{{ report.get_report_type_display }}</p>
+                    <p class="text-sm text-gray-500 mt-1">
+                        {{ report.date_from|date:"M d, Y" }} - {{ report.date_to|date:"M d, Y" }}
+                        <span class="mx-2">•</span>
+                        Generated: {{ data.generated_at|date:"M d, Y H:i" }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'analytics:export_report' report.id %}?format=CSV" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors text-sm">
+                        <i class="fas fa-download mr-2"></i> Export CSV
+                    </a>
+                    <a href="{% url 'analytics:schedule_report' report.id %}" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors text-sm">
+                        <i class="fas fa-clock mr-2"></i> Schedule
+                    </a>
+                    <a href="{% url 'analytics:custom_report' %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                        <i class="fas fa-edit mr-2"></i> Edit Report
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Data -->
+        <div class="space-y-6">
+            {% for metric, metric_data in data.data.items %}
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4 capitalize">{{ metric }} Analytics</h2>
+                    
+                    {% if metric == 'revenue' %}
+                        <!-- Revenue Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-sm text-blue-600">Total Revenue</p>
+                                <p class="text-2xl font-bold text-blue-900">KES {{ metric_data.total.amount|intcomma }}</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <p class="text-sm text-green-600">Total Payments</p>
+                                <p class="text-2xl font-bold text-green-900">{{ metric_data.total.count }}</p>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-4">
+                                <p class="text-sm text-yellow-600">Average Payment</p>
+                                <p class="text-2xl font-bold text-yellow-900">KES {{ metric_data.total.average|intcomma }}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Revenue Chart -->
+                        <div class="chart-container">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                        
+                        <!-- Revenue Table -->
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-200">
+                                        <th class="text-left py-2 text-sm font-semibold text-gray-600">Month</th>
+                                        <th class="text-right py-2 text-sm font-semibold text-gray-600">Revenue</th>
+                                        <th class="text-right py-2 text-sm font-semibold text-gray-600">Payments</th>
+                                        <th class="text-right py-2 text-sm font-semibold text-gray-600">Average</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month in metric_data.monthly_trend %}
+                                        <tr class="border-b border-gray-100">
+                                            <td class="py-2 text-sm text-gray-700">{{ month.period }}</td>
+                                            <td class="py-2 text-sm font-semibold text-right">KES {{ month.total_amount|intcomma }}</td>
+                                            <td class="py-2 text-sm text-right">{{ month.count }}</td>
+                                            <td class="py-2 text-sm text-right">KES {{ month.average|intcomma }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+
+                    {% if metric == 'tenants' %}
+                        <!-- Tenant Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-sm text-blue-600">Total Tenants</p>
+                                <p class="text-2xl font-bold text-blue-900">{{ metric_data.total_tenants }}</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <p class="text-sm text-green-600">Growth Rate</p>
+                                <p class="text-2xl font-bold text-green-900">{{ metric_data.growth_rate|floatformat:1 }}%</p>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <p class="text-sm text-purple-600">Properties</p>
+                                <p class="text-2xl font-bold text-purple-900">{{ metric_data.demographics.by_property|length }}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Tenant Chart -->
+                        <div class="chart-container">
+                            <canvas id="tenantChart"></canvas>
+                        </div>
+                    {% endif %}
+
+                    {% if metric == 'maintenance' %}
+                        <!-- Maintenance Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-sm text-blue-600">Total Requests</p>
+                                <p class="text-2xl font-bold text-blue-900">{{ metric_data.total }}</p>
+                            </div>
+                            <div class="bg-yellow-50 rounded-lg p-4">
+                                <p class="text-sm text-yellow-600">Pending</p>
+                                <p class="text-2xl font-bold text-yellow-900">{{ metric_data.pending }}</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <p class="text-sm text-green-600">Resolved</p>
+                                <p class="text-2xl font-bold text-green-900">{{ metric_data.resolved }}</p>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <p class="text-sm text-purple-600">Avg Resolution</p>
+                                <p class="text-2xl font-bold text-purple-900">{{ metric_data.avg_resolution_time }} hrs</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Maintenance Chart -->
+                        <div class="chart-container">
+                            <canvas id="maintenanceChart"></canvas>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-6">
+            <a href="{% url 'analytics:dashboard' %}" class="text-gray-600 hover:text-gray-800 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Revenue Chart
+{% if data.data.revenue %}
+const revenueCtx = document.getElementById('revenueChart');
+if (revenueCtx) {
+    new Chart(revenueCtx.getContext('2d'), {
+        type: '{{ chart_type }}',
+        data: {
+            labels: {{ chart_data.revenue.labels|safe }},
+            datasets: [{
+                label: 'Revenue (KES)',
+                data: {{ chart_data.revenue.data|safe }},
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'KES ' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
+// Tenant Chart
+{% if data.data.tenants %}
+const tenantCtx = document.getElementById('tenantChart');
+if (tenantCtx) {
+    new Chart(tenantCtx.getContext('2d'), {
+        type: '{{ chart_type }}',
+        data: {
+            labels: {{ chart_data.tenants.labels|safe }},
+            datasets: [
+                {
+                    label: 'New Tenants',
+                    data: {{ chart_data.tenants.new_tenants|safe }},
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Total Tenants',
+                    data: {{ chart_data.tenants.total_tenants|safe }},
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    type: 'line'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+
+// Maintenance Chart
+{% if data.data.maintenance %}
+const maintenanceCtx = document.getElementById('maintenanceChart');
+if (maintenanceCtx) {
+    new Chart(maintenanceCtx.getContext('2d'), {
+        type: '{{ chart_type }}',
+        data: {
+            labels: {{ chart_data.maintenance.labels|safe }},
+            datasets: [
+                {
+                    label: 'Total',
+                    data: {{ chart_data.maintenance.total|safe }},
+                    backgroundColor: '#3b82f6',
+                    borderRadius: 4
+                },
+                {
+                    label: 'Resolved',
+                    data: {{ chart_data.maintenance.resolved|safe }},
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+</script>
+{% endblock %}
