@@ -1,0 +1,735 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Winda Super Admin{% endblock %}</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* ========================================
+           GLOBAL RESET & BASE
+           ======================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            min-height: 100vh;
+        }
+        
+        /* ========================================
+           TOP HEADER
+           ======================================== */
+        .admin-header {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        .admin-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        
+        .admin-header .brand .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 18px;
+            color: white;
+        }
+        
+        .admin-header .brand .brand-text {
+            color: #f8fafc;
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: -0.5px;
+        }
+        
+        .admin-header .brand .brand-sub {
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+        
+        .admin-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .admin-header .header-actions .user-info {
+            color: #e2e8f0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .admin-header .header-actions .user-info .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .admin-header .header-actions .btn-icon {
+            background: rgba(255,255,255,0.08);
+            border: none;
+            color: #94a3b8;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .admin-header .header-actions .btn-icon:hover {
+            background: rgba(255,255,255,0.15);
+            color: #f8fafc;
+        }
+        
+        .admin-header .header-actions .btn-icon .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        /* ========================================
+           MAIN LAYOUT
+           ======================================== */
+        .admin-layout {
+            display: flex;
+            min-height: calc(100vh - 64px);
+        }
+        
+        /* ========================================
+           SIDEBAR NAVIGATION
+           ======================================== */
+        .admin-sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 20px 0;
+            overflow-y: auto;
+            flex-shrink: 0;
+            height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+        }
+        
+        .admin-sidebar .nav-section {
+            padding: 0 16px;
+            margin-bottom: 24px;
+        }
+        
+        .admin-sidebar .nav-section .section-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #94a3b8;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+        
+        .admin-sidebar .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: #475569;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+            gap: 12px;
+            margin-bottom: 2px;
+        }
+        
+        .admin-sidebar .nav-item:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        
+        .admin-sidebar .nav-item.active {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+        
+        .admin-sidebar .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+        
+        .admin-sidebar .nav-item .nav-badge {
+            margin-left: auto;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        /* ========================================
+           MAIN CONTENT AREA
+           ======================================== */
+        .admin-content {
+            flex: 1;
+            padding: 24px 32px;
+            max-width: calc(100% - 260px);
+            overflow-y: auto;
+        }
+        
+        /* ========================================
+           RIGHT SIDEBAR (Charts & Metrics)
+           ======================================== */
+        .admin-right-sidebar {
+            width: 320px;
+            background: white;
+            border-left: 1px solid #e2e8f0;
+            padding: 24px 20px;
+            flex-shrink: 0;
+            height: calc(100vh - 64px);
+            position: sticky;
+            top: 64px;
+            overflow-y: auto;
+        }
+        
+        .admin-right-sidebar .widget {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .admin-right-sidebar .widget .widget-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        
+        .admin-right-sidebar .widget .widget-chart {
+            height: 120px;
+        }
+        
+        .admin-right-sidebar .mini-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .admin-right-sidebar .mini-stat:last-child {
+            border-bottom: none;
+        }
+        
+        .admin-right-sidebar .mini-stat .label {
+            color: #64748b;
+            font-size: 13px;
+        }
+        
+        .admin-right-sidebar .mini-stat .value {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 13px;
+        }
+        
+        .admin-right-sidebar .mini-stat .value.positive { color: #10b981; }
+        .admin-right-sidebar .mini-stat .value.negative { color: #ef4444; }
+        
+        /* ========================================
+           RESPONSIVE
+           ======================================== */
+        @media (max-width: 1200px) {
+            .admin-right-sidebar {
+                display: none;
+            }
+            .admin-content {
+                max-width: calc(100% - 260px);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                display: none;
+            }
+            .admin-content {
+                max-width: 100%;
+                padding: 16px;
+            }
+            .admin-header {
+                padding: 0 16px;
+            }
+            .admin-header .brand .brand-sub {
+                display: none;
+            }
+        }
+        
+        /* ========================================
+           SCROLLBAR
+           ======================================== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* ========================================
+           CONTENT AREA STYLES
+           ======================================== */
+        .content-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        
+        .page-subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        /* Badge Styles */
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .badge-green { background: #ecfdf5; color: #065f46; }
+        .badge-blue { background: #eff6ff; color: #1e40af; }
+        .badge-yellow { background: #fffbeb; color: #92400e; }
+        .badge-red { background: #fef2f2; color: #991b1b; }
+        .badge-purple { background: #f5f3ff; color: #5b21b6; }
+        .badge-gray { background: #f3f4f6; color: #4b5563; }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 400px;
+        }
+        
+        .toast {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease;
+        }
+        
+        .toast-success { background: #10b981; }
+        .toast-error { background: #ef4444; }
+        .toast-warning { background: #f59e0b; }
+        .toast-info { background: #3b82f6; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ========================================
+         TOP HEADER
+         ======================================== -->
+    <header class="admin-header">
+        <a href="{% url 'admin:index' %}" class="brand">
+            <div class="logo-icon">W</div>
+            <div>
+                <span class="brand-text">Winda</span>
+                <span class="brand-sub">Super Admin</span>
+            </div>
+        </a>
+        
+        <div class="header-actions">
+            <button class="btn-icon" onclick="window.location.href='/'">
+                <i class="fas fa-globe"></i>
+            </button>
+            <button class="btn-icon" onclick="window.location.href='/admin/'">
+                <i class="fas fa-home"></i>
+            </button>
+            <button class="btn-icon" style="position:relative;" onclick="toggleNotifications()">
+                <i class="fas fa-bell"></i>
+                <span class="badge" id="notificationBadge">3</span>
+            </button>
+            <div class="user-info">
+                <div class="avatar">{{ request.user.get_full_name|slice:":1"|upper }}</div>
+                <span>{{ request.user.get_full_name }}</span>
+            </div>
+            <button class="btn-icon" onclick="window.location.href='{% url 'admin:logout' %}'" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+    
+    <!-- ========================================
+         MAIN LAYOUT
+         ======================================== -->
+    <div class="admin-layout">
+        <!-- SIDEBAR -->
+        <nav class="admin-sidebar" id="sidebar">
+            <div class="nav-section">
+                <div class="section-title">Main</div>
+                <a href="{% url 'admin:index' %}" class="nav-item {% if request.path == '/admin/' %}active{% endif %}">
+                    <i class="fas fa-chart-pie"></i> Dashboard
+                </a>
+                <a href="/admin/accounts/user/" class="nav-item {% if 'accounts' in request.path %}active{% endif %}">
+                    <i class="fas fa-users"></i> Users
+                </a>
+                <a href="/admin/properties/property/" class="nav-item {% if 'properties' in request.path %}active{% endif %}">
+                    <i class="fas fa-home"></i> Properties
+                </a>
+                <a href="/admin/tenants/tenantapplication/" class="nav-item {% if 'tenants' in request.path %}active{% endif %}">
+                    <i class="fas fa-file-signature"></i> Applications
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="section-title">Financial</div>
+                <a href="/admin/payments/payment/" class="nav-item {% if 'payments' in request.path %}active{% endif %}">
+                    <i class="fas fa-credit-card"></i> Payments
+                </a>
+                <a href="/admin/payments/invoice/" class="nav-item {% if 'invoices' in request.path %}active{% endif %}">
+                    <i class="fas fa-file-invoice"></i> Invoices
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="section-title">Operations</div>
+                <a href="/admin/maintenance/maintenancerequest/" class="nav-item {% if 'maintenance' in request.path %}active{% endif %}">
+                    <i class="fas fa-tools"></i> Maintenance
+                    <span class="nav-badge" id="maintenanceBadge">{{ pending_maintenance_count|default:0 }}</span>
+                </a>
+                <a href="/admin/communications/chatroom/" class="nav-item {% if 'communications' in request.path %}active{% endif %}">
+                    <i class="fas fa-comment-dots"></i> Chat Rooms
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="section-title">Analytics & SEO</div>
+                <a href="/admin/analytics/" class="nav-item {% if 'analytics' in request.path %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </a>
+                <a href="/admin/seo/seometa/" class="nav-item {% if 'seo' in request.path %}active{% endif %}">
+                    <i class="fas fa-search"></i> SEO
+                </a>
+                <a href="/admin/notifications/notification/" class="nav-item {% if 'notifications' in request.path %}active{% endif %}">
+                    <i class="fas fa-bell"></i> Notifications
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="section-title">System</div>
+                <a href="/admin/auth/group/" class="nav-item {% if 'auth' in request.path %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i> Groups
+                </a>
+                <a href="/admin/sites/site/" class="nav-item">
+                    <i class="fas fa-globe-americas"></i> Sites
+                </a>
+            </div>
+        </nav>
+        
+        <!-- MAIN CONTENT -->
+        <main class="admin-content">
+            <div class="content-wrapper">
+                {% block content %}
+                {% endblock %}
+            </div>
+        </main>
+        
+        <!-- RIGHT SIDEBAR - Charts & Metrics -->
+        <aside class="admin-right-sidebar" id="rightSidebar">
+            <!-- Quick Stats -->
+            <div class="widget">
+                <div class="widget-title"><i class="fas fa-bolt" style="color:#f59e0b;"></i> Quick Stats</div>
+                <div class="mini-stat">
+                    <span class="label">Total Users</span>
+                    <span class="value" id="totalUsers">{{ total_users|default:0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">Properties</span>
+                    <span class="value" id="totalProperties">{{ total_properties|default:0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">Active Leases</span>
+                    <span class="value" id="activeLeases">{{ active_leases|default:0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">Pending Maintenance</span>
+                    <span class="value negative" id="pendingMaintenance">{{ pending_maintenance|default:0 }}</span>
+                </div>
+            </div>
+            
+            <!-- Revenue Chart -->
+            <div class="widget">
+                <div class="widget-title"><i class="fas fa-chart-line" style="color:#3b82f6;"></i> Revenue (30 days)</div>
+                <div class="widget-chart">
+                    <canvas id="revenueMiniChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- New Users Chart -->
+            <div class="widget">
+                <div class="widget-title"><i class="fas fa-users" style="color:#8b5cf6;"></i> New Users</div>
+                <div class="widget-chart">
+                    <canvas id="usersMiniChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Platform Activity -->
+            <div class="widget">
+                <div class="widget-title"><i class="fas fa-clock" style="color:#6b7280;"></i> Platform Activity</div>
+                <div class="mini-stat">
+                    <span class="label">Messages Today</span>
+                    <span class="value" id="messagesToday">{{ messages_today|default:0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">New Applications</span>
+                    <span class="value" id="newApplications">{{ new_applications|default:0 }}</span>
+                </div>
+                <div class="mini-stat">
+                    <span class="label">Payments Today</span>
+                    <span class="value positive" id="paymentsToday">{{ payments_today|default:0 }}</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <!-- ========================================
+         TOAST CONTAINER
+         ======================================== -->
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <!-- ========================================
+         SCRIPTS
+         ======================================== -->
+    <script>
+        // ========================================
+        // TOAST NOTIFICATIONS
+        // ========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+        
+        // ========================================
+        // SIDEBAR TOGGLE (Mobile)
+        // ========================================
+        let sidebarVisible = false;
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth <= 768) {
+                sidebar.style.display = sidebar.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+        
+        // ========================================
+        // CHARTS
+        // ========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Revenue Chart
+            const revenueCtx = document.getElementById('revenueMiniChart');
+            if (revenueCtx) {
+                new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: {{ revenue_labels|safe }},
+                        datasets: [{
+                            data: {{ revenue_data|safe }},
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+            
+            // Users Chart
+            const usersCtx = document.getElementById('usersMiniChart');
+            if (usersCtx) {
+                new Chart(usersCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ user_labels|safe }},
+                        datasets: [{
+                            data: {{ user_data|safe }},
+                            backgroundColor: '#8b5cf6',
+                            borderRadius: 4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        });
+        
+        // ========================================
+        // NOTIFICATIONS DROPDOWN
+        // ========================================
+        let notificationsVisible = false;
+        function toggleNotifications() {
+            // Simple notification toggle - can be expanded
+            showToast('You have 3 unread notifications', 'info');
+        }
+        
+        // ========================================
+        // AUTO-REFRESH STATS (every 30 seconds)
+        // ========================================
+        setInterval(function() {
+            fetch('/admin/api/stats/')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalUsers').textContent = data.total_users || 0;
+                    document.getElementById('totalProperties').textContent = data.total_properties || 0;
+                    document.getElementById('activeLeases').textContent = data.active_leases || 0;
+                    document.getElementById('pendingMaintenance').textContent = data.pending_maintenance || 0;
+                    document.getElementById('maintenanceBadge').textContent = data.pending_maintenance || 0;
+                })
+                .catch(() => {});
+        }, 30000);
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
