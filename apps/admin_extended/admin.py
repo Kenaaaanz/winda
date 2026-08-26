@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth import get_user_model
+from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -19,17 +20,14 @@ from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
 from apps.notifications.models import Notification, NotificationPreference
 from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
 
+
 User = get_user_model()
 
 
-# ========================================
-# CUSTOM ADMIN SITE - OVERRIDING DEFAULT
-# ========================================
-
-class WindaAdminSite(admin.AdminSite):
+class WindaAdminSite(AdminSite):
     """
-    Custom admin site that overrides the default Django admin.
-    All admin pages use the custom base template with sidebar and charts.
+    Custom admin site that preserves ALL Django admin functionality.
+    Only the dashboard index page is customized with stats cards.
     """
     
     site_header = 'Winda Super Admin'
@@ -37,79 +35,11 @@ class WindaAdminSite(admin.AdminSite):
     index_title = 'Platform Dashboard'
     site_url = '/'
     
-    # CRITICAL: Use custom base template for ALL admin pages
-    base_template = 'admin/superadmin_base.html'
+    index_template = 'admin/custom_index.html'
     
-    def each_context(self, request):
-        """Add context data to ALL admin pages for the sidebar."""
-        context = super().each_context(request)
-        
-        # Only add sidebar data for superusers
-        if request.user.is_superuser:
-            today = timezone.now().date()
-            
-            # Get data for right sidebar
-            total_users = User.objects.filter(is_active=True).count()
-            total_properties = Property.objects.count()
-            active_leases = Lease.objects.filter(status='ACTIVE').count()
-            pending_maintenance = MaintenanceRequest.objects.filter(
-                status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
-            ).count()
-            
-            # Messages today
-            messages_today = Message.objects.filter(
-                created_at__date=today,
-                is_deleted=False
-            ).count()
-            
-            # New applications today
-            new_applications = TenantApplication.objects.filter(
-                created_at__date=today
-            ).count()
-            
-            # Payments today
-            payments_today = Payment.objects.filter(
-                status='COMPLETED',
-                paid_at__date=today
-            ).count()
-            
-            # Revenue chart data (last 30 days)
-            revenue_labels = []
-            revenue_data = []
-            for i in range(30, -1, -1):
-                date = today - timedelta(days=i)
-                revenue_labels.append(date.strftime('%b %d'))
-                revenue = Payment.objects.filter(
-                    status='COMPLETED',
-                    paid_at__date=date
-                ).aggregate(total=Sum('amount'))['total'] or 0
-                revenue_data.append(float(revenue))
-            
-            # User chart data (last 30 days)
-            user_labels = []
-            user_data = []
-            for i in range(30, -1, -1):
-                date = today - timedelta(days=i)
-                user_labels.append(date.strftime('%b %d'))
-                count = User.objects.filter(date_joined__date=date).count()
-                user_data.append(count)
-            
-            context.update({
-                'total_users': total_users,
-                'total_properties': total_properties,
-                'active_leases': active_leases,
-                'pending_maintenance': pending_maintenance,
-                'pending_maintenance_count': pending_maintenance,
-                'messages_today': messages_today,
-                'new_applications': new_applications,
-                'payments_today': payments_today,
-                'revenue_labels': revenue_labels,
-                'revenue_data': revenue_data,
-                'user_labels': user_labels,
-                'user_data': user_data,
-            })
-        
-        return context
+    def get_app_list(self, request):
+        """Get all app lists exactly as Django provides them."""
+        return super().get_app_list(request)
     
     def index(self, request, extra_context=None):
         """Custom dashboard with stats cards."""
@@ -363,6 +293,7 @@ class WindaAdminSite(admin.AdminSite):
             {'name': 'All Payments', 'url': '/admin/payments/payment/', 'icon': 'fa-credit-card', 'color': 'purple'},
             {'name': 'Maintenance', 'url': '/admin/maintenance/maintenancerequest/', 'icon': 'fa-tools', 'color': 'red'},
             {'name': 'SEO Settings', 'url': '/admin/seo/seometa/', 'icon': 'fa-search', 'color': 'indigo'},
+            {'name': 'Legal Pages', 'url': '/admin/legal/', 'icon': 'fa-gavel', 'color': 'teal'},
             {'name': 'Analytics', 'url': '/admin/analytics/', 'icon': 'fa-chart-line', 'color': 'pink'},
             {'name': 'Notifications', 'url': '/admin/notifications/', 'icon': 'fa-bell', 'color': 'orange'},
             {'name': 'Communications', 'url': '/admin/communications/', 'icon': 'fa-comment-dots', 'color': 'green'},
@@ -394,7 +325,7 @@ class WindaAdminSite(admin.AdminSite):
 # REGISTER ALL MODELS WITH CUSTOM ADMIN SITE
 # ========================================
 
-# Create the custom admin site
+# Create admin site instance
 admin_site = WindaAdminSite(name='admin')
 
 
@@ -632,21 +563,3 @@ class SeoRedirectAdmin(admin.ModelAdmin):
     search_fields = ('old_path', 'new_path')
 
 
-# Register Group (Django's built-in)
-admin_site.register(Group, GroupAdmin)
-
-
-# ========================================
-# OVERRIDE DEFAULT ADMIN SITE
-# ========================================
-
-admin.site.__class__ = WindaAdminSite
-admin.site.site_header = 'Winda Super Admin'
-admin.site.site_title = 'Winda Admin'
-admin.site.index_title = 'Platform Dashboard'
-admin.site.base_template = 'admin/superadmin_base.html'
-
-# Print confirmation
-print("✅ Custom Winda Admin Site successfully overridden!")
-print(f"✅ Site header: {admin.site.site_header}")
-print(f"✅ Base template: {admin.site.base_template}")
