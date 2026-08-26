@@ -200,5 +200,5 @@ if settings.DEBUG:
 # ERROR HANDLING (Optional - comment out if error handlers don't exist)
 # ========================================
 
- handler404 = 'apps.common.views.handler404'
- handler500 = 'apps.common.views.handler500'
+ #handler404 = 'apps.common.views.handler404'
+ #handler500 = 'apps.common.views.handler500'
