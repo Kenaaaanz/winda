@@ -11,7 +11,6 @@ from datetime import timedelta
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
-from django.shortcuts import render
 
 from apps.accounts.views import dashboard 
 from apps.properties.models import Property
@@ -73,6 +72,8 @@ def admin_stats_api(request):
 
 def home_view(request):
     """Home page with dynamic statistics"""
+    from django.shortcuts import render
+    
     # Get featured properties (verified, available, with images)
     featured_properties = Property.objects.filter(
         verification_status='VERIFIED',
@@ -184,20 +185,20 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     
-    # Debug Toolbar (if installed)
+    # Debug Toolbar - Only if installed
     try:
         import debug_toolbar
         urlpatterns = [
             path('__debug__/', include(debug_toolbar.urls)),
         ] + urlpatterns
     except ImportError:
+        # Debug toolbar not installed, skip it
         pass
 
 
 # ========================================
-# ERROR HANDLING
+# ERROR HANDLING (Optional - comment out if error handlers don't exist)
 # ========================================
 
-# Custom error handlers (optional)
-handler404 = 'apps.common.views.handler404'
-handler500 = 'apps.common.views.handler500'
+ handler404 = 'apps.common.views.handler404'
+ handler500 = 'apps.common.views.handler500'
