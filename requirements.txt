@@ -41,6 +41,7 @@ python-decouple
 cloudinary
 django-cloudinary-storage
 reportlab
+django-debug-toolbar
 # Windows-specific packages
 # pywin32==306  # For Windows services
 

@@ -11,6 +11,7 @@ from datetime import timedelta
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+from django.shortcuts import render
 
 from apps.accounts.views import dashboard 
 from apps.properties.models import Property
