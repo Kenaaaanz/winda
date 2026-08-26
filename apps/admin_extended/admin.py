@@ -19,7 +19,6 @@ from apps.communications.models import ChatRoom, Message, MessageTemplate
 from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
 from apps.notifications.models import Notification, NotificationPreference
 from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
-from apps.legal.models import TermsOfService, PrivacyPolicy
 
 
 User = get_user_model()
@@ -564,28 +563,7 @@ class SeoRedirectAdmin(admin.ModelAdmin):
     search_fields = ('old_path', 'new_path')
 
 
-# ========================================
-# LEGAL APP
-# ========================================
 
-# Try to import and register legal models if they exist
-try:
-    from apps.legal.models import TermsOfService, PrivacyPolicy
-    
-    @admin.register(TermsOfService, site=admin_site)
-    class TermsOfServiceAdmin(admin.ModelAdmin):
-        list_display = ('title', 'version', 'is_active', 'created_at')
-        list_filter = ('is_active',)
-        search_fields = ('title',)
-    
-    @admin.register(PrivacyPolicy, site=admin_site)
-    class PrivacyPolicyAdmin(admin.ModelAdmin):
-        list_display = ('title', 'version', 'is_active', 'created_at')
-        list_filter = ('is_active',)
-        search_fields = ('title',)
-        
-except ImportError:
-    pass
 
 
 # Register Group (Django's built-in)
