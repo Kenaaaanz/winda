@@ -186,14 +186,14 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     
     # Debug Toolbar - Only if installed
-    try:
-        import debug_toolbar
-        urlpatterns = [
-            path('__debug__/', include(debug_toolbar.urls)),
-        ] + urlpatterns
-    except ImportError:
+    #try:
+        #import debug_toolbar
+        #urlpatterns = [
+            #path('__debug__/', include(debug_toolbar.urls)),
+        #] + urlpatterns
+    #except ImportError:
         # Debug toolbar not installed, skip it
-        pass
+        #pass
 
 
 # ========================================
