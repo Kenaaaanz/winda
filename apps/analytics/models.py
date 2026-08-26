@@ -69,8 +69,8 @@ class AnalyticsEvent(models.Model):
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
     
     # Related objects
-    property = models.ForeignKey('properties.Property', on_delete=models.SET_NULL, null=True, blank=True)
-    unit = models.ForeignKey('properties.Unit', on_delete=models.SET_NULL, null=True, blank=True)
+    property = models.ForeignKey('properties.Property', on_delete=models.CASCADE, null=True, blank=True)
+    unit = models.ForeignKey('properties.Unit', on_delete=models.CASCADE, null=True, blank=True)
     
     # Event data
     data = models.JSONField(default=dict, blank=True)
