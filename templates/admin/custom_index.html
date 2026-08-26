@@ -262,9 +262,7 @@
 {% block content %}
 <div id="content-main" class="winda-dashboard">
     
-    <!-- ========================================
-         STATS GRID
-         ======================================== -->
+    <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon blue"><i class="fas fa-users"></i></div>
@@ -295,68 +293,37 @@
         </div>
     </div>
     
-    <!-- ========================================
-         STATS ROW 2
-         ======================================== -->
+    <!-- Stats Row 2 -->
     <div class="stats-row-2">
         <div class="stat-card">
             <div class="stat-icon teal"><i class="fas fa-building"></i></div>
             <div class="stat-label">Units</div>
             <div class="stat-value">{{ stats.properties.total_units|intcomma }}</div>
-            <div class="stat-row">
-                <span>Available</span>
-                <span><strong>{{ stats.properties.available_units|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Rented</span>
-                <span><strong>{{ stats.properties.rented_units|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Multi-unit buildings</span>
-                <span><strong>{{ stats.properties.multi_unit|intcomma }}</strong></span>
-            </div>
+            <div class="stat-row"><span>Available</span><span><strong>{{ stats.properties.available_units|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Rented</span><span><strong>{{ stats.properties.rented_units|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Multi-unit buildings</span><span><strong>{{ stats.properties.multi_unit|intcomma }}</strong></span></div>
         </div>
         
         <div class="stat-card">
             <div class="stat-icon red"><i class="fas fa-tools"></i></div>
             <div class="stat-label">Maintenance</div>
             <div class="stat-value">{{ stats.maintenance.pending|intcomma }}</div>
-            <div class="stat-row">
-                <span>Pending requests</span>
-                <span><strong>{{ stats.maintenance.pending|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Resolved</span>
-                <span><strong>{{ stats.maintenance.resolved|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Total requests</span>
-                <span><strong>{{ stats.maintenance.total|intcomma }}</strong></span>
-            </div>
+            <div class="stat-row"><span>Pending requests</span><span><strong>{{ stats.maintenance.pending|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Resolved</span><span><strong>{{ stats.maintenance.resolved|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Total requests</span><span><strong>{{ stats.maintenance.total|intcomma }}</strong></span></div>
         </div>
         
         <div class="stat-card">
             <div class="stat-icon indigo"><i class="fas fa-handshake"></i></div>
             <div class="stat-label">Leases</div>
             <div class="stat-value">{{ stats.leases.active|intcomma }}</div>
-            <div class="stat-row">
-                <span>Active leases</span>
-                <span><strong>{{ stats.leases.active|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Pending signature</span>
-                <span><strong>{{ stats.leases.pending_signature|intcomma }}</strong></span>
-            </div>
-            <div class="stat-row">
-                <span>Expiring soon (30 days)</span>
-                <span><strong>{{ stats.leases.expiring_soon|intcomma }}</strong></span>
-            </div>
+            <div class="stat-row"><span>Active leases</span><span><strong>{{ stats.leases.active|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Pending signature</span><span><strong>{{ stats.leases.pending_signature|intcomma }}</strong></span></div>
+            <div class="stat-row"><span>Expiring soon (30 days)</span><span><strong>{{ stats.leases.expiring_soon|intcomma }}</strong></span></div>
         </div>
     </div>
     
-    <!-- ========================================
-         QUICK ACTIONS
-         ======================================== -->
+    <!-- Quick Actions -->
     <h2 style="font-size:16px;font-weight:600;color:#111827;margin-bottom:14px;">
         <i class="fas fa-bolt" style="color:#f59e0b;margin-right:8px;"></i> Quick Actions
     </h2>
@@ -369,9 +336,7 @@
         {% endfor %}
     </div>
     
-    <!-- ========================================
-         RECENT ACTIVITIES
-         ======================================== -->
+    <!-- Recent Activities -->
     <div class="recent-activities">
         <div class="activity-header">
             <span><i class="fas fa-clock" style="color:#6b7280;margin-right:8px;"></i> Recent Activities</span>
@@ -383,23 +348,16 @@
                     <i class="fas fa-{{ activity.icon }}"></i>
                 </div>
                 <div class="activity-content">
-                    <div class="desc">
-                        {{ activity.description }}
-                        <span class="badge {{ activity.color }}">{{ activity.type }}</span>
-                    </div>
+                    <div class="desc">{{ activity.description }} <span class="badge {{ activity.color }}">{{ activity.type }}</span></div>
                     <div class="time">{{ activity.time_ago }}</div>
                 </div>
             </div>
         {% empty %}
-            <div class="activity-item" style="justify-content:center;color:#6b7280;padding:20px;">
-                No recent activity
-            </div>
+            <div class="activity-item" style="justify-content:center;color:#6b7280;padding:20px;">No recent activity</div>
         {% endfor %}
     </div>
     
-    <!-- ========================================
-         ORIGINAL DJANGO ADMIN APP LIST
-         ======================================== -->
+    <!-- ORIGINAL DJANGO ADMIN APP LIST -->
     <div style="margin-top:20px;">
         {{ block.super }}
     </div>

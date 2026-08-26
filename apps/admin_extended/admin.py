@@ -1,24 +1,34 @@
 from django.contrib.admin import AdminSite
 from django.contrib import admin
+from django.contrib.auth.models import Group
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
-from apps.properties.models import Property, Unit
+# Import all models from all apps
+from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
+from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
-from apps.payments.models import Payment
-from apps.maintenance.models import MaintenanceRequest
-from apps.accounts.models import User as CustomUser
-from apps.communications.models import ChatRoom, Message
+from apps.payments.models import Payment, Invoice, SubscriptionPlan
+from apps.maintenance.models import MaintenanceRequest, MaintenanceTask
+from apps.communications.models import ChatRoom, Message, MessageTemplate
+from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
+from apps.notifications.models import Notification, NotificationPreference
+from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
+from apps.legal.models import TermsOfService, PrivacyPolicy
 
 
-class WindaAdminSite(admin.AdminSite):
+User = get_user_model()
+
+
+class WindaAdminSite(AdminSite):
     """
     Custom admin site that preserves ALL Django admin functionality.
     Only the dashboard index page is customized with stats cards.
-    Everything else (all models, all apps, all admin features) remains exactly as Django provides.
     """
     
     site_header = 'Winda Super Admin'
@@ -26,23 +36,14 @@ class WindaAdminSite(admin.AdminSite):
     index_title = 'Platform Dashboard'
     site_url = '/'
     
-    # Keep all default admin templates except index.html
-    index_template = 'admin/custom_index.html'  # Use custom index template only
+    index_template = 'admin/custom_index.html'
     
     def get_app_list(self, request):
-        """
-        Get all app lists exactly as Django provides them.
-        We don't modify or filter anything - all apps remain visible.
-        """
+        """Get all app lists exactly as Django provides them."""
         return super().get_app_list(request)
     
     def index(self, request, extra_context=None):
-        """
-        Custom dashboard with stats cards.
-        All other admin functionality (list views, add views, change views, delete views)
-        remain exactly as Django provides them.
-        """
-        # Only superusers can see the custom dashboard
+        """Custom dashboard with stats cards."""
         if not request.user.is_superuser:
             return super().index(request, extra_context)
         
@@ -52,19 +53,17 @@ class WindaAdminSite(admin.AdminSite):
             'subtitle': 'Platform Overview & Analytics',
         }
         
-        # Get platform stats for the dashboard cards
         context['stats'] = self.get_platform_stats()
         context['recent_activities'] = self.get_recent_activities()
         context['quick_actions'] = self.get_quick_actions()
         
-        # Pass any extra context
         if extra_context:
             context.update(extra_context)
         
         return super().index(request, context)
     
     def get_platform_stats(self):
-        """Get platform-wide statistics for superadmin dashboard"""
+        """Get platform-wide statistics for superadmin dashboard."""
         today = timezone.now().date()
         last_week = today - timedelta(days=7)
         last_month = today - timedelta(days=30)
@@ -72,14 +71,14 @@ class WindaAdminSite(admin.AdminSite):
         # ========================================
         # USER STATS
         # ========================================
-        total_users = CustomUser.objects.filter(is_active=True).count()
-        new_users_week = CustomUser.objects.filter(date_joined__date__gte=last_week).count()
-        new_users_month = CustomUser.objects.filter(date_joined__date__gte=last_month).count()
+        total_users = User.objects.filter(is_active=True).count()
+        new_users_week = User.objects.filter(date_joined__date__gte=last_week).count()
+        new_users_month = User.objects.filter(date_joined__date__gte=last_month).count()
         
-        owners = CustomUser.objects.filter(user_type='HOUSE_OWNER', is_active=True).count()
-        tenants = CustomUser.objects.filter(user_type='TENANT', is_active=True).count()
-        caretakers = CustomUser.objects.filter(user_type='CARETAKER', is_active=True).count()
-        pending_verifications = CustomUser.objects.filter(
+        owners = User.objects.filter(user_type='HOUSE_OWNER', is_active=True).count()
+        tenants = User.objects.filter(user_type='TENANT', is_active=True).count()
+        caretakers = User.objects.filter(user_type='CARETAKER', is_active=True).count()
+        pending_verifications = User.objects.filter(
             user_type='HOUSE_OWNER',
             verification_status='PENDING'
         ).count()
@@ -94,7 +93,6 @@ class WindaAdminSite(admin.AdminSite):
         
         multi_unit_buildings = Property.objects.filter(is_multi_unit=True).count()
         
-        # Unit stats
         total_units = Unit.objects.count()
         available_units = Unit.objects.filter(is_available=True).count()
         rented_units = Unit.objects.filter(status='RENTED').count()
@@ -225,11 +223,10 @@ class WindaAdminSite(admin.AdminSite):
         }
     
     def get_recent_activities(self):
-        """Get recent platform activities for superadmin dashboard"""
+        """Get recent platform activities for superadmin dashboard."""
         activities = []
         
-        # Recent users
-        recent_users = CustomUser.objects.order_by('-date_joined')[:3]
+        recent_users = User.objects.order_by('-date_joined')[:3]
         for user in recent_users:
             activities.append({
                 'type': 'New User',
@@ -240,7 +237,6 @@ class WindaAdminSite(admin.AdminSite):
                 'time_ago': self.get_time_ago(user.date_joined),
             })
         
-        # Recent properties
         recent_properties = Property.objects.order_by('-created_at')[:3]
         for prop in recent_properties:
             status = 'verified' if prop.verification_status == 'VERIFIED' else 'listed'
@@ -253,7 +249,6 @@ class WindaAdminSite(admin.AdminSite):
                 'time_ago': self.get_time_ago(prop.created_at),
             })
         
-        # Recent payments
         recent_payments = Payment.objects.filter(status='COMPLETED').order_by('-paid_at')[:3]
         for payment in recent_payments:
             activities.append({
@@ -265,7 +260,6 @@ class WindaAdminSite(admin.AdminSite):
                 'time_ago': self.get_time_ago(payment.paid_at),
             })
         
-        # Recent applications
         recent_apps = TenantApplication.objects.order_by('-created_at')[:3]
         for app in recent_apps:
             activities.append({
@@ -277,7 +271,6 @@ class WindaAdminSite(admin.AdminSite):
                 'time_ago': self.get_time_ago(app.created_at),
             })
         
-        # Recent maintenance
         recent_maintenance = MaintenanceRequest.objects.order_by('-created_at')[:3]
         for req in recent_maintenance:
             activities.append({
@@ -293,60 +286,22 @@ class WindaAdminSite(admin.AdminSite):
         return activities[:10]
     
     def get_quick_actions(self):
-        """Get quick actions for superadmin - all using Django admin URLs"""
+        """Get quick actions for superadmin."""
         return [
-            {
-                'name': 'All Users',
-                'url': '/admin/accounts/user/',
-                'icon': 'fa-users-cog',
-                'color': 'blue',
-            },
-            {
-                'name': 'Verify Properties',
-                'url': '/admin/properties/property/?verification_status__exact=PENDING',
-                'icon': 'fa-check-circle',
-                'color': 'yellow',
-            },
-            {
-                'name': 'All Properties',
-                'url': '/admin/properties/property/',
-                'icon': 'fa-home',
-                'color': 'green',
-            },
-            {
-                'name': 'All Payments',
-                'url': '/admin/payments/payment/',
-                'icon': 'fa-credit-card',
-                'color': 'purple',
-            },
-            {
-                'name': 'Maintenance',
-                'url': '/admin/maintenance/maintenancerequest/',
-                'icon': 'fa-tools',
-                'color': 'red',
-            },
-            {
-                'name': 'SEO Settings',
-                'url': '/admin/seo/seometa/',
-                'icon': 'fa-search',
-                'color': 'indigo',
-            },
-            {
-                'name': 'Legal Pages',
-                'url': '/admin/legal/',
-                'icon': 'fa-gavel',
-                'color': 'teal',
-            },
-            {
-                'name': 'Analytics',
-                'url': '/admin/analytics/',
-                'icon': 'fa-chart-line',
-                'color': 'pink',
-            },
+            {'name': 'All Users', 'url': '/admin/accounts/user/', 'icon': 'fa-users-cog', 'color': 'blue'},
+            {'name': 'Verify Properties', 'url': '/admin/properties/property/?verification_status__exact=PENDING', 'icon': 'fa-check-circle', 'color': 'yellow'},
+            {'name': 'All Properties', 'url': '/admin/properties/property/', 'icon': 'fa-home', 'color': 'green'},
+            {'name': 'All Payments', 'url': '/admin/payments/payment/', 'icon': 'fa-credit-card', 'color': 'purple'},
+            {'name': 'Maintenance', 'url': '/admin/maintenance/maintenancerequest/', 'icon': 'fa-tools', 'color': 'red'},
+            {'name': 'SEO Settings', 'url': '/admin/seo/seometa/', 'icon': 'fa-search', 'color': 'indigo'},
+            {'name': 'Legal Pages', 'url': '/admin/legal/', 'icon': 'fa-gavel', 'color': 'teal'},
+            {'name': 'Analytics', 'url': '/admin/analytics/', 'icon': 'fa-chart-line', 'color': 'pink'},
+            {'name': 'Notifications', 'url': '/admin/notifications/', 'icon': 'fa-bell', 'color': 'orange'},
+            {'name': 'Communications', 'url': '/admin/communications/', 'icon': 'fa-comment-dots', 'color': 'green'},
         ]
     
     def get_time_ago(self, time):
-        """Get time ago string"""
+        """Get time ago string."""
         if not time:
             return ''
         diff = timezone.now() - time
@@ -367,5 +322,271 @@ class WindaAdminSite(admin.AdminSite):
             return time.strftime('%b %d, %Y')
 
 
-# Create admin site instance - this is the ONLY customization
+# ========================================
+# REGISTER ALL MODELS WITH CUSTOM ADMIN SITE
+# ========================================
+
+# Create admin site instance
 admin_site = WindaAdminSite(name='admin')
+
+
+# ========================================
+# ACCOUNTS APP
+# ========================================
+
+@admin.register(User, site=admin_site)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('email', 'first_name', 'last_name', 'user_type', 'verification_status', 'is_active', 'date_joined')
+    list_filter = ('user_type', 'verification_status', 'is_active')
+    search_fields = ('email', 'first_name', 'last_name', 'phone')
+    ordering = ('-date_joined',)
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'phone', 'bio', 'profile_picture')}),
+        ('User Type', {'fields': ('user_type',)}),
+        ('Verification', {'fields': ('verification_status', 'verification_documents')}),
+        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Important Dates', {'fields': ('last_login', 'date_joined')}),
+    )
+
+
+@admin.register(OwnerProfile, site=admin_site)
+class OwnerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company_name', 'total_properties', 'total_revenue', 'created_at')
+    search_fields = ('user__email', 'company_name')
+    readonly_fields = ('total_properties', 'total_revenue')
+
+
+@admin.register(TenantProfile, site=admin_site)
+class TenantProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'employer_name', 'monthly_income', 'is_approved')
+    search_fields = ('user__email', 'employer_name')
+
+
+@admin.register(CaretakerProfile, site=admin_site)
+class CaretakerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'owner', 'permission_level', 'is_active')
+    list_filter = ('permission_level', 'is_active')
+    search_fields = ('user__email', 'owner__user__email')
+
+
+# ========================================
+# PROPERTIES APP
+# ========================================
+
+@admin.register(Property, site=admin_site)
+class PropertyAdmin(admin.ModelAdmin):
+    list_display = ('title', 'owner', 'city', 'rental_price', 'verification_status', 'availability_status', 'created_at')
+    list_filter = ('verification_status', 'availability_status', 'property_type', 'is_multi_unit')
+    search_fields = ('title', 'address', 'city', 'owner__user__email')
+    readonly_fields = ('view_count', 'inquiry_count', 'favorite_count')
+
+
+@admin.register(Unit, site=admin_site)
+class UnitAdmin(admin.ModelAdmin):
+    list_display = ('unit_number', 'property_obj', 'bedrooms', 'bathrooms', 'status', 'is_available')
+    list_filter = ('status', 'is_available')
+    search_fields = ('unit_number', 'property_obj__title')
+
+
+@admin.register(PropertyImage, site=admin_site)
+class PropertyImageAdmin(admin.ModelAdmin):
+    list_display = ('property', 'is_main', 'order', 'uploaded_at')
+    list_filter = ('is_main',)
+
+
+@admin.register(PropertyDocument, site=admin_site)
+class PropertyDocumentAdmin(admin.ModelAdmin):
+    list_display = ('property', 'document_type', 'is_verified', 'uploaded_at')
+    list_filter = ('document_type', 'is_verified')
+
+
+# ========================================
+# TENANTS APP
+# ========================================
+
+@admin.register(TenantApplication, site=admin_site)
+class TenantApplicationAdmin(admin.ModelAdmin):
+    list_display = ('tenant', 'property', 'unit', 'status', 'created_at')
+    list_filter = ('status', 'property__owner')
+    search_fields = ('tenant__email', 'property__title')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Lease, site=admin_site)
+class LeaseAdmin(admin.ModelAdmin):
+    list_display = ('tenant', 'property', 'unit', 'monthly_rent', 'status', 'start_date', 'end_date')
+    list_filter = ('status',)
+    search_fields = ('tenant__email', 'property__title')
+
+
+# ========================================
+# PAYMENTS APP
+# ========================================
+
+@admin.register(Payment, site=admin_site)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('payment_reference', 'payer', 'amount', 'payment_type', 'status', 'created_at')
+    list_filter = ('status', 'payment_type', 'payment_method')
+    search_fields = ('payment_reference', 'payer__email')
+    readonly_fields = ('payment_reference', 'created_at')
+
+
+@admin.register(Invoice, site=admin_site)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'user', 'amount', 'status', 'due_date')
+    list_filter = ('status',)
+    search_fields = ('invoice_number', 'user__email')
+
+
+@admin.register(SubscriptionPlan, site=admin_site)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'plan_type', 'price_monthly', 'is_active')
+    list_filter = ('is_active',)
+
+
+# ========================================
+# MAINTENANCE APP
+# ========================================
+
+@admin.register(MaintenanceRequest, site=admin_site)
+class MaintenanceRequestAdmin(admin.ModelAdmin):
+    list_display = ('title', 'property', 'tenant', 'priority', 'status', 'created_at')
+    list_filter = ('status', 'priority', 'category')
+    search_fields = ('title', 'tenant__email', 'property__title')
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(MaintenanceTask, site=admin_site)
+class MaintenanceTaskAdmin(admin.ModelAdmin):
+    list_display = ('title', 'request', 'assigned_to', 'status', 'due_date')
+    list_filter = ('status',)
+
+
+# ========================================
+# COMMUNICATIONS APP
+# ========================================
+
+@admin.register(ChatRoom, site=admin_site)
+class ChatRoomAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'room_type', 'participant_count', 'created_at')
+    filter_horizontal = ('participants',)
+    
+    def participant_count(self, obj):
+        return obj.participants.count()
+    participant_count.short_description = 'Participants'
+
+
+@admin.register(Message, site=admin_site)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ('sender', 'room', 'content_preview', 'created_at')
+    list_filter = ('message_type',)
+    search_fields = ('content', 'sender__email')
+    
+    def content_preview(self, obj):
+        return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
+    content_preview.short_description = 'Message'
+
+
+@admin.register(MessageTemplate, site=admin_site)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'template_type', 'is_active')
+    list_filter = ('template_type', 'is_active')
+
+
+# ========================================
+# ANALYTICS APP
+# ========================================
+
+@admin.register(AnalyticsEvent, site=admin_site)
+class AnalyticsEventAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event_type', 'property', 'created_at')
+    list_filter = ('event_type',)
+    search_fields = ('user__email',)
+    readonly_fields = ('created_at',)
+
+
+@admin.register(AnalyticsMetric, site=admin_site)
+class AnalyticsMetricAdmin(admin.ModelAdmin):
+    list_display = ('metric_type', 'owner', 'property', 'value', 'date')
+    list_filter = ('metric_type', 'date')
+    search_fields = ('owner__user__email',)
+
+
+@admin.register(SavedReport, site=admin_site)
+class SavedReportAdmin(admin.ModelAdmin):
+    list_display = ('title', 'owner', 'report_type', 'is_scheduled', 'created_at')
+    list_filter = ('report_type', 'is_scheduled')
+
+
+# ========================================
+# NOTIFICATIONS APP
+# ========================================
+
+@admin.register(Notification, site=admin_site)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read')
+    search_fields = ('user__email', 'title')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(NotificationPreference, site=admin_site)
+class NotificationPreferenceAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+    search_fields = ('user__email',)
+
+
+# ========================================
+# SEO APP
+# ========================================
+
+@admin.register(SeoMeta, site=admin_site)
+class SeoMetaAdmin(admin.ModelAdmin):
+    list_display = ('url_path', 'meta_title', 'meta_description')
+    search_fields = ('url_path', 'meta_title')
+    list_filter = ('created_at',)
+
+
+@admin.register(SeoRobots, site=admin_site)
+class SeoRobotsAdmin(admin.ModelAdmin):
+    list_display = ('user_agent', 'is_active', 'created_at')
+
+
+@admin.register(SeoSitemap, site=admin_site)
+class SeoSitemapAdmin(admin.ModelAdmin):
+    list_display = ('name', 'url', 'priority', 'is_active')
+
+
+@admin.register(SeoRedirect, site=admin_site)
+class SeoRedirectAdmin(admin.ModelAdmin):
+    list_display = ('old_path', 'new_path', 'redirect_type', 'is_active')
+    search_fields = ('old_path', 'new_path')
+
+
+# ========================================
+# LEGAL APP
+# ========================================
+
+# Try to import and register legal models if they exist
+try:
+    from apps.legal.models import TermsOfService, PrivacyPolicy
+    
+    @admin.register(TermsOfService, site=admin_site)
+    class TermsOfServiceAdmin(admin.ModelAdmin):
+        list_display = ('title', 'version', 'is_active', 'created_at')
+        list_filter = ('is_active',)
+        search_fields = ('title',)
+    
+    @admin.register(PrivacyPolicy, site=admin_site)
+    class PrivacyPolicyAdmin(admin.ModelAdmin):
+        list_display = ('title', 'version', 'is_active', 'created_at')
+        list_filter = ('is_active',)
+        search_fields = ('title',)
+        
+except ImportError:
+    pass
+
+
+# Register Group (Django's built-in)
+admin_site.register(Group, GroupAdmin)

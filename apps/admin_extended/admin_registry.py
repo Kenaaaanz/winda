@@ -4,14 +4,31 @@ from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
+# Import the admin_site from admin.py
 from .admin import admin_site
-from apps.accounts.models import User, OwnerProfile, TenantProfile
-from apps.properties.models import Property, Unit, PropertyImage
-from apps.tenants.models import TenantApplication, Lease
-from apps.payments.models import Payment, Invoice
-from apps.maintenance.models import MaintenanceRequest
-from apps.communications.models import ChatRoom, Message
 
+# Import ALL models from all apps
+from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
+from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
+from apps.tenants.models import TenantApplication, Lease
+from apps.payments.models import Payment, Invoice, SubscriptionPlan
+from apps.maintenance.models import MaintenanceRequest, MaintenanceTask
+from apps.communications.models import ChatRoom, Message, MessageTemplate
+from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
+from apps.notifications.models import Notification, NotificationPreference
+from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
+
+# Try to import legal models if they exist
+try:
+    from apps.legal.models import TermsOfService, PrivacyPolicy
+    LEGAL_MODELS_AVAILABLE = True
+except ImportError:
+    LEGAL_MODELS_AVAILABLE = False
+
+
+# ========================================
+# ACCOUNTS APP REGISTRATIONS
+# ========================================
 
 @admin.register(User, site=admin_site)
 class CustomUserAdmin(UserAdmin):
@@ -63,6 +80,30 @@ class CustomUserAdmin(UserAdmin):
         )
     verification_badge.short_description = 'Verification'
 
+
+@admin.register(OwnerProfile, site=admin_site)
+class OwnerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'company_name', 'total_properties', 'total_revenue', 'created_at')
+    search_fields = ('user__email', 'company_name')
+    readonly_fields = ('total_properties', 'total_revenue')
+
+
+@admin.register(TenantProfile, site=admin_site)
+class TenantProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'employer_name', 'monthly_income', 'is_approved')
+    search_fields = ('user__email', 'employer_name')
+
+
+@admin.register(CaretakerProfile, site=admin_site)
+class CaretakerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'owner', 'permission_level', 'is_active')
+    list_filter = ('permission_level', 'is_active')
+    search_fields = ('user__email', 'owner__user__email')
+
+
+# ========================================
+# PROPERTIES APP REGISTRATIONS
+# ========================================
 
 @admin.register(Property, site=admin_site)
 class PropertyAdmin(admin.ModelAdmin):
@@ -139,9 +180,46 @@ class PropertyAdmin(admin.ModelAdmin):
     verification_badge.short_description = 'Verification'
 
 
+@admin.register(Unit, site=admin_site)
+class UnitAdmin(admin.ModelAdmin):
+    list_display = ('unit_number', 'property_obj', 'bedrooms', 'bathrooms', 'status_badge', 'is_available')
+    list_filter = ('status', 'is_available')
+    search_fields = ('unit_number', 'property_obj__title')
+    
+    def status_badge(self, obj):
+        colors = {
+            'AVAILABLE': 'green',
+            'RENTED': 'red',
+            'BOOKED': 'yellow',
+            'UNDER_MAINTENANCE': 'orange',
+        }
+        return format_html(
+            '<span class="badge badge-{}">{}</span>',
+            colors.get(obj.status, 'gray'),
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+
+
+@admin.register(PropertyImage, site=admin_site)
+class PropertyImageAdmin(admin.ModelAdmin):
+    list_display = ('property', 'is_main', 'order', 'uploaded_at')
+    list_filter = ('is_main',)
+
+
+@admin.register(PropertyDocument, site=admin_site)
+class PropertyDocumentAdmin(admin.ModelAdmin):
+    list_display = ('property', 'document_type', 'is_verified', 'uploaded_at')
+    list_filter = ('document_type', 'is_verified')
+
+
+# ========================================
+# TENANTS APP REGISTRATIONS
+# ========================================
+
 @admin.register(TenantApplication, site=admin_site)
 class TenantApplicationAdmin(admin.ModelAdmin):
-    list_display = ('tenant_info', 'property_info', 'status_badge', 'created_at')
+    list_display = ('tenant_info', 'property_info', 'unit_info', 'status_badge', 'created_at')
     list_filter = ('status', 'property__owner')
     search_fields = ('tenant__email', 'tenant__first_name', 'tenant__last_name', 'property__title')
     readonly_fields = ('created_at', 'updated_at')
@@ -162,6 +240,17 @@ class TenantApplicationAdmin(admin.ModelAdmin):
         )
     property_info.short_description = 'Property'
     
+    def unit_info(self, obj):
+        if obj.unit:
+            return format_html(
+                'Unit {}<br/><span style="font-size:11px;color:#666;">{} bed, {} bath</span>',
+                obj.unit.unit_number,
+                obj.unit.bedrooms,
+                obj.unit.bathrooms
+            )
+        return 'N/A'
+    unit_info.short_description = 'Unit'
+    
     def status_badge(self, obj):
         colors = {
             'APPROVED': 'green',
@@ -178,9 +267,35 @@ class TenantApplicationAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
 
 
+@admin.register(Lease, site=admin_site)
+class LeaseAdmin(admin.ModelAdmin):
+    list_display = ('tenant', 'property', 'unit', 'monthly_rent', 'status_badge', 'start_date', 'end_date')
+    list_filter = ('status',)
+    search_fields = ('tenant__email', 'property__title')
+    
+    def status_badge(self, obj):
+        colors = {
+            'DRAFT': 'gray',
+            'PENDING_SIGNATURE': 'yellow',
+            'ACTIVE': 'green',
+            'EXPIRED': 'orange',
+            'TERMINATED': 'red',
+        }
+        return format_html(
+            '<span class="badge badge-{}">{}</span>',
+            colors.get(obj.status, 'gray'),
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+
+
+# ========================================
+# PAYMENTS APP REGISTRATIONS
+# ========================================
+
 @admin.register(Payment, site=admin_site)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'payer_info', 'amount_display', 'payment_type_badge', 'status_badge', 'created_at')
+    list_display = ('payment_reference', 'payer_info', 'amount_display', 'payment_type_badge', 'status_badge', 'created_at')
     list_filter = ('status', 'payment_type', 'payment_method')
     search_fields = ('payment_reference', 'payer__email', 'payer__first_name')
     readonly_fields = ('payment_reference', 'created_at', 'updated_at')
@@ -231,6 +346,23 @@ class PaymentAdmin(admin.ModelAdmin):
         )
     status_badge.short_description = 'Status'
 
+
+@admin.register(Invoice, site=admin_site)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'user', 'amount', 'status', 'due_date')
+    list_filter = ('status',)
+    search_fields = ('invoice_number', 'user__email')
+
+
+@admin.register(SubscriptionPlan, site=admin_site)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'plan_type', 'price_monthly', 'is_active')
+    list_filter = ('is_active',)
+
+
+# ========================================
+# MAINTENANCE APP REGISTRATIONS
+# ========================================
 
 @admin.register(MaintenanceRequest, site=admin_site)
 class MaintenanceRequestAdmin(admin.ModelAdmin):
@@ -283,49 +415,15 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
     status_badge.short_description = 'Status'
 
 
-# Register remaining models
-@admin.register(Unit, site=admin_site)
-class UnitAdmin(admin.ModelAdmin):
-    list_display = ('unit_number', 'property_obj', 'bedrooms', 'bathrooms', 'status_badge', 'is_available')
-    list_filter = ('status', 'is_available')
-    search_fields = ('unit_number', 'property_obj__title')
-    
-    def status_badge(self, obj):
-        colors = {
-            'AVAILABLE': 'green',
-            'RENTED': 'red',
-            'BOOKED': 'yellow',
-            'UNDER_MAINTENANCE': 'orange',
-        }
-        return format_html(
-            '<span class="badge badge-{}">{}</span>',
-            colors.get(obj.status, 'gray'),
-            obj.get_status_display()
-        )
-    status_badge.short_description = 'Status'
-
-
-@admin.register(Lease, site=admin_site)
-class LeaseAdmin(admin.ModelAdmin):
-    list_display = ('tenant', 'property', 'unit', 'monthly_rent', 'status_badge', 'start_date', 'end_date')
+@admin.register(MaintenanceTask, site=admin_site)
+class MaintenanceTaskAdmin(admin.ModelAdmin):
+    list_display = ('title', 'request', 'assigned_to', 'status', 'due_date')
     list_filter = ('status',)
-    search_fields = ('tenant__email', 'property__title')
-    
-    def status_badge(self, obj):
-        colors = {
-            'DRAFT': 'gray',
-            'PENDING_SIGNATURE': 'yellow',
-            'ACTIVE': 'green',
-            'EXPIRED': 'orange',
-            'TERMINATED': 'red',
-        }
-        return format_html(
-            '<span class="badge badge-{}">{}</span>',
-            colors.get(obj.status, 'gray'),
-            obj.get_status_display()
-        )
-    status_badge.short_description = 'Status'
 
+
+# ========================================
+# COMMUNICATIONS APP REGISTRATIONS
+# ========================================
 
 @admin.register(ChatRoom, site=admin_site)
 class ChatRoomAdmin(admin.ModelAdmin):
@@ -348,11 +446,102 @@ class MessageAdmin(admin.ModelAdmin):
     content_preview.short_description = 'Message'
 
 
-@admin.register(PropertyImage, site=admin_site)
-class PropertyImageAdmin(admin.ModelAdmin):
-    list_display = ('property', 'is_main', 'order', 'uploaded_at')
-    list_filter = ('is_main',)
+@admin.register(MessageTemplate, site=admin_site)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'template_type', 'is_active')
+    list_filter = ('template_type', 'is_active')
 
 
-# Register Group
+# ========================================
+# ANALYTICS APP REGISTRATIONS
+# ========================================
+
+@admin.register(AnalyticsEvent, site=admin_site)
+class AnalyticsEventAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event_type', 'property', 'created_at')
+    list_filter = ('event_type',)
+    search_fields = ('user__email',)
+    readonly_fields = ('created_at',)
+
+
+@admin.register(AnalyticsMetric, site=admin_site)
+class AnalyticsMetricAdmin(admin.ModelAdmin):
+    list_display = ('metric_type', 'owner', 'property', 'value', 'date')
+    list_filter = ('metric_type', 'date')
+    search_fields = ('owner__user__email',)
+
+
+@admin.register(SavedReport, site=admin_site)
+class SavedReportAdmin(admin.ModelAdmin):
+    list_display = ('title', 'owner', 'report_type', 'is_scheduled', 'created_at')
+    list_filter = ('report_type', 'is_scheduled')
+
+
+# ========================================
+# NOTIFICATIONS APP REGISTRATIONS
+# ========================================
+
+@admin.register(Notification, site=admin_site)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read')
+    search_fields = ('user__email', 'title')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(NotificationPreference, site=admin_site)
+class NotificationPreferenceAdmin(admin.ModelAdmin):
+    list_display = ('user',)
+    search_fields = ('user__email',)
+
+
+# ========================================
+# SEO APP REGISTRATIONS
+# ========================================
+
+@admin.register(SeoMeta, site=admin_site)
+class SeoMetaAdmin(admin.ModelAdmin):
+    list_display = ('url_path', 'meta_title', 'meta_description')
+    search_fields = ('url_path', 'meta_title')
+    list_filter = ('created_at',)
+
+
+@admin.register(SeoRobots, site=admin_site)
+class SeoRobotsAdmin(admin.ModelAdmin):
+    list_display = ('user_agent', 'is_active', 'created_at')
+
+
+@admin.register(SeoSitemap, site=admin_site)
+class SeoSitemapAdmin(admin.ModelAdmin):
+    list_display = ('name', 'url', 'priority', 'is_active')
+
+
+@admin.register(SeoRedirect, site=admin_site)
+class SeoRedirectAdmin(admin.ModelAdmin):
+    list_display = ('old_path', 'new_path', 'redirect_type', 'is_active')
+    search_fields = ('old_path', 'new_path')
+
+
+# ========================================
+# LEGAL APP REGISTRATIONS
+# ========================================
+
+if LEGAL_MODELS_AVAILABLE:
+    @admin.register(TermsOfService, site=admin_site)
+    class TermsOfServiceAdmin(admin.ModelAdmin):
+        list_display = ('title', 'version', 'is_active', 'created_at')
+        list_filter = ('is_active',)
+        search_fields = ('title',)
+
+    @admin.register(PrivacyPolicy, site=admin_site)
+    class PrivacyPolicyAdmin(admin.ModelAdmin):
+        list_display = ('title', 'version', 'is_active', 'created_at')
+        list_filter = ('is_active',)
+        search_fields = ('title',)
+
+
+# ========================================
+# REGISTER DJANGO'S DEFAULT GROUP MODEL
+# ========================================
+
 admin_site.register(Group, GroupAdmin)
