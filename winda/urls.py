@@ -25,48 +25,6 @@ User = get_user_model()
 
 
 # ========================================
-# API ENDPOINT FOR REAL-TIME STATS
-# ========================================
-
-def admin_stats_api(request):
-    """API endpoint for real-time admin stats"""
-    if not request.user.is_superuser:
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-    
-    today = timezone.now().date()
-    last_30_days = today - timedelta(days=30)
-    
-    data = {
-        'total_users': User.objects.filter(is_active=True).count(),
-        'total_properties': Property.objects.count(),
-        'active_leases': Lease.objects.filter(status='ACTIVE').count(),
-        'pending_maintenance': MaintenanceRequest.objects.filter(
-            status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED', 'IN_PROGRESS']
-        ).count(),
-        'messages_today': Message.objects.filter(
-            created_at__date=today,
-            is_deleted=False
-        ).count(),
-        'new_applications': TenantApplication.objects.filter(
-            created_at__date=today
-        ).count(),
-        'payments_today': Payment.objects.filter(
-            status='COMPLETED',
-            paid_at__date=today
-        ).count(),
-        'revenue_30_days': Payment.objects.filter(
-            status='COMPLETED',
-            paid_at__date__gte=last_30_days
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'new_users_30_days': User.objects.filter(
-            date_joined__date__gte=last_30_days
-        ).count(),
-    }
-    
-    return JsonResponse(data)
-
-
-# ========================================
 # CUSTOM HOME VIEW
 # ========================================
 
@@ -131,10 +89,8 @@ urlpatterns = [
     # ========================================
     # ADMIN - Use custom admin site
     # ========================================
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
     
-    # Admin API endpoint for real-time stats
-    path('admin/api/stats/', admin_stats_api, name='admin_stats_api'),
     
     # ========================================
     # HOME
@@ -185,20 +141,4 @@ if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     
-    # Debug Toolbar - Only if installed
-    #try:
-        #import debug_toolbar
-        #urlpatterns = [
-            #path('__debug__/', include(debug_toolbar.urls)),
-        #] + urlpatterns
-    #except ImportError:
-        # Debug toolbar not installed, skip it
-        #pass
-
-
-# ========================================
-# ERROR HANDLING (Optional - comment out if error handlers don't exist)
-# ========================================
-
- #handler404 = 'apps.common.views.handler404'
- #handler500 = 'apps.common.views.handler500'
+    
