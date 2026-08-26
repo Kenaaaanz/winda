@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 # Import the admin_site from admin.py
 from .admin import admin_site
 
-# Import ALL models from all apps
+# Import ALL models from all apps (excluding legal since it has no models)
 from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
@@ -17,13 +17,6 @@ from apps.communications.models import ChatRoom, Message, MessageTemplate
 from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
 from apps.notifications.models import Notification, NotificationPreference
 from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
-
-# Try to import legal models if they exist
-try:
-    from apps.legal.models import TermsOfService, PrivacyPolicy
-    LEGAL_MODELS_AVAILABLE = True
-except ImportError:
-    LEGAL_MODELS_AVAILABLE = False
 
 
 # ========================================
@@ -520,24 +513,6 @@ class SeoSitemapAdmin(admin.ModelAdmin):
 class SeoRedirectAdmin(admin.ModelAdmin):
     list_display = ('old_path', 'new_path', 'redirect_type', 'is_active')
     search_fields = ('old_path', 'new_path')
-
-
-# ========================================
-# LEGAL APP REGISTRATIONS
-# ========================================
-
-if LEGAL_MODELS_AVAILABLE:
-    @admin.register(TermsOfService, site=admin_site)
-    class TermsOfServiceAdmin(admin.ModelAdmin):
-        list_display = ('title', 'version', 'is_active', 'created_at')
-        list_filter = ('is_active',)
-        search_fields = ('title',)
-
-    @admin.register(PrivacyPolicy, site=admin_site)
-    class PrivacyPolicyAdmin(admin.ModelAdmin):
-        list_display = ('title', 'version', 'is_active', 'created_at')
-        list_filter = ('is_active',)
-        search_fields = ('title',)
 
 
 # ========================================
