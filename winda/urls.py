@@ -131,7 +131,7 @@ urlpatterns = [
     # ========================================
     # ADMIN - Use custom admin site
     # ========================================
-    path('admin/', admin_site.urls),
+    path('admin/', admin.site.urls),
     
     # Admin API endpoint for real-time stats
     path('admin/api/stats/', admin_stats_api, name='admin_stats_api'),

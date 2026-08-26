@@ -3,7 +3,6 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -20,14 +19,17 @@ from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
 from apps.notifications.models import Notification, NotificationPreference
 from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
 
-
 User = get_user_model()
 
 
-class WindaAdminSite(AdminSite):
+# ========================================
+# CUSTOM ADMIN SITE - OVERRIDING DEFAULT
+# ========================================
+
+class WindaAdminSite(admin.AdminSite):
     """
-    Custom admin site that preserves ALL Django admin functionality.
-    Only the dashboard index page is customized with stats cards.
+    Custom admin site that overrides the default Django admin.
+    All admin pages use the custom base template with sidebar and charts.
     """
     
     site_header = 'Winda Super Admin'
@@ -392,7 +394,7 @@ class WindaAdminSite(AdminSite):
 # REGISTER ALL MODELS WITH CUSTOM ADMIN SITE
 # ========================================
 
-# Create admin site instance
+# Create the custom admin site
 admin_site = WindaAdminSite(name='admin')
 
 
@@ -634,7 +636,17 @@ class SeoRedirectAdmin(admin.ModelAdmin):
 admin_site.register(Group, GroupAdmin)
 
 
-# Print confirmation when admin loads
-print("✅ Custom Winda Admin Site loaded successfully!")
-print(f"✅ Site header: {admin_site.site_header}")
-print(f"✅ Base template: {admin_site.base_template}")
+# ========================================
+# OVERRIDE DEFAULT ADMIN SITE
+# ========================================
+
+admin.site.__class__ = WindaAdminSite
+admin.site.site_header = 'Winda Super Admin'
+admin.site.site_title = 'Winda Admin'
+admin.site.index_title = 'Platform Dashboard'
+admin.site.base_template = 'admin/superadmin_base.html'
+
+# Print confirmation
+print("✅ Custom Winda Admin Site successfully overridden!")
+print(f"✅ Site header: {admin.site.site_header}")
+print(f"✅ Base template: {admin.site.base_template}")
