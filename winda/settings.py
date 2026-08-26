@@ -18,6 +18,7 @@ ALLOWED_HOSTS = [ 'localhost', '127.0.0.1', '.onrender.com', 'www.winda.africa',
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
+    'apps.admin_extended',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -56,7 +57,6 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.seo',
     'apps.legal',
-    'apps.admin_extended',
 ]
 
 MIDDLEWARE = [

@@ -35,7 +35,7 @@ class WindaAdminSite(AdminSite):
     index_title = 'Platform Dashboard'
     site_url = '/'
     
-    # Use custom base template for ALL admin pages
+    # CRITICAL: Use custom base template for ALL admin pages
     base_template = 'admin/superadmin_base.html'
     
     def each_context(self, request):
@@ -45,7 +45,6 @@ class WindaAdminSite(AdminSite):
         # Only add sidebar data for superusers
         if request.user.is_superuser:
             today = timezone.now().date()
-            last_30_days = today - timedelta(days=30)
             
             # Get data for right sidebar
             total_users = User.objects.filter(is_active=True).count()
@@ -633,3 +632,9 @@ class SeoRedirectAdmin(admin.ModelAdmin):
 
 # Register Group (Django's built-in)
 admin_site.register(Group, GroupAdmin)
+
+
+# Print confirmation when admin loads
+print("✅ Custom Winda Admin Site loaded successfully!")
+print(f"✅ Site header: {admin_site.site_header}")
+print(f"✅ Base template: {admin_site.base_template}")
