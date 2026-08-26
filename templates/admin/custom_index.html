@@ -6,7 +6,7 @@
 {{ block.super }}
 <style>
     /* ========================================
-       WINDA SUPER ADMIN STYLES
+       WINDA SUPER ADMIN DASHBOARD STYLES
        ======================================== */
     
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
@@ -116,8 +116,8 @@
     /* Quick Actions */
     .quick-actions-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
         margin-bottom: 30px;
     }
     
@@ -159,6 +159,7 @@
         border-radius: 12px;
         border: 1px solid #e5e7eb;
         overflow: hidden;
+        margin-bottom: 30px;
     }
     
     .recent-activities .activity-header {
@@ -397,9 +398,9 @@
     </div>
     
     <!-- ========================================
-         APP LIST (Original Admin)
+         ORIGINAL DJANGO ADMIN APP LIST
          ======================================== -->
-    <div style="margin-top:30px;">
+    <div style="margin-top:20px;">
         {{ block.super }}
     </div>
     

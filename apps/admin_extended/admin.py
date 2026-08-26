@@ -1,9 +1,7 @@
 from django.contrib.admin import AdminSite
-from django.contrib.auth.models import Group
-from django.contrib.auth.admin import GroupAdmin
 from django.contrib import admin
 from django.urls import reverse
-from django.db.models import Count, Sum, Q, Avg
+from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
@@ -12,21 +10,39 @@ from apps.properties.models import Property, Unit
 from apps.tenants.models import TenantApplication, Lease
 from apps.payments.models import Payment
 from apps.maintenance.models import MaintenanceRequest
-from apps.accounts.models import User as CustomUser, OwnerProfile, TenantProfile
+from apps.accounts.models import User as CustomUser
 from apps.communications.models import ChatRoom, Message
 
 
-class WindaAdminSite(AdminSite):
-    """Custom admin site for Superadmin with platform-wide analytics"""
+class WindaAdminSite(admin.AdminSite):
+    """
+    Custom admin site that preserves ALL Django admin functionality.
+    Only the dashboard index page is customized with stats cards.
+    Everything else (all models, all apps, all admin features) remains exactly as Django provides.
+    """
     
     site_header = 'Winda Super Admin'
     site_title = 'Winda Admin'
     index_title = 'Platform Dashboard'
     site_url = '/'
     
+    # Keep all default admin templates except index.html
+    index_template = 'admin/custom_index.html'  # Use custom index template only
+    
+    def get_app_list(self, request):
+        """
+        Get all app lists exactly as Django provides them.
+        We don't modify or filter anything - all apps remain visible.
+        """
+        return super().get_app_list(request)
+    
     def index(self, request, extra_context=None):
-        """Custom admin dashboard with platform stats for superadmin only"""
-        # Only superusers can access this
+        """
+        Custom dashboard with stats cards.
+        All other admin functionality (list views, add views, change views, delete views)
+        remain exactly as Django provides them.
+        """
+        # Only superusers can see the custom dashboard
         if not request.user.is_superuser:
             return super().index(request, extra_context)
         
@@ -36,19 +52,22 @@ class WindaAdminSite(AdminSite):
             'subtitle': 'Platform Overview & Analytics',
         }
         
-        # Get all platform stats
+        # Get platform stats for the dashboard cards
         context['stats'] = self.get_platform_stats()
         context['recent_activities'] = self.get_recent_activities()
         context['quick_actions'] = self.get_quick_actions()
         
+        # Pass any extra context
+        if extra_context:
+            context.update(extra_context)
+        
         return super().index(request, context)
     
     def get_platform_stats(self):
-        """Get platform-wide statistics for superadmin"""
+        """Get platform-wide statistics for superadmin dashboard"""
         today = timezone.now().date()
         last_week = today - timedelta(days=7)
         last_month = today - timedelta(days=30)
-        last_3_months = today - timedelta(days=90)
         
         # ========================================
         # USER STATS
@@ -206,7 +225,7 @@ class WindaAdminSite(AdminSite):
         }
     
     def get_recent_activities(self):
-        """Get recent platform activities for superadmin"""
+        """Get recent platform activities for superadmin dashboard"""
         activities = []
         
         # Recent users
@@ -258,15 +277,26 @@ class WindaAdminSite(AdminSite):
                 'time_ago': self.get_time_ago(app.created_at),
             })
         
+        # Recent maintenance
+        recent_maintenance = MaintenanceRequest.objects.order_by('-created_at')[:3]
+        for req in recent_maintenance:
+            activities.append({
+                'type': 'Maintenance',
+                'icon': 'tools',
+                'color': 'red',
+                'description': f'{req.tenant.get_full_name()} reported: {req.title}',
+                'time': req.created_at,
+                'time_ago': self.get_time_ago(req.created_at),
+            })
+        
         activities.sort(key=lambda x: x['time'], reverse=True)
         return activities[:10]
     
     def get_quick_actions(self):
-        """Get quick actions for superadmin"""
-        # Use direct URLs for admin actions
+        """Get quick actions for superadmin - all using Django admin URLs"""
         return [
             {
-                'name': 'Manage Users',
+                'name': 'All Users',
                 'url': '/admin/accounts/user/',
                 'icon': 'fa-users-cog',
                 'color': 'blue',
@@ -278,28 +308,40 @@ class WindaAdminSite(AdminSite):
                 'color': 'yellow',
             },
             {
-                'name': 'View All Properties',
+                'name': 'All Properties',
                 'url': '/admin/properties/property/',
                 'icon': 'fa-home',
                 'color': 'green',
             },
             {
-                'name': 'View Payments',
+                'name': 'All Payments',
                 'url': '/admin/payments/payment/',
                 'icon': 'fa-credit-card',
                 'color': 'purple',
             },
             {
-                'name': 'Maintenance Requests',
+                'name': 'Maintenance',
                 'url': '/admin/maintenance/maintenancerequest/',
                 'icon': 'fa-tools',
                 'color': 'red',
             },
             {
-                'name': 'Platform Settings',
-                'url': '/admin/',
-                'icon': 'fa-cog',
-                'color': 'gray',
+                'name': 'SEO Settings',
+                'url': '/admin/seo/seometa/',
+                'icon': 'fa-search',
+                'color': 'indigo',
+            },
+            {
+                'name': 'Legal Pages',
+                'url': '/admin/legal/',
+                'icon': 'fa-gavel',
+                'color': 'teal',
+            },
+            {
+                'name': 'Analytics',
+                'url': '/admin/analytics/',
+                'icon': 'fa-chart-line',
+                'color': 'pink',
             },
         ]
     
@@ -325,5 +367,5 @@ class WindaAdminSite(AdminSite):
             return time.strftime('%b %d, %Y')
 
 
-# Create admin site instance
+# Create admin site instance - this is the ONLY customization
 admin_site = WindaAdminSite(name='admin')
