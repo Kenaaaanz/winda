@@ -48,6 +48,40 @@ class PropertyAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+    actions = ['delete_with_analytics']
+    
+    def delete_with_analytics(self, request, queryset):
+        """Delete properties and their related analytics events"""
+        deleted_count = 0
+        error_count = 0
+        
+        for obj in queryset:
+            try:
+                # Delete related analytics events first
+                AnalyticsEvent.objects.filter(property=obj).delete()
+                obj.delete()
+                deleted_count += 1
+            except Exception as e:
+                error_count += 1
+                self.message_user(
+                    request, 
+                    f'Error deleting property {obj.title}: {str(e)}', 
+                    level='ERROR'
+                )
+        
+        if deleted_count > 0:
+            self.message_user(
+                request, 
+                f'Successfully deleted {deleted_count} properties and their analytics events.'
+            )
+        if error_count > 0:
+            self.message_user(
+                request, 
+                f'Failed to delete {error_count} properties.', 
+                level='ERROR'
+            )
+    
+    delete_with_analytics.short_description = "Delete selected properties (including analytics)"
     
     def get_readonly_fields(self, request, obj=None):
         """Make fields readonly based on user permissions"""
