@@ -1,7 +1,8 @@
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, pre_delete, post_delete
 from django.dispatch import receiver
-from .models import Property, PropertyImage
-from django.db.models.signals import pre_delete
+from .models import Property, PropertyImage, Unit
+from apps.analytics.models import AnalyticsEvent
+
 
 @receiver(post_save, sender=Property)
 def update_owner_stats_on_save(sender, instance, created, **kwargs):
@@ -32,12 +33,31 @@ def update_main_image(sender, instance, created, **kwargs):
         # Unset other main images
         instance.property.property_images.filter(is_main=True).exclude(id=instance.id).update(is_main=False)
 
+
 @receiver(pre_delete, sender=Property)
 def clear_analytics_events_on_property_delete(sender, instance, **kwargs):
     """Clear analytics events reference before deleting property"""
     try:
-        # Set all related analytics events to have null property
-        instance.analytics_events.all().update(property=None)
+        # Check if the property has analytics_events related name
+        if hasattr(instance, 'analytics_events'):
+            # Delete all related analytics events
+            instance.analytics_events.all().delete()
+        else:
+            # Fallback: delete by property_id directly
+            AnalyticsEvent.objects.filter(property=instance).delete()
     except Exception as e:
-        # Log error but don't prevent deletion
+        print(f"Error clearing analytics events: {e}")
+
+
+@receiver(pre_delete, sender=Unit)
+def clear_analytics_events_on_unit_delete(sender, instance, **kwargs):
+    """Clear analytics events reference before deleting unit"""
+    try:
+        # Check if the unit has analytics_events related name
+        if hasattr(instance, 'analytics_events'):
+            instance.analytics_events.all().delete()
+        else:
+            # Fallback: delete by unit_id directly
+            AnalyticsEvent.objects.filter(unit=instance).delete()
+    except Exception as e:
         print(f"Error clearing analytics events: {e}")
