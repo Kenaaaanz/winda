@@ -37,8 +37,13 @@ class WindaAdminSite(AdminSite):
     
     index_template = 'admin/custom_index.html'
     
-    def get_app_list(self, request):
-        """Get all app lists exactly as Django provides them."""
+    def get_app_list(self, request, app_label=None):
+        """
+        Get all app lists exactly as Django provides them.
+        This method must accept `app_label` as the third argument for Django 5.2+.
+        """
+        if app_label:
+            return super().get_app_list(request, app_label)
         return super().get_app_list(request)
     
     def index(self, request, extra_context=None):
@@ -293,7 +298,6 @@ class WindaAdminSite(AdminSite):
             {'name': 'All Payments', 'url': '/admin/payments/payment/', 'icon': 'fa-credit-card', 'color': 'purple'},
             {'name': 'Maintenance', 'url': '/admin/maintenance/maintenancerequest/', 'icon': 'fa-tools', 'color': 'red'},
             {'name': 'SEO Settings', 'url': '/admin/seo/seometa/', 'icon': 'fa-search', 'color': 'indigo'},
-            {'name': 'Legal Pages', 'url': '/admin/legal/', 'icon': 'fa-gavel', 'color': 'teal'},
             {'name': 'Analytics', 'url': '/admin/analytics/', 'icon': 'fa-chart-line', 'color': 'pink'},
             {'name': 'Notifications', 'url': '/admin/notifications/', 'icon': 'fa-bell', 'color': 'orange'},
             {'name': 'Communications', 'url': '/admin/communications/', 'icon': 'fa-comment-dots', 'color': 'green'},
@@ -322,17 +326,17 @@ class WindaAdminSite(AdminSite):
 
 
 # ========================================
-# REGISTER ALL MODELS WITH CUSTOM ADMIN SITE
+# CREATE ADMIN SITE INSTANCE
 # ========================================
 
-# Create admin site instance
 admin_site = WindaAdminSite(name='admin')
 
 
 # ========================================
-# ACCOUNTS APP
+# REGISTER ALL MODELS WITH CUSTOM ADMIN SITE
 # ========================================
 
+# ACCOUNTS APP
 @admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'user_type', 'verification_status', 'is_active', 'date_joined')
@@ -369,10 +373,7 @@ class CaretakerProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__email', 'owner__user__email')
 
 
-# ========================================
 # PROPERTIES APP
-# ========================================
-
 @admin.register(Property, site=admin_site)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = ('title', 'owner', 'city', 'rental_price', 'verification_status', 'availability_status', 'created_at')
@@ -400,10 +401,7 @@ class PropertyDocumentAdmin(admin.ModelAdmin):
     list_filter = ('document_type', 'is_verified')
 
 
-# ========================================
 # TENANTS APP
-# ========================================
-
 @admin.register(TenantApplication, site=admin_site)
 class TenantApplicationAdmin(admin.ModelAdmin):
     list_display = ('tenant', 'property', 'unit', 'status', 'created_at')
@@ -419,10 +417,7 @@ class LeaseAdmin(admin.ModelAdmin):
     search_fields = ('tenant__email', 'property__title')
 
 
-# ========================================
 # PAYMENTS APP
-# ========================================
-
 @admin.register(Payment, site=admin_site)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('payment_reference', 'payer', 'amount', 'payment_type', 'status', 'created_at')
@@ -444,10 +439,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     list_filter = ('is_active',)
 
 
-# ========================================
 # MAINTENANCE APP
-# ========================================
-
 @admin.register(MaintenanceRequest, site=admin_site)
 class MaintenanceRequestAdmin(admin.ModelAdmin):
     list_display = ('title', 'property', 'tenant', 'priority', 'status', 'created_at')
@@ -462,10 +454,7 @@ class MaintenanceTaskAdmin(admin.ModelAdmin):
     list_filter = ('status',)
 
 
-# ========================================
 # COMMUNICATIONS APP
-# ========================================
-
 @admin.register(ChatRoom, site=admin_site)
 class ChatRoomAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'room_type', 'participant_count', 'created_at')
@@ -493,10 +482,7 @@ class MessageTemplateAdmin(admin.ModelAdmin):
     list_filter = ('template_type', 'is_active')
 
 
-# ========================================
 # ANALYTICS APP
-# ========================================
-
 @admin.register(AnalyticsEvent, site=admin_site)
 class AnalyticsEventAdmin(admin.ModelAdmin):
     list_display = ('user', 'event_type', 'property', 'created_at')
@@ -518,10 +504,7 @@ class SavedReportAdmin(admin.ModelAdmin):
     list_filter = ('report_type', 'is_scheduled')
 
 
-# ========================================
 # NOTIFICATIONS APP
-# ========================================
-
 @admin.register(Notification, site=admin_site)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
@@ -536,10 +519,7 @@ class NotificationPreferenceAdmin(admin.ModelAdmin):
     search_fields = ('user__email',)
 
 
-# ========================================
 # SEO APP
-# ========================================
-
 @admin.register(SeoMeta, site=admin_site)
 class SeoMetaAdmin(admin.ModelAdmin):
     list_display = ('url_path', 'meta_title', 'meta_description')
@@ -563,3 +543,5 @@ class SeoRedirectAdmin(admin.ModelAdmin):
     search_fields = ('old_path', 'new_path')
 
 
+# REGISTER DJANGO'S DEFAULT GROUP MODEL
+admin_site.register(Group, GroupAdmin)
