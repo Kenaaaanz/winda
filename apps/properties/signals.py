@@ -38,26 +38,17 @@ def update_main_image(sender, instance, created, **kwargs):
 def clear_analytics_events_on_property_delete(sender, instance, **kwargs):
     """Clear analytics events reference before deleting property"""
     try:
-        # Check if the property has analytics_events related name
-        if hasattr(instance, 'analytics_events'):
-            # Delete all related analytics events
-            instance.analytics_events.all().delete()
-        else:
-            # Fallback: delete by property_id directly
-            AnalyticsEvent.objects.filter(property=instance).delete()
+        # Delete using property_id directly
+        AnalyticsEvent.objects.filter(property_id=instance.id).delete()
     except Exception as e:
-        print(f"Error clearing analytics events: {e}")
+        print(f"Error clearing analytics events for property {instance.id}: {e}")
 
 
 @receiver(pre_delete, sender=Unit)
 def clear_analytics_events_on_unit_delete(sender, instance, **kwargs):
     """Clear analytics events reference before deleting unit"""
     try:
-        # Check if the unit has analytics_events related name
-        if hasattr(instance, 'analytics_events'):
-            instance.analytics_events.all().delete()
-        else:
-            # Fallback: delete by unit_id directly
-            AnalyticsEvent.objects.filter(unit=instance).delete()
+        # Delete using unit_id directly
+        AnalyticsEvent.objects.filter(unit_id=instance.id).delete()
     except Exception as e:
-        print(f"Error clearing analytics events: {e}")
+        print(f"Error clearing analytics events for unit {instance.id}: {e}")
