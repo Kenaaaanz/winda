@@ -337,27 +337,107 @@ admin_site = WindaAdminSite(name='admin')
 # ========================================
 
 # ACCOUNTS APP
+# In the UserAdmin class, update fieldsets and add actions:
+
 @admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'user_type', 'verification_status', 'is_active', 'date_joined')
-    list_filter = ('user_type', 'verification_status', 'is_active')
+    list_filter = ('user_type', 'verification_status', 'is_active', 'is_email_verified')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
     ordering = ('-date_joined',)
+    
+    # Add custom actions
+    actions = ['mark_email_verified', 'mark_owner_verified', 'send_verification_email']
+    
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal Info', {'fields': ('first_name', 'last_name', 'phone', 'bio', 'profile_picture')}),
         ('User Type', {'fields': ('user_type',)}),
-        ('Verification', {'fields': ('verification_status', 'verification_documents')}),
+        ('Verification', {'fields': ('verification_status', 'verification_documents', 'is_email_verified', 'is_phone_verified')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important Dates', {'fields': ('last_login', 'date_joined')}),
+        ('Important Dates', {'fields': ('last_login',)}),  # Removed date_joined
     )
-
+    
+    readonly_fields = ('last_login',)  # Make last_login read-only
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make certain fields read-only for non-superusers"""
+        readonly = list(self.readonly_fields)
+        if not request.user.is_superuser:
+            readonly.extend(['is_superuser', 'user_type'])
+        return readonly
+    
+    def mark_email_verified(self, request, queryset):
+        """Admin action to mark selected users' email as verified"""
+        updated = queryset.update(is_email_verified=True)
+        self.message_user(request, f'{updated} user(s) email marked as verified.')
+    mark_email_verified.short_description = 'Mark email as verified'
+    
+    def mark_owner_verified(self, request, queryset):
+        """Admin action to mark selected owners as verified"""
+        updated = queryset.filter(user_type='HOUSE_OWNER').update(
+            verification_status='VERIFIED',
+            is_email_verified=True
+        )
+        self.message_user(request, f'{updated} owner(s) marked as verified.')
+    mark_owner_verified.short_description = 'Mark owners as verified'
+    
+    def send_verification_email(self, request, queryset):
+        """Admin action to send verification email to selected users"""
+        from django.core.mail import send_mail
+        from django.contrib.sites.shortcuts import get_current_site
+        from django.urls import reverse
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        from apps.accounts.tokens import account_activation_token
+        
+        count = 0
+        for user in queryset:
+            if not user.is_email_verified:
+                try:
+                    current_site = get_current_site(request)
+                    uid = urlsafe_base64_encode(force_bytes(user.pk))
+                    token = account_activation_token.make_token(user)
+                    activation_link = f"{request.scheme}://{current_site.domain}{reverse('accounts:activate', kwargs={'uidb64': uid, 'token': token})}"
+                    
+                    send_mail(
+                        'Verify Your Email - Winda',
+                        f'Hello {user.get_full_name()},\n\nPlease verify your email by clicking the link below:\n{activation_link}\n\nIf you did not request this, please ignore this email.\n\nRegards,\nWinda Team',
+                        'noreply@winda.co.ke',
+                        [user.email],
+                        fail_silently=True,
+                    )
+                    count += 1
+                except:
+                    pass
+        
+        self.message_user(request, f'Verification email sent to {count} user(s).')
+    send_verification_email.short_description = 'Send verification email'
 
 @admin.register(OwnerProfile, site=admin_site)
 class OwnerProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'company_name', 'total_properties', 'total_revenue', 'created_at')
     search_fields = ('user__email', 'company_name')
     readonly_fields = ('total_properties', 'total_revenue')
+    
+    actions = ['approve_owners', 'reject_owners']
+    
+    def approve_owners(self, request, queryset):
+        """Admin action to approve selected owners"""
+        for owner in queryset:
+            owner.user.verification_status = 'VERIFIED'
+            owner.user.is_email_verified = True
+            owner.user.save()
+        self.message_user(request, f'{queryset.count()} owner(s) approved.')
+    approve_owners.short_description = '✅ Approve selected owners'
+    
+    def reject_owners(self, request, queryset):
+        """Admin action to reject selected owners"""
+        for owner in queryset:
+            owner.user.verification_status = 'REJECTED'
+            owner.user.save()
+        self.message_user(request, f'{queryset.count()} owner(s) rejected.')
+    reject_owners.short_description = '❌ Reject selected owners'
 
 
 @admin.register(TenantProfile, site=admin_site)
