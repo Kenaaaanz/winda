@@ -94,9 +94,9 @@ def log_property_deletion(sender, instance, **kwargs):
         AnalyticsEvent.objects.create(
             user=instance.owner.user,
             event_type='PROPERTY_LIST',
-            property=instance,
             data={
                 'action': 'delete',
+                'property_id': str(instance.pk),
                 'title': instance.title,
                 'deleted_at': timezone.now().isoformat()
             }

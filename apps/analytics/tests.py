@@ -1,4 +1,36 @@
 from django import forms
+from django.test import TestCase
+
+from apps.accounts.models import User
+from apps.analytics.models import AnalyticsEvent
+from apps.properties.models import Property
+
+
+class AnalyticsEventDeletionTests(TestCase):
+    def test_property_deletion_cascades_to_analytics_events(self):
+        user = User.objects.create_user(
+            username='analytics-owner',
+            email='analytics-owner@example.com',
+            user_type='HOUSE_OWNER',
+        )
+        owner = user.owner_profile
+        property_record = Property.objects.create(
+            owner=owner,
+            title='Test property',
+            description='Test description',
+            property_type='APARTMENT',
+            address='Test address',
+            city='Nairobi',
+            state='Nairobi',
+        )
+        event = AnalyticsEvent.objects.create(
+            event_type='PROPERTY_VIEW',
+            property=property_record,
+        )
+
+        property_record.delete()
+
+        self.assertFalse(AnalyticsEvent.objects.filter(pk=event.pk).exists())
 
 
 class AnalyticsFilterForm(forms.Form):
