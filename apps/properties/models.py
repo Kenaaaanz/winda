@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 import uuid
 import os
+from urllib.parse import urlparse, parse_qs
 
 User = get_user_model()
 
@@ -174,6 +175,28 @@ class Property(models.Model):
             })
         
         return images
+
+    def get_video_embed_url(self):
+        """Return an embeddable URL for common hosted video links."""
+        if not self.video_url:
+            return None
+
+        parsed = urlparse(self.video_url)
+        host = parsed.netloc.lower().split(':')[0]
+        if host in {'youtube.com', 'www.youtube.com', 'm.youtube.com'}:
+            video_id = parse_qs(parsed.query).get('v', [None])[0]
+            if video_id:
+                return f'https://www.youtube.com/embed/{video_id}'
+        elif host == 'youtu.be':
+            video_id = parsed.path.strip('/').split('/')[0]
+            if video_id:
+                return f'https://www.youtube.com/embed/{video_id}'
+        elif host in {'vimeo.com', 'www.vimeo.com'}:
+            video_id = parsed.path.strip('/').split('/')[0]
+            if video_id.isdigit():
+                return f'https://player.vimeo.com/video/{video_id}'
+
+        return self.video_url
 
     def get_absolute_url(self):
         from django.urls import reverse

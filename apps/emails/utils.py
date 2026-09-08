@@ -1,3 +1,5 @@
+import json
+
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
@@ -12,7 +14,7 @@ class EmailService:
     """Service class for sending emails asynchronously"""
     
     @staticmethod
-    def send_email(subject, to_email, template_name, context=None, from_email=None, async_mode=True):
+    def send_email(subject, to_email, template_name, context=None, from_email=None, async_mode=None):
         """
         Send an email using HTML template
         """
@@ -20,13 +22,19 @@ class EmailService:
             context = {}
         
         from_email = from_email or settings.DEFAULT_FROM_EMAIL
+        if async_mode is None:
+            async_mode = getattr(settings, 'EMAIL_ASYNC', False)
         
         if async_mode:
             # Send asynchronously using Celery
             try:
+                json.dumps(context)
                 send_email_task.delay(subject, to_email, template_name, context, from_email)
                 logger.info(f"Email task queued for {to_email}")
                 return True
+            except TypeError:
+                logger.warning('Email context is not JSON serializable; sending synchronously')
+                return EmailService.send_email_sync(subject, to_email, template_name, context, from_email)
             except Exception as e:
                 logger.error(f"Failed to queue email task for {to_email}: {str(e)}")
                 # Fall back to sync sending
@@ -80,7 +88,7 @@ class EmailService:
             'site_name': 'Winda',
         }
         # Use async mode to prevent timeout
-        return EmailService.send_email(subject, user.email, template_name, context, async_mode=True)
+        return EmailService.send_email(subject, user.email, template_name, context, async_mode=False)
             
     @staticmethod
     def send_welcome_email(user):
@@ -90,7 +98,7 @@ class EmailService:
         context = {
             'user': user,
             'full_name': user.get_full_name(),
-            'login_url': 'http://localhost:8000/accounts/login/',
+            'login_url': f'{settings.SITE_URL}/accounts/login/',
         }
         return EmailService.send_email(subject, user.email, template_name, context)
     
@@ -119,9 +127,28 @@ class EmailService:
             'property': application.property,
             'status': application.get_status_display(),
             'status_class': application.status.lower(),
-            'property_url': f'http://localhost:8000/properties/{application.property.id}/',
+            'property_url': f'{settings.SITE_URL}/properties/{application.property.id}/',
         }
         return EmailService.send_email(subject, application.tenant.email, template_name, context)
+
+    @staticmethod
+    def send_application_received_email(application):
+        """Notify the property owner that a tenant submitted an application."""
+        owner = application.property.owner.user
+        context = {
+            'full_name': owner.get_full_name(),
+            'application': application,
+            'property': application.property,
+            'tenant': application.tenant,
+            'application_url': f'{settings.SITE_URL}/tenants/owner/tenants/pending/{application.id}/',
+            'support_email': 'support@winda.co.ke',
+        }
+        return EmailService.send_email(
+            f'New Application - {application.property.title}',
+            owner.email,
+            'emails/application_received.html',
+            context,
+        )
     
     @staticmethod
     def send_payment_confirmation_email(payment):
@@ -134,10 +161,16 @@ class EmailService:
             'payment': payment,
             'amount': payment.amount,
             'payment_type': payment.get_payment_type_display(),
-            'payment_link': f'http://localhost:8000/payments/{payment.id}/',
+            'payment_link': f'{settings.SITE_URL}/payments/{payment.id}/',
             'support_email': 'support@winda.co.ke',
         }
-        return EmailService.send_email(subject, payment.payer.email, template_name, context)
+        sent = EmailService.send_email(subject, payment.payer.email, template_name, context)
+        if payment.recipient and payment.recipient.email:
+            owner_context = dict(context)
+            owner_context['user'] = payment.recipient
+            owner_context['full_name'] = payment.recipient.get_full_name()
+            sent = EmailService.send_email(subject, payment.recipient.email, template_name, owner_context) and sent
+        return sent
     
     @staticmethod
     def send_lease_created_email(lease):
@@ -153,10 +186,16 @@ class EmailService:
             'start_date': lease.start_date,
             'end_date': lease.end_date,
             'monthly_rent': lease.monthly_rent,
-            'lease_url': f'http://localhost:8000/tenants/leases/{lease.id}/',
+            'lease_url': f'{settings.SITE_URL}/tenants/leases/{lease.id}/',
             'support_email': 'support@winda.co.ke',
         }
-        return EmailService.send_email(subject, lease.tenant.email, template_name, context)
+        sent = EmailService.send_email(subject, lease.tenant.email, template_name, context)
+        owner = lease.property.owner.user
+        owner_context = dict(context)
+        owner_context['user'] = owner
+        owner_context['full_name'] = owner.get_full_name()
+        sent = EmailService.send_email(subject, owner.email, template_name, owner_context) and sent
+        return sent
     
     @staticmethod
     def send_lease_signed_email(lease):
@@ -174,7 +213,13 @@ class EmailService:
             'monthly_rent': lease.monthly_rent,
             'support_email': 'support@winda.co.ke',
         }
-        return EmailService.send_email(subject, lease.tenant.email, template_name, context)
+        sent = EmailService.send_email(subject, lease.tenant.email, template_name, context)
+        owner = lease.property.owner.user
+        owner_context = dict(context)
+        owner_context['user'] = owner
+        owner_context['full_name'] = owner.get_full_name()
+        sent = EmailService.send_email(subject, owner.email, template_name, owner_context) and sent
+        return sent
     
     @staticmethod
     def send_maintenance_request_email(request_obj):
@@ -186,7 +231,7 @@ class EmailService:
             'full_name': request_obj.tenant.get_full_name(),
             'request': request_obj,
             'property': request_obj.property,
-            'request_url': f'http://localhost:8000/maintenance/{request_obj.id}/',
+            'request_url': f'{settings.SITE_URL}/maintenance/{request_obj.id}/',
             'support_email': 'support@winda.co.ke',
         }
         return EmailService.send_email(subject, request_obj.tenant.email, template_name, context)

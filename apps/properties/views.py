@@ -125,7 +125,6 @@ def property_list(request):
     }
     return render(request, 'properties/list.html', context)
 
-@login_required
 def property_detail(request, pk):
     """Property detail page"""
     property_obj = get_object_or_404(Property, pk=pk)

@@ -396,6 +396,24 @@
                         <div id="gallery-image-preview" class="image-preview-grid"></div>
                     </div>
 
+                    <!-- Video Tours -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Video Tours</h3>
+                        <p class="text-sm text-gray-500 mb-4">Add public links so prospective tenants can view the property before applying.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Property Video URL</label>
+                                {{ form.video_url }}
+                                {% if form.video_url.errors %}<div class="form-error">{{ form.video_url.errors }}</div>{% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Virtual Tour URL</label>
+                                {{ form.virtual_tour_url }}
+                                {% if form.virtual_tour_url.errors %}<div class="form-error">{{ form.virtual_tour_url.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Submit -->
                     <div class="flex items-center space-x-4">
                         <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">

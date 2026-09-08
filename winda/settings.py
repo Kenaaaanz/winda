@@ -190,6 +190,8 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', default='windaafricasupport@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', default='kpdi btxe ouuh imae')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', default='windaafricasupport@gmail.com')
+SITE_URL = os.getenv('SITE_URL', 'https://www.winda.africa').rstrip('/')
+EMAIL_ASYNC = os.getenv('EMAIL_ASYNC', 'false').lower() in ('1', 'true', 'yes', 'on')
 
 # Paystack
 PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', '')

@@ -44,6 +44,9 @@ def register_wizard(request):
     # If user is already logged in, redirect
     if request.user.is_authenticated:
         return redirect('dashboard')
+
+    if request.GET.get('next'):
+        request.session['registration_next'] = request.GET['next']
     
     # Get current step from session or default to 1
     step = request.session.get('registration_step', 1)
@@ -237,12 +240,13 @@ def create_tenant_account(request):
         request.session.pop('registration_data', None)
         request.session.pop('registration_step', None)
         request.session.pop('registration_user_type', None)
+        next_url = request.session.pop('registration_next', None)
         
         # Log user in
         login(request, user)
         
         messages.success(request, 'Account created successfully! Welcome to Winda.')
-        return redirect('dashboard')
+        return redirect(next_url or 'dashboard')
     
 def create_owner_account(request):
     """Create owner account (pending admin approval)"""

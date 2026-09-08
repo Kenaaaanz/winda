@@ -28,7 +28,7 @@ class PropertyBaseForm(forms.ModelForm):
             'rental_price', 'service_charge', 'security_deposit', 'negotiation_allowed',
             'bedrooms', 'bathrooms', 'parking_spaces', 'square_feet',
             'floor_number', 'total_floors', 'year_built',
-            'main_image'
+            'main_image', 'video_url', 'virtual_tour_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
@@ -48,6 +48,8 @@ class PropertyBaseForm(forms.ModelForm):
             'total_floors': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'year_built': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 1900, 'max': 2100}),
             'main_image': forms.FileInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
+            'video_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://www.youtube.com/watch?v=...'}),
+            'virtual_tour_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://...'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -96,7 +98,7 @@ class PropertyMultiUnitForm(forms.ModelForm):
             'title', 'description', 'property_type', 'furnishing_status',
             'address', 'city', 'state', 'postal_code',
             'parking_spaces', 'square_feet', 'total_floors', 'year_built',
-            'main_image'
+            'main_image', 'video_url', 'virtual_tour_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
@@ -110,6 +112,8 @@ class PropertyMultiUnitForm(forms.ModelForm):
             'total_floors': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'year_built': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 1900, 'max': 2100}),
             'main_image': forms.FileInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
+            'video_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://www.youtube.com/watch?v=...'}),
+            'virtual_tour_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://...'}),
         }
     
     def __init__(self, *args, **kwargs):

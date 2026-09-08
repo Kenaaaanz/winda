@@ -9,12 +9,14 @@ from datetime import timedelta
 from django.db.models import Q, Count, Sum
 from django.db import models
 from django.urls import reverse 
+from urllib.parse import quote
 
 from .models import TenantApplication, Lease, LeaseAgreementTemplate
 from .forms import TenantApplicationForm, LeaseForm
 from ..accounts.decorators import tenant_required, owner_required
 from ..properties.models import Property, Unit
 from ..notifications.models import Notification
+from apps.emails.utils import EmailService
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -46,10 +48,13 @@ def application_list(request):
     })
 
 
-@login_required
 def apply_for_property(request, property_id):
     """Apply for a property as a tenant"""
     property_obj = get_object_or_404(Property, pk=property_id)
+
+    if not request.user.is_authenticated:
+        next_url = quote(request.get_full_path())
+        return redirect(f'{reverse("accounts:register")}?next={next_url}')
     
     # Check if property is available (or has available units)
     if property_obj.is_multi_unit:
@@ -129,6 +134,7 @@ def apply_for_property(request, property_id):
                     'unit_id': str(unit.id) if unit else None
                 }
             )
+            EmailService.send_application_received_email(application)
             
             messages.success(request, f'Application submitted successfully for Unit {unit.unit_number if unit else ""}!')
             return redirect('tenants:application_detail', pk=application.pk)
@@ -224,6 +230,7 @@ def application_review(request, pk):
                 related_object_type='application',
                 related_object_id=str(application.id)
             )
+            EmailService.send_application_status_email(application)
             
             messages.success(request, f'Application {status.lower()} successfully!')
             return redirect('tenants:application_detail', pk=application.pk)
@@ -394,6 +401,7 @@ def lease_create(request, application_id):
                 related_object_type='lease',
                 related_object_id=str(lease.id)
             )
+            EmailService.send_lease_created_email(lease)
             
             messages.success(request, 'Lease created successfully!')
             return redirect('tenants:lease_detail', pk=lease.pk)
@@ -467,6 +475,7 @@ def lease_sign(request, pk):
             related_object_type='lease',
             related_object_id=str(lease.id)
         )
+        EmailService.send_lease_signed_email(lease)
         
         # Create welcome notification for tenant
         Notification.objects.create(
@@ -1013,6 +1022,7 @@ def review_application(request, pk):
             related_object_type='application',
             related_object_id=str(application.id)
         )
+        EmailService.send_application_status_email(application)
         
         return JsonResponse({
             'status': 'success',
@@ -1041,6 +1051,7 @@ def review_application(request, pk):
             related_object_type='application',
             related_object_id=str(application.id)
         )
+        EmailService.send_application_status_email(application)
         
         return JsonResponse({
             'status': 'success',

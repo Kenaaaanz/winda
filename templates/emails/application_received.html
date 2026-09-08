@@ -1,0 +1,14 @@
+{% extends 'emails/base_email.html' %}
+{% block title %}New property application{% endblock %}
+{% block header %}New application{% endblock %}
+{% block content %}
+<p>Hello {{ full_name|default:'there' }},</p>
+<p>{{ tenant.get_full_name }} has applied for <strong>{{ property.title }}</strong>.</p>
+<div class="highlight">
+    <p><strong>Move-in date:</strong> {{ application.intended_move_in_date }}</p>
+    <p><strong>Lease duration:</strong> {{ application.preferred_lease_duration }} months</p>
+    <p><strong>Employment status:</strong> {{ application.employment_status }}</p>
+</div>
+<a class="button" href="{{ application_url }}">Review application</a>
+<p>Please review the application in your Winda dashboard.</p>
+{% endblock %}

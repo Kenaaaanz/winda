@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=2, ignore_result=True)
 def send_email_task(self, subject, to_email, template_name, context=None, from_email=None):
     """
     Async task to send email

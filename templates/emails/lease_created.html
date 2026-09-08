@@ -1,0 +1,15 @@
+{% extends 'emails/base_email.html' %}
+{% block title %}Lease agreement ready{% endblock %}
+{% block header %}Lease agreement ready{% endblock %}
+{% block content %}
+<p>Hello {{ full_name|default:'there' }},</p>
+<p>A lease agreement for <strong>{{ property.title }}</strong> is ready for review.</p>
+<div class="highlight">
+    <p><strong>Start date:</strong> {{ start_date }}</p>
+    <p><strong>End date:</strong> {{ end_date }}</p>
+    <p><strong>Monthly rent:</strong> KES {{ monthly_rent|floatformat:2 }}</p>
+    {% if unit %}<p><strong>Unit:</strong> {{ unit.unit_number }}</p>{% endif %}
+</div>
+<a class="button" href="{{ lease_url }}">Review lease agreement</a>
+<p>Please review the agreement and complete the signing step in your Winda account.</p>
+{% endblock %}

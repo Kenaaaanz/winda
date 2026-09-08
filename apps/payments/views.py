@@ -20,6 +20,7 @@ from ..accounts.models import OwnerProfile
 from ..properties.models import Property
 from ..notifications.models import Notification
 from ..tenants.models import Lease
+from apps.emails.utils import EmailService
 from django.contrib.auth import get_user_model
 
 
@@ -239,6 +240,7 @@ def sync_payment_paystack(request, payment_id):
             payment.status = 'COMPLETED'
             payment.paid_at = timezone.now()
             payment.save()
+            EmailService.send_payment_confirmation_email(payment)
             
             # Check if invoice already exists before creating
             if not hasattr(payment, 'invoice'):

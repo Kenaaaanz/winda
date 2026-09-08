@@ -120,6 +120,33 @@
                     {% endwith %}
                 </div>
                 
+                <!-- Property Videos -->
+                {% if property.video_url or property.virtual_tour_url %}
+                    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                        <h2 class="text-xl font-semibold mb-4">Virtual Tour & Videos</h2>
+                        <div class="grid grid-cols-1 {% if property.video_url and property.virtual_tour_url %}md:grid-cols-2{% endif %} gap-6">
+                            {% if property.video_url %}
+                                <div>
+                                    <h3 class="font-medium text-gray-900 mb-2">Property Video</h3>
+                                    <div class="aspect-video rounded-lg overflow-hidden bg-gray-100">
+                                        <iframe src="{{ property.get_video_embed_url }}" title="{{ property.title }} property video" class="w-full h-full" loading="lazy" allowfullscreen></iframe>
+                                    </div>
+                                    <a href="{{ property.video_url }}" target="_blank" rel="noopener" class="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800">Open video</a>
+                                </div>
+                            {% endif %}
+                            {% if property.virtual_tour_url %}
+                                <div>
+                                    <h3 class="font-medium text-gray-900 mb-2">Virtual Tour</h3>
+                                    <div class="aspect-video rounded-lg overflow-hidden bg-gray-100">
+                                        <iframe src="{{ property.virtual_tour_url }}" title="{{ property.title }} virtual tour" class="w-full h-full" loading="lazy" allowfullscreen></iframe>
+                                    </div>
+                                    <a href="{{ property.virtual_tour_url }}" target="_blank" rel="noopener" class="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800">Open virtual tour</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
                 <!-- Property Details -->
                 <div class="bg-white rounded-xl shadow-md p-6 mb-6">
                     <div class="flex justify-between items-start mb-4">
@@ -402,10 +429,10 @@
                                 </a>
                             {% endif %}
                         {% else %}
-                            <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200">
-                                <i class="fas fa-sign-in-alt mr-2"></i> Login to Apply
+                            <a href="{% url 'tenants:apply' property.id %}" class="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-center py-3 rounded-lg hover:shadow-lg transition-all duration-200">
+                                <i class="fas fa-paper-plane mr-2"></i> Apply Now
                             </a>
-                            <p class="text-center text-sm text-gray-500 mt-2">New here? <a href="{% url 'accounts:register' %}" class="text-blue-500 hover:text-blue-600">Create account</a></p>
+                            <p class="text-center text-sm text-gray-500 mt-2">You will create an account before submitting your application.</p>
                         {% endif %}
                     </div>
                 </div>

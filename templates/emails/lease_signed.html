@@ -1,0 +1,14 @@
+{% extends 'emails/base_email.html' %}
+{% block title %}Lease signed{% endblock %}
+{% block header %}Lease signed{% endblock %}
+{% block content %}
+<p>Hello {{ full_name|default:'there' }},</p>
+<p>The lease for <strong>{{ property.title }}</strong> has been signed and is now active.</p>
+<div class="highlight">
+    <p><strong>Lease period:</strong> {{ start_date }} to {{ end_date }}</p>
+    <p><strong>Monthly rent:</strong> KES {{ monthly_rent|floatformat:2 }}</p>
+    {% if unit %}<p><strong>Unit:</strong> {{ unit.unit_number }}</p>{% endif %}
+</div>
+<a class="button" href="{{ lease_url }}">View lease</a>
+<p>Keep this email for your records. Contact support if any lease details look incorrect.</p>
+{% endblock %}
