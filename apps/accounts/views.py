@@ -24,7 +24,7 @@ from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImag
 from apps.notifications.models import Notification
 from apps.properties.models import Property
 
-from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, LoginHistory
+from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, LoginHistory, PaystackSubaccount
 from .forms import (
     CaretakerInviteForm, CaretakerUpdateForm, PaystackSubaccountForm, 
     UserRegistrationForm, UserLoginForm, UserProfileForm,
@@ -316,7 +316,6 @@ def create_owner_account(request):
         
         # Create bank account using the data from session
         try:
-            from apps.payments.models import PaystackSubaccount
             # Check if bank account already exists
             bank_account = PaystackSubaccount.objects.filter(owner_profile=owner_profile).first()
             if not bank_account:
@@ -325,6 +324,7 @@ def create_owner_account(request):
                     bank_code=bank_data.get('bank_code', ''),
                     account_number=bank_data.get('account_number', ''),
                     account_name=bank_data.get('account_name', ''),
+                    subaccount_code=f'pending_{user.id}',
                     business_name=bank_data.get('business_name', business_data.get('company_name', '')),
                     verification_status='PENDING',
                     is_active=False,
@@ -337,7 +337,9 @@ def create_owner_account(request):
                 bank_account.business_name = bank_data.get('business_name', bank_account.business_name)
                 bank_account.save()
         except Exception as e:
-            print(f"Bank account creation error: {e}")
+            transaction.set_rollback(True)
+            messages.error(request, 'Your registration could not save the bank account. Please try again.')
+            raise
         
         # Notify admins
         notify_admins_new_owner(user)

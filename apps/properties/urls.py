@@ -19,7 +19,7 @@ urlpatterns = [
     path('<uuid:pk>/edit/', views.property_edit, name='edit'),
     path('<uuid:pk>/delete/', views.property_delete, name='delete'),
     
-    # ==================== IMAGE MANAGEMENT (POST endpoints) ====================
+    # ==================== MEDIA MANAGEMENT (POST endpoints) ====================
     path('<uuid:pk>/images/manage/', views.property_images_manage, name='images_manage'),
     path('<uuid:pk>/images/upload/', views.upload_property_images, name='upload_images'),
 

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Manage Images - {{ property.title }} - Winda{% endblock %}
+{% block title %}Manage Media - {{ property.title }} - Winda{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -250,7 +250,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
             <div class="flex flex-wrap items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Manage Images</h1>
+                    <h1 class="text-2xl font-bold text-gray-900">Manage Media</h1>
                     <p class="text-gray-600">{{ property.title }}</p>
                     <p class="text-sm text-gray-500 mt-1">{{ property.city }}, {{ property.state }}</p>
                 </div>
@@ -260,6 +260,38 @@
                     </a>
                 </div>
             </div>
+        </div>
+
+        <!-- Video Management -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">Property Video</h3>
+                    <p class="text-sm text-gray-500">Add or replace a YouTube, Vimeo, or hosted video URL.</p>
+                </div>
+                {% if property.video_url %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="media_action" value="delete_video">
+                        <button type="submit" class="text-red-600 hover:text-red-700" onclick="return confirm('Delete this property video?');">
+                            <i class="fas fa-trash mr-1"></i> Delete video
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <form method="post" class="flex flex-col md:flex-row gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="media_action" value="save_video">
+                <input type="url" name="video_url" value="{{ property.video_url|default:'' }}" placeholder="https://www.youtube.com/watch?v=..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-save mr-1"></i> Save video
+                </button>
+            </form>
+            {% if property.video_url %}
+                <div class="mt-4 aspect-video max-w-2xl">
+                    <iframe src="{{ property.get_video_embed_url }}" title="Property video" class="w-full h-full rounded-lg" allowfullscreen></iframe>
+                </div>
+            {% endif %}
         </div>
 
         <!-- Current Thumbnail & Main Image -->

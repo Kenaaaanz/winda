@@ -857,8 +857,21 @@ def property_maintenance(request, pk):
 @login_required
 @owner_required
 def property_images_manage(request, pk):
-    """Manage property images - set main, thumbnail, reorder, delete"""
+    """Manage property images and video media."""
     property_obj = get_object_or_404(Property, pk=pk, owner=request.user.owner_profile)
+
+    if request.method == 'POST':
+        action = request.POST.get('media_action')
+        if action == 'save_video':
+            property_obj.video_url = request.POST.get('video_url', '').strip() or None
+            property_obj.save(update_fields=['video_url', 'updated_at'])
+            messages.success(request, 'Video updated successfully.')
+        elif action == 'delete_video':
+            property_obj.video_url = None
+            property_obj.save(update_fields=['video_url', 'updated_at'])
+            messages.success(request, 'Video deleted successfully.')
+        return redirect('properties:images_manage', pk=property_obj.pk)
+
     images = property_obj.property_images.filter(is_active=True).order_by('order')
     
     context = {
