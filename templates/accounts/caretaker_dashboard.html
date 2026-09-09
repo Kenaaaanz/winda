@@ -61,6 +61,37 @@
             </div>
         </div>
 
+        <!-- Property Contacts -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h3 class="text-lg font-semibold mb-4">Property Contacts</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if owner_user %}
+                    <div class="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ owner_user.get_full_name|default:owner_user.email }}</p>
+                            <p class="text-sm text-gray-600">House owner</p>
+                        </div>
+                        <a href="{% url 'communications:start_chat_user' owner_user.id %}" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                            <i class="fas fa-comment mr-1"></i> Chat
+                        </a>
+                    </div>
+                {% endif %}
+                {% for tenant in tenants %}
+                    <div class="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ tenant.get_full_name|default:tenant.email }}</p>
+                            <p class="text-sm text-gray-600">Tenant</p>
+                        </div>
+                        <a href="{% url 'communications:start_chat_user' tenant.id %}" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                            <i class="fas fa-comment mr-1"></i> Chat
+                        </a>
+                    </div>
+                {% empty %}
+                    {% if not owner_user %}<p class="text-gray-500">No contacts available.</p>{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
         <!-- Recent Maintenance -->
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex justify-between items-center mb-4">

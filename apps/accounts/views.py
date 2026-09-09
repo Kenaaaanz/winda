@@ -1398,6 +1398,12 @@ def caretaker_dashboard(request):
         property__in=properties,
         status__in=['PENDING', 'IN_REVIEW', 'ASSIGNED']
     ).count()
+
+    tenants = User.objects.filter(
+        applications__property__in=properties,
+        applications__status='APPROVED',
+        user_type='TENANT',
+    ).exclude(id=request.user.id).distinct().order_by('first_name', 'last_name', 'email')
     
     # Get total units managed
     total_units = 0
@@ -1414,6 +1420,8 @@ def caretaker_dashboard(request):
         'total_units': total_units,
         'maintenance_requests': maintenance_requests,
         'pending_maintenance': pending_maintenance,
+        'owner_user': caretaker_profile.owner.user if caretaker_profile.owner else None,
+        'tenants': tenants,
     }
     
     return render(request, 'accounts/caretaker_dashboard.html', context)

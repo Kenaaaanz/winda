@@ -258,8 +258,16 @@ def delete_message(request, message_id):
 @login_required
 def start_chat(request, user_id=None, property_id=None):
     """Start a new chat with management options"""
+    user_id = user_id or request.POST.get('user_id') or request.GET.get('user_id')
+    property_id = property_id or request.POST.get('property_id') or request.GET.get('property_id')
+    initial_message = request.POST.get('initial_message', '').strip()
+
     if user_id:
         participant = get_object_or_404(User, id=user_id)
+
+        if participant == request.user:
+            messages.error(request, 'You cannot start a chat with yourself.')
+            return redirect('communications:chat_list')
         
         # Check if blocked
         if ChatBlock.objects.filter(blocker=request.user, blocked=participant).exists():
@@ -278,6 +286,12 @@ def start_chat(request, user_id=None, property_id=None):
         ).filter(participants=participant).first()
         
         if existing_room:
+            if initial_message:
+                Message.objects.create(
+                    room=existing_room,
+                    sender=request.user,
+                    content=initial_message,
+                )
             return redirect('communications:chat_detail', room_id=existing_room.id)
         
         # Create new chat
@@ -288,6 +302,13 @@ def start_chat(request, user_id=None, property_id=None):
         )
         room.participants.add(request.user, participant)
         room.save()
+
+        if initial_message:
+            Message.objects.create(
+                room=room,
+                sender=request.user,
+                content=initial_message,
+            )
         
         return redirect('communications:chat_detail', room_id=room.id)
     
@@ -313,6 +334,12 @@ def start_chat(request, user_id=None, property_id=None):
         ).filter(participants=owner).first()
         
         if existing_room:
+            if initial_message:
+                Message.objects.create(
+                    room=existing_room,
+                    sender=request.user,
+                    content=initial_message,
+                )
             return redirect('communications:chat_detail', room_id=existing_room.id)
         
         # Create new chat
@@ -324,6 +351,13 @@ def start_chat(request, user_id=None, property_id=None):
         )
         room.participants.add(request.user, owner)
         room.save()
+
+        if initial_message:
+            Message.objects.create(
+                room=room,
+                sender=request.user,
+                content=initial_message,
+            )
         
         # Notify owner
         Notification.objects.create(
@@ -342,7 +376,13 @@ def start_chat(request, user_id=None, property_id=None):
         
         return redirect('communications:chat_detail', room_id=room.id)
     
-    return redirect('communications:chat_list')
+    properties = Property.objects.filter(
+        verification_status='VERIFIED',
+        availability_status='AVAILABLE',
+    ).select_related('owner__user').order_by('-created_at')[:20]
+    return render(request, 'communications/start_chat.html', {
+        'properties': properties,
+    })
 
 
 @login_required

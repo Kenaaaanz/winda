@@ -870,6 +870,14 @@ def property_images_manage(request, pk):
             property_obj.video_url = None
             property_obj.save(update_fields=['video_url', 'updated_at'])
             messages.success(request, 'Video deleted successfully.')
+        elif action == 'save_virtual_tour':
+            property_obj.virtual_tour_url = request.POST.get('virtual_tour_url', '').strip() or None
+            property_obj.save(update_fields=['virtual_tour_url', 'updated_at'])
+            messages.success(request, 'Virtual tour updated successfully.')
+        elif action == 'delete_virtual_tour':
+            property_obj.virtual_tour_url = None
+            property_obj.save(update_fields=['virtual_tour_url', 'updated_at'])
+            messages.success(request, 'Virtual tour deleted successfully.')
         return redirect('properties:images_manage', pk=property_obj.pk)
 
     images = property_obj.property_images.filter(is_active=True).order_by('order')

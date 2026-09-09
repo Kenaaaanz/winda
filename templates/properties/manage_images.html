@@ -294,6 +294,36 @@
             {% endif %}
         </div>
 
+        <!-- Virtual Tour Management -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">Virtual Tour</h3>
+                    <p class="text-sm text-gray-500">Add or replace the property's virtual tour link.</p>
+                </div>
+                {% if property.virtual_tour_url %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="media_action" value="delete_virtual_tour">
+                        <button type="submit" class="text-red-600 hover:text-red-700" onclick="return confirm('Delete this virtual tour?');">
+                            <i class="fas fa-trash mr-1"></i> Delete virtual tour
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <form method="post" class="flex flex-col md:flex-row gap-3">
+                {% csrf_token %}
+                <input type="hidden" name="media_action" value="save_virtual_tour">
+                <input type="url" name="virtual_tour_url" value="{{ property.virtual_tour_url|default:'' }}" placeholder="https://..." class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <button type="submit" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-save mr-1"></i> Save virtual tour
+                </button>
+            </form>
+            {% if property.virtual_tour_url %}
+                <p class="mt-3 text-sm text-gray-600 break-all">Current link: {{ property.virtual_tour_url }}</p>
+            {% endif %}
+        </div>
+
         <!-- Current Thumbnail & Main Image -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div class="bg-white rounded-xl shadow-sm p-4">

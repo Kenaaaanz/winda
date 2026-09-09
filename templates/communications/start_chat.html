@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Start a Chat - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Start a Chat</h1>
+            <p class="text-gray-600 mt-1">Choose a property to contact its owner.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {% for property in properties %}
+                <div class="bg-white rounded-xl shadow-sm p-5">
+                    <h2 class="font-semibold text-gray-900">{{ property.title }}</h2>
+                    <p class="text-sm text-gray-600 mt-1">{{ property.city }}, {{ property.state }}</p>
+                    <p class="text-sm text-gray-500 mt-2">Owner: {{ property.owner.user.get_full_name|default:property.owner.user.email }}</p>
+                    <a href="{% url 'communications:start_chat_property' property.id %}" class="inline-flex items-center mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">
+                        <i class="fas fa-comment mr-2"></i> Start Chat
+                    </a>
+                </div>
+            {% empty %}
+                <div class="bg-white rounded-xl shadow-sm p-6 col-span-full text-center text-gray-500">
+                    No available properties are ready for a new conversation.
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
