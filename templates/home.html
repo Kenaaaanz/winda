@@ -4,56 +4,11 @@
 {% block title %}Winda - Your Home, Directly{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-20">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-                <h1 class="text-4xl md:text-5xl font-bold mb-6">
-                    Find Your Perfect Home<br>
-                    <span class="text-blue-200">Directly from Owners</span>
-                </h1>
-                <p class="text-xl text-blue-100 mb-8">
-                    No agents. No middlemen. Just direct connections between property owners and tenants.
-                </p>
-                <div class="flex flex-wrap gap-4">
-                    <a href="{% url 'properties:list' %}" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200">
-                        <i class="fas fa-search mr-2"></i> Browse Properties
-                    </a>
-                    {% if not user.is_authenticated %}
-                        <a href="{% url 'accounts:register' %}" class="bg-blue-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-400 transition-colors">
-                            <i class="fas fa-user-plus mr-2"></i> Get Started
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="relative">
-                {% if hero_image %}
-                    <img src="{{ hero_image }}" alt="Winda Hero" class="rounded-lg shadow-2xl">
-                {% else %}
-                    <div class="bg-blue-400 rounded-lg shadow-2xl h-64 flex items-center justify-center">
-                        <i class="fas fa-home text-8xl text-white opacity-50"></i>
-                    </div>
-                {% endif %}
-                <div class="absolute -bottom-6 -left-6 bg-white text-gray-800 p-4 rounded-lg shadow-lg">
-                    <p class="font-semibold">{{ total_properties|default:0 }}+</p>
-                    <p class="text-sm text-gray-600">Properties Listed</p>
-                </div>
-                <div class="absolute -top-6 -right-6 bg-white text-gray-800 p-4 rounded-lg shadow-lg">
-                    <p class="font-semibold">{{ total_tenants|default:0 }}+</p>
-                    <p class="text-sm text-gray-600">Happy Tenants</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Quick Search -->
+<!-- Search first so visitors can act immediately. -->
 <section class="py-8 bg-white border-b border-gray-200">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <form method="GET" action="{% url 'properties:list' %}" class="flex flex-col md:flex-row gap-3">
-            <input type="text" name="city" placeholder="Search by city or area..." 
-                   class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            <input type="text" name="city" placeholder="Search by city or area..." class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
             <select name="property_type" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All Types</option>
                 <option value="APARTMENT">Apartment</option>
@@ -66,40 +21,8 @@
                 <option value="COMMERCIAL">Commercial</option>
                 <option value="LAND">Land</option>
             </select>
-            <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200">
-                <i class="fas fa-search mr-2"></i> Search
-            </button>
+            <button type="submit" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-3 rounded-lg hover:shadow-lg transition-all duration-200"><i class="fas fa-search mr-2"></i> Search</button>
         </form>
-    </div>
-</section>
-
-<!-- Features Section -->
-<section class="py-16 bg-gray-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-3xl font-bold text-center mb-12">Why Choose Winda?</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
-                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-handshake text-2xl text-blue-600"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Direct Connection</h3>
-                <p class="text-gray-600">Connect directly with property owners without any middlemen or agents.</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
-                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-check-circle text-2xl text-green-600"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Verified Properties</h3>
-                <p class="text-gray-600">All properties are verified with proper documentation before listing.</p>
-            </div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center hover:shadow-lg transition-shadow">
-                <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-lock text-2xl text-purple-600"></i>
-                </div>
-                <h3 class="text-xl font-semibold mb-2">Secure Payments</h3>
-                <p class="text-gray-600">All payments are processed securely through Paystack integration.</p>
-            </div>
-        </div>
     </div>
 </section>
 
@@ -116,7 +39,7 @@
         {% if featured_properties %}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {% for property in featured_properties %}
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                    <a href="{% url 'properties:detail' property.id %}" class="block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                         <div class="relative">
                             {% if property.main_image %}
                                 <img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-48 object-cover">
@@ -164,12 +87,12 @@
                             {% endif %}
                             
                             <div class="flex justify-between text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
-                                <span><i class="fas fa-bed mr-1"></i> {{ property.bedrooms }}</span>
-                                <span><i class="fas fa-bath mr-1"></i> {{ property.bathrooms }}</span>
+                                <span><i class="fas fa-bed mr-1"></i> {{ property.get_bedroom_range }}</span>
+                                <span><i class="fas fa-bath mr-1"></i> {{ property.get_bathroom_range }}</span>
                                 <span><i class="fas fa-car mr-1"></i> {{ property.parking_spaces }}</span>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 {% endfor %}
             </div>
         {% else %}
@@ -179,6 +102,49 @@
                 <p class="text-gray-500">Check back soon for new listings</p>
             </div>
         {% endif %}
+    </div>
+</section>
+
+<!-- Available Properties -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-900">Available Properties</h2>
+            <a href="{% url 'properties:list' %}" class="text-blue-600 hover:text-blue-500 font-semibold">View All <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        {% if available_properties %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for property in available_properties %}
+                    <a href="{% url 'properties:detail' property.id %}" class="block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                        {% if property.main_image %}<img src="{{ property.main_image }}" alt="{{ property.title }}" class="w-full h-48 object-cover">{% else %}<div class="w-full h-48 bg-gray-200 flex items-center justify-center"><i class="fas fa-home text-4xl text-gray-400"></i></div>{% endif %}
+                        <div class="p-4">
+                            <h3 class="font-semibold text-gray-900">{{ property.title }}</h3>
+                            <p class="text-sm text-gray-600">{{ property.city }}</p>
+                            <p class="text-xl font-bold text-blue-600 mt-2">{{ property.get_price_range }}</p>
+                            <div class="flex justify-between text-sm text-gray-600 mt-2 pt-2 border-t border-gray-100">
+                                <span><i class="fas fa-bed mr-1"></i> {{ property.get_bedroom_range }}</span>
+                                <span><i class="fas fa-bath mr-1"></i> {{ property.get_bathroom_range }}</span>
+                                <span><i class="fas fa-car mr-1"></i> {{ property.parking_spaces }}</span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-gray-500">No other available properties yet.</p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Platform Highlights -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl font-bold text-center mb-12">Why Choose Winda?</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-handshake text-3xl text-blue-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Direct Connection</h3><p class="text-gray-600">Connect directly with property owners without middlemen.</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Verified Properties</h3><p class="text-gray-600">Browse properties verified with proper documentation.</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-lock text-3xl text-purple-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Secure Payments</h3><p class="text-gray-600">Make payments securely through Winda.</p></div>
+        </div>
     </div>
 </section>
 

@@ -261,6 +261,22 @@ class Property(models.Model):
         elif self.security_deposit:
             return f"KES {self.security_deposit:,.0f}"
         return "KES 0"
+
+    def get_bedroom_range(self):
+        """Return the bedroom range for this property or its available units."""
+        if self.is_multi_unit:
+            values = list(self.units.filter(is_available=True).values_list('bedrooms', flat=True))
+            if values:
+                return str(min(values)) if min(values) == max(values) else f"{min(values)} - {max(values)}"
+        return str(self.bedrooms or 0)
+
+    def get_bathroom_range(self):
+        """Return the bathroom range for this property or its available units."""
+        if self.is_multi_unit:
+            values = list(self.units.filter(is_available=True).values_list('bathrooms', flat=True))
+            if values:
+                return str(min(values)) if min(values) == max(values) else f"{min(values)} - {max(values)}"
+        return str(self.bathrooms or 0)
     
     def get_service_charge_range(self):
         """Get service charge range for multi-unit properties"""

@@ -78,6 +78,8 @@ class Lease(models.Model):
     
     # Documents
     lease_agreement = models.FileField(upload_to='leases/', null=True, blank=True)
+    custom_lease_agreement = models.FileField(upload_to='leases/custom/', null=True, blank=True)
+    use_custom_lease = models.BooleanField(default=False)
     signed_lease = models.FileField(upload_to='leases/signed/', null=True, blank=True)
     
     # Status

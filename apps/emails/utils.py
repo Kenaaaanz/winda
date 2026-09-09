@@ -212,6 +212,7 @@ class EmailService:
             'end_date': lease.end_date,
             'monthly_rent': lease.monthly_rent,
             'support_email': 'support@winda.co.ke',
+            'lease_url': f'{settings.SITE_URL}/tenants/leases/{lease.id}/',
         }
         sent = EmailService.send_email(subject, lease.tenant.email, template_name, context)
         owner = lease.property.owner.user

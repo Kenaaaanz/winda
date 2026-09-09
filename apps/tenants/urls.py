@@ -17,6 +17,7 @@ urlpatterns = [
     path('leases/create/<uuid:application_id>/', views.lease_create, name='lease_create'),
     path('leases/<uuid:pk>/sign/', views.lease_sign, name='lease_sign'),
     path('leases/<uuid:pk>/terminate/', views.lease_terminate, name='lease_terminate'),
+    path('leases/<uuid:pk>/manage/', views.lease_manage, name='lease_manage'),
     
     # Owner Tenant Management
     path('owner/tenants/', views.tenant_list, name='tenant_list'),

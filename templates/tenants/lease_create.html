@@ -54,7 +54,12 @@
                         {{ form.end_date|as_crispy_field }}
                         {{ form.termination_notice_period|as_crispy_field }}
                         {{ form.late_payment_penalty|as_crispy_field }}
-                        {{ form.lease_agreement|as_crispy_field }}
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-gray-800 mb-2">Agreement choice</h3>
+                            <p class="text-sm text-gray-600 mb-3">Winda always keeps a system-generated lease. Upload a custom agreement only if you prefer to use your own.</p>
+                            {{ form.custom_lease_agreement|as_crispy_field }}
+                            {{ form.use_custom_lease|as_crispy_field }}
+                        </div>
                     </div>
                     
                     <div class="mt-6 flex space-x-3">

@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.core.files.base import ContentFile
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -373,6 +374,25 @@ def lease_create(request, application_id):
             else:
                 lease.monthly_rent = application.property.rental_price
                 lease.security_deposit = application.property.security_deposit
+
+                system_agreement = (
+                    f"Winda Lease Agreement\n\n"
+                    f"Property: {application.property.title}\n"
+                    f"Tenant: {application.tenant.get_full_name()}\n"
+                    f"Start date: {lease.start_date}\n"
+                    f"End date: {lease.end_date}\n"
+                    f"Monthly rent: KES {lease.monthly_rent}\n"
+                    f"Security deposit: KES {lease.security_deposit}\n"
+                    f"Termination notice: {lease.termination_notice_period} days\n"
+                    f"Late payment penalty: KES {lease.late_payment_penalty}\n"
+                )
+                lease.lease_agreement.save(
+                    f"system-lease-{application.id}.txt",
+                    ContentFile(system_agreement.encode('utf-8')),
+                    save=False,
+                )
+                if not lease.custom_lease_agreement:
+                    lease.use_custom_lease = False
             
             lease.save()
             
@@ -426,6 +446,27 @@ def lease_create(request, application_id):
         'form': form,
         'application': application,
     })
+
+
+@login_required
+@owner_required
+def lease_manage(request, pk):
+    """Let the property owner choose between the system and custom agreement."""
+    lease = get_object_or_404(Lease, pk=pk, property__owner=request.user.owner_profile)
+
+    if request.method == 'POST':
+        custom_file = request.FILES.get('custom_lease_agreement')
+        if custom_file:
+            lease.custom_lease_agreement = custom_file
+        lease.use_custom_lease = request.POST.get('use_custom_lease') == 'on'
+        if lease.use_custom_lease and not lease.custom_lease_agreement:
+            messages.error(request, 'Upload a custom lease before selecting it.')
+        else:
+            lease.save(update_fields=['custom_lease_agreement', 'use_custom_lease', 'updated_at'])
+            messages.success(request, 'Lease agreement preferences updated.')
+            return redirect('tenants:lease_detail', pk=lease.pk)
+
+    return render(request, 'tenants/lease_manage.html', {'lease': lease})
 
 @login_required
 def lease_sign(request, pk):

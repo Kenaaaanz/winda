@@ -79,7 +79,7 @@ class LeaseForm(forms.ModelForm):
         fields = [
             'start_date', 'end_date', 
             'termination_notice_period',
-            'late_payment_penalty', 'lease_agreement'
+            'late_payment_penalty', 'custom_lease_agreement', 'use_custom_lease'
         ]
         
         widgets = {
@@ -101,5 +101,11 @@ class LeaseForm(forms.ModelForm):
             }),
             'lease_agreement': forms.FileInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+            }),
+            'custom_lease_agreement': forms.FileInput(attrs={
+                'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+            }),
+            'use_custom_lease': forms.CheckboxInput(attrs={
+                'class': 'rounded border-gray-300 text-blue-600 focus:ring-blue-500'
             }),
         }

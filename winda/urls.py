@@ -43,6 +43,13 @@ def home_view(request):
         featured_properties = Property.objects.filter(
             verification_status='VERIFIED'
         ).order_by('-created_at')[:8]
+
+    available_properties = Property.objects.filter(
+        verification_status='VERIFIED',
+        availability_status='AVAILABLE',
+    ).exclude(
+        id__in=featured_properties.values('id')
+    ).order_by('-created_at')[:8]
     
     # Calculate total units across all properties
     total_units = 0
@@ -54,6 +61,7 @@ def home_view(request):
     
     context = {
         'featured_properties': featured_properties,
+        'available_properties': available_properties,
         'total_properties': Property.objects.filter(verification_status='VERIFIED').count(),
         'total_units': total_units,
         'total_tenants': User.objects.filter(user_type='TENANT', is_active=True).count(),

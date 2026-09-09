@@ -255,6 +255,21 @@ def property_create(request):
                     
                     # Save property
                     property_obj.save()
+
+                    # Persist gallery uploads submitted with the building form.
+                    for idx, image in enumerate(request.FILES.getlist('images'), start=1):
+                        result = upload_property_image_to_cloudinary(image, property_obj.id, 'gallery')
+                        if result:
+                            PropertyImage.objects.create(
+                                property=property_obj,
+                                image_url=result['url'],
+                                is_main=(idx == 1 and not property_obj.main_image),
+                                order=idx,
+                                is_active=True,
+                            )
+                            if not property_obj.main_image:
+                                property_obj.main_image = result['url']
+                                property_obj.save(update_fields=['main_image'])
                     
                     messages.success(request, 'Building created! Now add your units.')
                     return redirect('properties:manage_units', pk=property_obj.pk)
@@ -304,6 +319,20 @@ def property_create(request):
                             property_obj.main_image = result['url']
                     
                     property_obj.save()
+
+                    for idx, image in enumerate(request.FILES.getlist('images'), start=1):
+                        result = upload_property_image_to_cloudinary(image, property_obj.id, 'gallery')
+                        if result:
+                            PropertyImage.objects.create(
+                                property=property_obj,
+                                image_url=result['url'],
+                                is_main=(idx == 1 and not property_obj.main_image),
+                                order=idx,
+                                is_active=True,
+                            )
+                            if not property_obj.main_image:
+                                property_obj.main_image = result['url']
+                                property_obj.save(update_fields=['main_image'])
                     
                     messages.success(request, 'Property created successfully!')
                     return redirect('properties:detail', pk=property_obj.pk)

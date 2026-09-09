@@ -185,7 +185,13 @@
                         {% if lease.lease_agreement %}
                             <a href="{{ lease.lease_agreement.url }}" target="_blank" class="flex items-center text-blue-600 hover:text-blue-500">
                                 <i class="fas fa-file-pdf text-red-500 mr-2"></i>
-                                Download Lease Agreement
+                                Download System Lease{% if not lease.use_custom_lease %} (Current){% endif %}
+                            </a>
+                        {% endif %}
+                        {% if lease.custom_lease_agreement %}
+                            <a href="{{ lease.custom_lease_agreement.url }}" target="_blank" class="flex items-center text-blue-600 hover:text-blue-500">
+                                <i class="fas fa-file-alt text-blue-500 mr-2"></i>
+                                Download Custom Lease{% if lease.use_custom_lease %} (Current){% endif %}
                             </a>
                         {% endif %}
                         {% if lease.signed_lease %}
@@ -194,7 +200,7 @@
                                 Download Signed Lease
                             </a>
                         {% endif %}
-                        {% if not lease.lease_agreement and not lease.signed_lease %}
+                        {% if not lease.lease_agreement and not lease.custom_lease_agreement and not lease.signed_lease %}
                             <p class="text-sm text-gray-500">No documents uploaded yet</p>
                         {% endif %}
                     </div>
@@ -212,6 +218,11 @@
                             Please review and sign the lease agreement to complete the process.
                         </p>
                     </div>
+                {% endif %}
+                {% if lease.property.owner == user.owner_profile %}
+                    <a href="{% url 'tenants:lease_manage' lease.id %}" class="flex items-center text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-sliders-h mr-2"></i> Manage agreement
+                    </a>
                 {% endif %}
                 
                 <!-- Navigation -->
