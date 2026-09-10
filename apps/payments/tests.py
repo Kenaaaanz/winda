@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from apps.accounts.models import OwnerProfile, User
+from apps.payments.models import OwnerSubscription, SubscriptionPlan
 from apps.payments.services import PaymentService, PaystackService
 from apps.properties.models import Property
 
@@ -52,6 +53,56 @@ class PaymentServiceTests(TestCase):
             PaymentService.get_property_payment_amount(self.property, 'DEPOSIT'),
             Decimal('30000.00'),
         )
+
+    def test_base_package_uses_three_percent_platform_fee(self):
+        fee = PaymentService.get_fee_configuration(Decimal('10000.00'), self.owner_profile)
+
+        self.assertEqual(fee['fee_mode'], 'PERCENTAGE')
+        self.assertEqual(fee['platform_fee'], Decimal('300.00'))
+
+    def test_flat_package_charges_once_per_month_then_zero(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Portfolio Flat',
+            plan_type='ENTERPRISE',
+            fee_mode='FLAT_RATE',
+            monthly_charge=Decimal('500.00'),
+            price_monthly=Decimal('5000.00'),
+            price_yearly=Decimal('50000.00'),
+            minimum_units=1,
+        )
+        subscription = OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
+
+        first_fee = PaymentService.get_fee_configuration(Decimal('10000.00'), self.owner_profile)
+        self.assertEqual(first_fee['platform_fee'], Decimal('500.00'))
+        self.assertTrue(first_fee['first_flat_charge'])
+
+        subscription.last_flat_fee_month = first_fee['flat_fee_month']
+        subscription.save(update_fields=['last_flat_fee_month'])
+        later_fee = PaymentService.get_fee_configuration(Decimal('10000.00'), self.owner_profile)
+        self.assertEqual(later_fee['platform_fee'], Decimal('0.00'))
+        self.assertEqual(later_fee['transaction_charge'], 0)
+
+    def test_flat_package_carries_unpaid_balance(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Small Flat Balance',
+            plan_type='PREMIUM',
+            fee_mode='FLAT_RATE',
+            monthly_charge=Decimal('500.00'),
+            price_monthly=Decimal('5000.00'),
+            price_yearly=Decimal('50000.00'),
+            minimum_units=1,
+        )
+        subscription = OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
+
+        first_fee = PaymentService.get_fee_configuration(Decimal('200.00'), self.owner_profile)
+        self.assertEqual(first_fee['platform_fee'], Decimal('200.00'))
+        self.assertEqual(first_fee['flat_fee_balance_after'], Decimal('300.00'))
+
+        subscription.flat_fee_balance = first_fee['flat_fee_balance_after']
+        subscription.save(update_fields=['flat_fee_balance'])
+        second_fee = PaymentService.get_fee_configuration(Decimal('250.00'), self.owner_profile)
+        self.assertEqual(second_fee['platform_fee'], Decimal('250.00'))
+        self.assertEqual(second_fee['flat_fee_balance_after'], Decimal('50.00'))
 
 
 class PaystackServiceTests(TestCase):

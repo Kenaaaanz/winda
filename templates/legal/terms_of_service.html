@@ -88,15 +88,20 @@
                         Paystack subaccount through the Platform dashboard to receive funds.
                     </p>
                     
-                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.2 Platform Fee (3%)</h3>
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.2 Platform Fee Packages</h3>
                     <p class="text-gray-700 leading-relaxed">
-                        By using the Platform, Landlords authorize the following automated transaction mechanism:
+                        By using the Platform, Landlords authorize the automated fee mechanism applicable to their selected and eligible package:
                     </p>
                     <ul class="list-disc list-inside text-gray-700 leading-relaxed mt-2 space-y-1 ml-4">
                         <li>When a Tenant initiates a payment through the Platform, funds are routed via Paystack.</li>
-                        <li><strong>Platform Fee:</strong> Winda automatically deducts a non-refundable marketplace facilitation fee equal to <strong>three percent (3%)</strong> of the total gross transaction value.</li>
-                        <li><strong>Payout:</strong> The remaining ninety-seven percent (97%) is settled directly into the Landlord's designated bank account.</li>
+                        <li><strong>Base package:</strong> Unless another eligible package applies, Winda deducts the configured percentage platform fee, normally <strong>three percent (3%)</strong> of the gross transaction value.</li>
+                        <li><strong>Flat-rate package:</strong> For an eligible Landlord, Winda applies the configured monthly flat fee through a Paystack transaction-charge override on successful transactions.</li>
+                        <li><strong>Payout:</strong> The balance remaining after the applicable platform fee and gateway charges is settled through the Landlord's designated Paystack subaccount.</li>
                     </ul>
+
+                    <h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">3.3 Monthly Fee Balance and Carryover</h3>
+                    <p class="text-gray-700 leading-relaxed">If the first successful payment in a month is less than the applicable flat-rate fee, Winda deducts the amount available from that transaction and carries the unpaid balance forward. The balance is deducted from the next successful transaction or transactions until the monthly fee is fully covered. Once fully covered, subsequent transactions in that month carry a zero platform fee under the flat-rate package.</p>
+                    <p class="text-gray-700 leading-relaxed mt-3">Free months and discounted months are applied according to the package configuration. Winda may record fee state, transaction references, and carryover balances for settlement, accounting, fraud prevention, and dispute resolution.</p>
                     
                     <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mt-4 rounded-r-lg">
                         <h4 class="font-semibold text-blue-800">🔒 Zero-Trust Funds Policy</h4>

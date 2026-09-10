@@ -6,6 +6,7 @@ from django.db import transaction
 
 from apps.properties.models import Property
 from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, PaystackSubaccount
+from apps.payments.models import SubscriptionPlan
 
 User = get_user_model()
 
@@ -82,6 +83,15 @@ class RegistrationStep1Form(forms.ModelForm):
 
 class RegistrationStep2Form(forms.ModelForm):
     """Step 2: Business Details (for owners)"""
+
+    subscription_plan = forms.ModelChoiceField(
+        queryset=SubscriptionPlan.objects.none(),
+        required=False,
+        empty_label='Select a package (Base 3% fee applies by default)',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
+        }),
+    )
     
     class Meta:
         model = OwnerProfile
@@ -240,7 +250,9 @@ class UserLoginForm(AuthenticationForm):
     }))
 
     def __init__(self, *args, **kwargs):
+        from apps.payments.models import SubscriptionPlan
         super().__init__(*args, **kwargs)
+        self.fields['subscription_plan'].queryset = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly', 'name')
         self.fields['username'].widget.attrs.update({'placeholder': 'Enter your email'})
         self.fields['password'].widget.attrs.update({'placeholder': 'Enter your password'})
 

@@ -11,7 +11,7 @@ from .admin import admin_site
 from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
-from apps.payments.models import Payment, Invoice, SubscriptionPlan
+from apps.payments.models import Payment, Invoice, SubscriptionPlan, OwnerSubscription
 from apps.maintenance.models import MaintenanceRequest, MaintenanceTask
 from apps.communications.models import ChatRoom, Message, MessageTemplate
 from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
@@ -349,8 +349,15 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionPlan, site=admin_site)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'plan_type', 'price_monthly', 'is_active')
+    list_display = ('name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units', 'minimum_tenants', 'is_active')
     list_filter = ('is_active',)
+
+
+@admin.register(OwnerSubscription, site=admin_site)
+class OwnerSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('owner', 'plan', 'is_active', 'discounted_months_remaining', 'free_months_remaining', 'flat_fee_balance', 'last_flat_fee_month')
+    list_filter = ('is_active', 'plan__fee_mode')
+    search_fields = ('owner__user__email', 'owner__company_name', 'plan__name')
 
 
 # ========================================

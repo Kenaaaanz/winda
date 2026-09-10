@@ -118,8 +118,19 @@ class SubscriptionPlan(models.Model):
     )
 
     name = models.CharField(max_length=50)
-    plan_type = models.CharField(max_length=20, choices=PLAN_TYPES, unique=True)
+    plan_type = models.CharField(max_length=20, choices=PLAN_TYPES)
     description = models.TextField(blank=True)
+
+    FEE_MODES = (
+        ('PERCENTAGE', 'Percentage platform fee'),
+        ('FLAT_RATE', 'Flat monthly platform fee'),
+    )
+    fee_mode = models.CharField(max_length=20, choices=FEE_MODES, default='PERCENTAGE')
+    minimum_units = models.PositiveIntegerField(default=0)
+    minimum_tenants = models.PositiveIntegerField(default=0)
+    discounted_months = models.PositiveIntegerField(default=0)
+    free_months = models.PositiveIntegerField(default=0)
+    discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
 
     # Pricing
     price_monthly = models.DecimalField(max_digits=10, decimal_places=2)
@@ -154,6 +165,28 @@ class SubscriptionPlan(models.Model):
         if period == 'yearly':
             return self.price_yearly
         return self.price_monthly
+
+    def matches_owner_scale(self, units, tenants):
+        return units >= self.minimum_units or tenants >= self.minimum_tenants
+
+
+class OwnerSubscription(models.Model):
+    """The package selected by an owner and its monthly fee state."""
+    owner = models.OneToOneField('accounts.OwnerProfile', on_delete=models.CASCADE, related_name='subscription')
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.SET_NULL, null=True, blank=True, related_name='owner_subscriptions')
+    started_at = models.DateTimeField(default=timezone.now)
+    discounted_months_remaining = models.PositiveIntegerField(default=0)
+    free_months_remaining = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    last_flat_fee_month = models.CharField(max_length=7, blank=True)
+    flat_fee_balance = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'owner_subscriptions'
+
+    def __str__(self):
+        return f'{self.owner} - {self.plan.name if self.plan else "No package"}'
 
 
 class Invoice(models.Model):

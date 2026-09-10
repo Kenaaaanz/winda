@@ -12,7 +12,7 @@ import uuid
 from django.conf import settings
 
 
-from .models import Payment, SubscriptionPlan, Invoice
+from .models import Payment, SubscriptionPlan, OwnerSubscription, Invoice
 from .forms import PaymentForm, SubscriptionForm
 from .services import PaystackService, PaymentService
 from ..accounts.decorators import owner_required, tenant_required
@@ -240,6 +240,23 @@ def sync_payment_paystack(request, payment_id):
             payment.status = 'COMPLETED'
             payment.paid_at = timezone.now()
             payment.save()
+
+            if payment.metadata.get('fee_mode') == 'FLAT_RATE' and payment.metadata.get('first_flat_charge'):
+                try:
+                    subscription = payment.property.owner.subscription
+                    balance_after = Decimal(payment.metadata.get('flat_fee_balance_after', '0.00'))
+                    subscription.flat_fee_balance = balance_after
+                    if balance_after <= 0:
+                        subscription.last_flat_fee_month = payment.metadata.get('flat_fee_month', timezone.now().strftime('%Y-%m'))
+                    else:
+                        subscription.last_flat_fee_month = ''
+                    if subscription.free_months_remaining:
+                        subscription.free_months_remaining -= 1
+                    elif subscription.discounted_months_remaining:
+                        subscription.discounted_months_remaining -= 1
+                    subscription.save(update_fields=['last_flat_fee_month', 'flat_fee_balance', 'free_months_remaining', 'discounted_months_remaining', 'updated_at'])
+                except (AttributeError, OwnerSubscription.DoesNotExist):
+                    pass
             EmailService.send_payment_confirmation_email(payment)
             
             # Check if invoice already exists before creating
@@ -390,10 +407,22 @@ def initiate_payment(request):
             payment.payment_reference = f"PAY-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
             payment.status = 'PENDING'
             
-            # Calculate fee split: 3% to Winda, 97% to owner
-            fee_split = PaymentService.calculate_fee_split(payment.amount)
+            fee_split = PaymentService.get_fee_configuration(payment.amount, property_obj.owner) if property_obj else {
+                **PaymentService.calculate_fee_split(payment.amount),
+                'fee_mode': 'PERCENTAGE',
+                'transaction_charge': None,
+                'first_flat_charge': False,
+            }
             payment.platform_fee = fee_split['platform_fee']
             payment.owner_amount = fee_split['owner_amount']
+            payment.metadata.update({
+                'fee_mode': fee_split['fee_mode'],
+                'platform_percentage': str(fee_split['platform_percentage']),
+                'subscription_plan_id': fee_split.get('plan_id'),
+                'flat_fee_month': fee_split.get('flat_fee_month'),
+                'first_flat_charge': fee_split.get('first_flat_charge', False),
+                'flat_fee_balance_after': str(fee_split.get('flat_fee_balance_after', '0.00')),
+            })
             
             # Get the owner's Paystack subaccount code
             subaccount_code = None
@@ -412,6 +441,15 @@ def initiate_payment(request):
             payment.save()
 
             paystack_service = PaystackService()
+            if subaccount_code:
+                paystack_service.update_subaccount(
+                    subaccount_code,
+                    percentage_charge=(
+                        Decimal('0.00')
+                        if fee_split['fee_mode'] == 'FLAT_RATE'
+                        else fee_split['platform_percentage']
+                    ),
+                )
             response = paystack_service.initialize_transaction_with_subaccount(
                 email=request.user.email,
                 amount=int(float(payment.amount) * 100),
@@ -425,8 +463,9 @@ def initiate_payment(request):
                     'recipient_id': str(payment.recipient.id) if payment.recipient else '',
                     'owner_amount': str(payment.owner_amount),
                     'platform_fee': str(payment.platform_fee),
+                    'fee_mode': fee_split['fee_mode'],
                 }
-            ) if subaccount_code else paystack_service.initialize_transaction(
+                , transaction_charge=fee_split.get('transaction_charge')) if subaccount_code else paystack_service.initialize_transaction(
                 email=request.user.email,
                 amount=int(float(payment.amount) * 100),
                 reference=payment.payment_reference,
@@ -547,6 +586,23 @@ def payment_callback(request):
             payment.status = 'COMPLETED'
             payment.paid_at = timezone.now()
             payment.save()
+
+            if payment.metadata.get('fee_mode') == 'FLAT_RATE' and payment.metadata.get('first_flat_charge'):
+                try:
+                    subscription = payment.property.owner.subscription
+                    balance_after = Decimal(payment.metadata.get('flat_fee_balance_after', '0.00'))
+                    subscription.flat_fee_balance = balance_after
+                    if balance_after <= 0:
+                        subscription.last_flat_fee_month = payment.metadata.get('flat_fee_month', timezone.now().strftime('%Y-%m'))
+                    else:
+                        subscription.last_flat_fee_month = ''
+                    if subscription.free_months_remaining:
+                        subscription.free_months_remaining -= 1
+                    elif subscription.discounted_months_remaining:
+                        subscription.discounted_months_remaining -= 1
+                    subscription.save(update_fields=['last_flat_fee_month', 'flat_fee_balance', 'free_months_remaining', 'discounted_months_remaining', 'updated_at'])
+                except (AttributeError, OwnerSubscription.DoesNotExist):
+                    pass
             
             # Check if invoice already exists before creating
             if not hasattr(payment, 'invoice'):

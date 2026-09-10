@@ -114,6 +114,7 @@ def register_wizard(request):
                     'company_name': form.cleaned_data['company_name'],
                     'company_registration_number': form.cleaned_data.get('company_registration_number', ''),
                     'tax_pin': form.cleaned_data.get('tax_pin', ''),
+                    'subscription_plan_id': form.cleaned_data.get('subscription_plan').id if form.cleaned_data.get('subscription_plan') else None,
                 }
                 
                 # Store the file in a temporary location or in memory
@@ -305,6 +306,33 @@ def create_owner_account(request):
             owner_profile.company_registration_number = business_data.get('company_registration_number', owner_profile.company_registration_number)
             owner_profile.tax_pin = business_data.get('tax_pin', owner_profile.tax_pin)
             owner_profile.save()
+
+        from apps.payments.models import OwnerSubscription, SubscriptionPlan
+        selected_plan = None
+        selected_plan_id = business_data.get('subscription_plan_id')
+        if selected_plan_id:
+            selected_plan = SubscriptionPlan.objects.filter(id=selected_plan_id, is_active=True).first()
+        if not selected_plan:
+            selected_plan, _ = SubscriptionPlan.objects.get_or_create(
+                plan_type='BASIC',
+                defaults={
+                    'name': 'Base',
+                    'description': 'Base platform package',
+                    'price_monthly': 0,
+                    'price_yearly': 0,
+                    'platform_fee_percent': 3,
+                    'fee_mode': 'PERCENTAGE',
+                },
+            )
+        OwnerSubscription.objects.update_or_create(
+            owner=owner_profile,
+            defaults={
+                'plan': selected_plan,
+                'discounted_months_remaining': selected_plan.discounted_months,
+                'free_months_remaining': selected_plan.free_months,
+                'is_active': True,
+            },
+        )
         
         # Handle business license file upload
         if business_license_file:
@@ -889,7 +917,11 @@ def setup_bank_account(request):
                 settlement_bank=bank_code,
                 account_number=account_number,
                 account_holder_name=account_name,
-                percentage_charge=3  # 3% for Winda
+                percentage_charge=(
+                    owner_profile.subscription.plan.platform_fee_percent
+                    if hasattr(owner_profile, 'subscription') and owner_profile.subscription.plan.fee_mode == 'PERCENTAGE'
+                    else 0
+                )
             )
             
             if response.get('status') is True:

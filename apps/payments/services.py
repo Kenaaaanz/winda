@@ -1,4 +1,5 @@
 from datetime import timezone
+from django.utils import timezone as django_timezone
 
 import requests
 from django.conf import settings
@@ -150,7 +151,7 @@ class PaystackService:
         except Exception as exc:
             return {'status': False, 'message': str(exc)}
     
-    def initialize_transaction_with_subaccount(self, email, amount, reference, subaccount_code, metadata=None):
+    def initialize_transaction_with_subaccount(self, email, amount, reference, subaccount_code, metadata=None, transaction_charge=None):
         """Initialize a transaction to be settled to a subaccount.
         
         Args:
@@ -171,12 +172,98 @@ class PaystackService:
                 'subaccount': subaccount_code,
                 'metadata': metadata or {},
             }
+            if transaction_charge is not None:
+                payload['transaction_charge'] = int(transaction_charge)
+                payload['bearer'] = 'account'
             return self._request('post', '/transaction/initialize', json=payload)
         except Exception as exc:
             return {'status': False, 'message': str(exc)}
 
 class PaymentService:
     PLATFORM_FEE_PERCENT = Decimal('3.00')  # 3% to Winda, 97% to owner
+
+    @staticmethod
+    def get_owner_scale(owner):
+        from apps.properties.models import Property
+        from apps.tenants.models import Lease
+
+        properties = Property.objects.filter(owner=owner)
+        units = sum(property_obj.get_total_units_count() for property_obj in properties)
+        tenants = Lease.objects.filter(property__in=properties, status__in=['ACTIVE', 'PENDING_SIGNATURE']).values('tenant_id').distinct().count()
+        return units, tenants
+
+    @staticmethod
+    def get_fee_configuration(amount, owner, at=None):
+        """Return the fee mode for this payment and whether a flat fee is due."""
+        from .models import OwnerSubscription
+
+        at = at or django_timezone.now()
+        default = PaymentService.calculate_fee_split(amount)
+        try:
+            subscription = owner.subscription
+        except OwnerSubscription.DoesNotExist:
+            return {**default, 'fee_mode': 'PERCENTAGE', 'transaction_charge': None}
+
+        plan = subscription.plan
+        units, tenants = PaymentService.get_owner_scale(owner)
+        if not subscription.is_active or not plan or plan.fee_mode != 'FLAT_RATE' or not plan.matches_owner_scale(units, tenants):
+            percentage = plan.platform_fee_percent if plan else PaymentService.PLATFORM_FEE_PERCENT
+            return {
+                **PaymentService.calculate_fee_split(amount, percentage),
+                'fee_mode': 'PERCENTAGE',
+                'transaction_charge': None,
+                'plan_id': plan.id if plan else None,
+            }
+
+        month_key = at.strftime('%Y-%m')
+        if subscription.last_flat_fee_month == month_key and subscription.flat_fee_balance <= 0:
+            return {
+                'platform_fee': Decimal('0.00'),
+                'owner_amount': amount,
+                'platform_percentage': Decimal('0.00'),
+                'owner_percentage': Decimal('100.00'),
+                'fee_mode': 'FLAT_RATE',
+                'transaction_charge': 0,
+                'first_flat_charge': False,
+                'plan_id': plan.id,
+                'flat_fee_month': month_key,
+            }
+
+        if subscription.free_months_remaining > 0:
+            return {
+                'platform_fee': Decimal('0.00'),
+                'owner_amount': amount,
+                'platform_percentage': Decimal('0.00'),
+                'owner_percentage': Decimal('100.00'),
+                'fee_mode': 'FLAT_RATE',
+                'transaction_charge': 0,
+                'first_flat_charge': True,
+                'plan_id': plan.id,
+                'flat_fee_month': month_key,
+            }
+
+        if subscription.flat_fee_balance > 0:
+            fee_due = subscription.flat_fee_balance
+        else:
+            fee_due = plan.monthly_charge
+            if subscription.discounted_months_remaining > 0:
+                fee_due = (fee_due * (Decimal('100.00') - plan.discount_percent) / Decimal('100.00')).quantize(Decimal('0.01'))
+
+        flat_fee = min(amount, fee_due)
+        balance_after = (fee_due - flat_fee).quantize(Decimal('0.01'))
+
+        return {
+            'platform_fee': flat_fee.quantize(Decimal('0.01')),
+            'owner_amount': (amount - flat_fee).quantize(Decimal('0.01')),
+            'platform_percentage': Decimal('0.00'),
+            'owner_percentage': Decimal('100.00') - (flat_fee / amount * 100 if amount else Decimal('0.00')),
+            'fee_mode': 'FLAT_RATE',
+            'transaction_charge': int(flat_fee * 100),
+            'first_flat_charge': True,
+            'flat_fee_balance_after': balance_after,
+            'plan_id': plan.id,
+            'flat_fee_month': month_key,
+        }
     
     @staticmethod
     def calculate_fee_split(amount, platform_fee_percent=None):
