@@ -34,6 +34,14 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+
+        :root {
+            --platform-emerald: #064e3b;
+            --platform-emerald-deep: #022c22;
+            --platform-mint: #dff4e8;
+            --platform-ivory: #FDFBD4;
+            --platform-brass: #b38b2e;
+        }
         
         /* Logo Animation */
         .logo-icon {
@@ -45,7 +53,7 @@
         
         /* Gradient Text */
         .logo-text {
-            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            background: linear-gradient(135deg, #0f766e, #064e3b);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -60,12 +68,12 @@
         
         /* Button Gradient Animation */
         .btn-gradient {
-            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            background: linear-gradient(135deg, #0f766e, #064e3b);
             transition: all 0.3s ease;
         }
         .btn-gradient:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 20px rgba(6, 78, 59, 0.3);
         }
         
         /* Mobile Menu Slide */
@@ -79,7 +87,7 @@
             transition: all 0.3s ease;
         }
         .avatar-ring:hover {
-            border-color: #3B82F6;
+            border-color: #b38b2e;
         }
 
         /* Tenant-facing visual language: emerald, ivory, and restrained brass. */
@@ -176,6 +184,127 @@
         body.tenant-experience .tenant-reveal {
             animation: tenant-reveal 0.5s ease both;
         }
+
+        /* Keep legacy blue utility classes aligned with the platform palette. */
+        body .bg-blue-500,
+        body .bg-blue-600,
+        body .bg-blue-700,
+        body .btn-gradient,
+        body .from-blue-500,
+        body .to-blue-600 {
+            background: var(--platform-emerald) !important;
+        }
+        body .bg-blue-50,
+        body .bg-blue-100 {
+            background-color: var(--platform-mint) !important;
+        }
+        body .text-blue-500,
+        body .text-blue-600,
+        body .text-blue-700,
+        body .text-blue-800,
+        body .text-blue-900,
+        body .hover\:text-blue-500:hover,
+        body .hover\:text-blue-600:hover,
+        body .hover\:text-blue-700:hover {
+            color: var(--platform-emerald) !important;
+        }
+        body .border-blue-200,
+        body .border-blue-500,
+        body .border-blue-600 {
+            border-color: rgba(6, 78, 59, 0.26) !important;
+        }
+        body .ring-blue-500,
+        body .focus\:ring-blue-500:focus {
+            --tw-ring-color: rgba(6, 78, 59, 0.3) !important;
+        }
+        body .dashboard-sidebar {
+            background: var(--platform-emerald-deep);
+            color: #e8f5e9;
+        }
+        body .dashboard-sidebar a {
+            color: #d4eadb;
+        }
+        body .dashboard-sidebar a:hover,
+        body .dashboard-sidebar a.is-active {
+            color: #fffef0;
+            background: rgba(223, 244, 232, 0.14);
+        }
+        body.dashboard-shell {
+            background: var(--platform-ivory);
+        }
+        body.dashboard-shell .dashboard-top-nav {
+            display: none;
+        }
+        body.dashboard-shell main {
+            margin-left: 254px;
+            padding-top: 0;
+        }
+        .dashboard-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: 254px;
+            z-index: 60;
+            padding: 22px 14px;
+            transition: transform 0.25s ease;
+        }
+        .dashboard-sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 12px 24px;
+            color: #fffef0;
+            font-size: 20px;
+            font-weight: 800;
+        }
+        .dashboard-sidebar-brand span {
+            color: #f7d774;
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+        .dashboard-sidebar-links { display: grid; gap: 5px; }
+        .dashboard-sidebar a {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-height: 43px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .dashboard-sidebar a i { width: 18px; text-align: center; color: #9ac8aa; }
+        .dashboard-sidebar a.is-active i,
+        .dashboard-sidebar a:hover i { color: #f7d774; }
+        .dashboard-sidebar-divider { height: 1px; background: rgba(232,245,233,0.18); margin: 18px 10px; }
+        .dashboard-sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 70;
+            width: 42px;
+            height: 42px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--platform-emerald-deep);
+            color: #fffef0;
+            box-shadow: 0 8px 20px rgba(2,44,34,0.22);
+        }
+        @media (max-width: 800px) {
+            body.dashboard-shell .dashboard-top-nav { display: none; }
+            body.dashboard-shell main { margin-left: 0; padding-top: 0; }
+            .dashboard-sidebar { transform: translateX(-105%); box-shadow: 12px 0 30px rgba(2,44,34,0.2); }
+            body.dashboard-shell.sidebar-open .dashboard-sidebar { transform: translateX(0); }
+            .dashboard-sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+            body.dashboard-shell.sidebar-open::after {
+                content: '';
+                position: fixed;
+                inset: 0;
+                z-index: 55;
+                background: rgba(2,44,34,0.42);
+            }
+        }
         body.tenant-experience label[data-selected-files]::after {
             content: attr(data-selected-files);
             display: block;
@@ -190,9 +319,43 @@
         }
     </style>
 </head>
-<body class="tenant-experience">
+<body class="tenant-experience {% if request.path == '/dashboard/' or request.path == '/accounts/dashboard/' %}{% if user.user_type == 'HOUSE_OWNER' or user.user_type == 'TENANT' %}dashboard-shell{% endif %}{% endif %}">
+    {% if request.path == '/dashboard/' or request.path == '/accounts/dashboard/' %}{% if user.user_type == 'HOUSE_OWNER' or user.user_type == 'TENANT' %}
+        <button class="dashboard-sidebar-toggle" type="button" aria-label="Open dashboard menu" onclick="toggleDashboardSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <aside class="dashboard-sidebar" id="dashboard-sidebar" aria-label="Dashboard navigation">
+            <a href="{% url 'dashboard' %}" class="dashboard-sidebar-brand">
+                <i class="fas fa-window-maximize"></i>
+                <div>Winda <span>Workspace</span></div>
+            </a>
+            <nav class="dashboard-sidebar-links">
+                <a href="{% url 'dashboard' %}" class="is-active"><i class="fas fa-compass"></i><span>Overview</span></a>
+                {% if user.user_type == 'HOUSE_OWNER' %}
+                    <a href="{% url 'properties:owner_properties' %}"><i class="fas fa-building"></i><span>My Properties</span></a>
+                    <a href="{% url 'properties:create' %}"><i class="fas fa-plus-circle"></i><span>List Property</span></a>
+                    <a href="{% url 'tenants:tenant_list' %}"><i class="fas fa-users"></i><span>Tenants</span></a>
+                    <a href="{% url 'tenants:pending_tenants' %}"><i class="fas fa-clock"></i><span>Pending Applications</span>{% if pending_count > 0 %}<b class="ml-auto rounded-full bg-amber-300 text-emerald-950 px-2 py-0.5 text-xs">{{ pending_count }}</b>{% endif %}</a>
+                    <a href="{% url 'tenants:lease_list' %}"><i class="fas fa-file-contract"></i><span>Lease Management</span></a>
+                    <a href="{% url 'analytics:dashboard' %}"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                {% else %}
+                    <a href="{% url 'properties:list' %}"><i class="fas fa-search"></i><span>Find Properties</span></a>
+                    <a href="{% url 'tenants:applications' %}"><i class="fas fa-file-signature"></i><span>Applications</span></a>
+                    <a href="{% url 'tenants:lease_list' %}"><i class="fas fa-file-contract"></i><span>My Leases</span></a>
+                    <a href="{% url 'payments:list' %}"><i class="fas fa-credit-card"></i><span>Payments</span></a>
+                {% endif %}
+            </nav>
+            <div class="dashboard-sidebar-divider"></div>
+            <nav class="dashboard-sidebar-links">
+                <a href="{% url 'notifications:list' %}"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                <a href="{% url 'communications:chat_list' %}"><i class="fas fa-comments"></i><span>Messages</span></a>
+                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i><span>Profile</span></a>
+                <a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i><span>Sign out</span></a>
+            </nav>
+        </aside>
+    {% endif %}{% endif %}
     <!-- Navigation -->
-    <nav class="nav-glass shadow-sm border-b border-gray-200/80 fixed w-full z-50 top-0">
+    <nav class="nav-glass dashboard-top-nav shadow-sm border-b border-gray-200/80 fixed w-full z-50 top-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <!-- Logo -->
@@ -202,13 +365,13 @@
                         <svg class="logo-icon w-10 h-10" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <defs>
                                 <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
-                                    <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+                                    <stop offset="0%" style="stop-color:#0f766e;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#064e3b;stop-opacity:1" />
                                 </linearGradient>
                             </defs>
                             
                             <!-- Outer Circle -->
-                            <circle cx="40" cy="40" r="38" fill="#EFF6FF" stroke="url(#logoGradient)" stroke-width="2"/>
+                            <circle cx="40" cy="40" r="38" fill="#dff4e8" stroke="url(#logoGradient)" stroke-width="2"/>
                             
                             <!-- Roof -->
                             <path d="M40 8 L12 35 L68 35 L40 8Z" fill="url(#logoGradient)"/>
@@ -218,11 +381,11 @@
                             
                             <!-- Window - The "Winda" window -->
                             <rect x="28" y="42" width="24" height="18" fill="white" rx="2"/>
-                            <line x1="40" y1="42" x2="40" y2="60" stroke="#2563EB" stroke-width="2"/>
-                            <line x1="28" y1="51" x2="52" y2="51" stroke="#2563EB" stroke-width="2"/>
+                            <line x1="40" y1="42" x2="40" y2="60" stroke="#064e3b" stroke-width="2"/>
+                            <line x1="28" y1="51" x2="52" y2="51" stroke="#064e3b" stroke-width="2"/>
                             
                             <!-- Window Glow -->
-                            <rect x="30" y="44" width="8" height="5" fill="#93C5FD" rx="1" opacity="0.5"/>
+                            <rect x="30" y="44" width="8" height="5" fill="#b8dfc4" rx="1" opacity="0.7"/>
                             
                             <!-- Door -->
                             <rect x="34" y="57" width="12" height="13" fill="#1E3A5F" rx="1"/>
@@ -603,6 +766,14 @@
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
         }
+
+        function toggleDashboardSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        document.querySelectorAll('.dashboard-sidebar a').forEach(link => {
+            link.addEventListener('click', () => document.body.classList.remove('sidebar-open'));
+        });
         
         // Close mobile menu on link click
         document.querySelectorAll('#mobile-menu a').forEach(link => {

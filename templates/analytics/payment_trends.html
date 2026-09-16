@@ -169,7 +169,7 @@ new Chart(revenueCtx, {
         datasets: [{
             label: 'Revenue (KES)',
             data: {{ chart_data.amounts|safe }},
-            borderColor: '#3b82f6',
+            borderColor: '#064e3b',
             backgroundColor: 'rgba(59, 130, 246, 0.1)',
             fill: true,
             tension: 0.4
@@ -202,7 +202,7 @@ new Chart(typesCtx, {
         labels: {{ pie_data.labels|safe }},
         datasets: [{
             data: {{ pie_data.values|safe }},
-            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+            backgroundColor: ['#064e3b', '#0f766e', '#b38b2e', '#ef4444', '#8b5cf6', '#ec4899']
         }]
     },
     options: {

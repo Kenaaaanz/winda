@@ -53,6 +53,71 @@
         padding: 24px 0 40px;
     }
 
+    .admin-dashboard-layout {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+    }
+
+    .admin-action-rail {
+        position: sticky;
+        top: 20px;
+        background: var(--winda-emerald-deep);
+        border-radius: 14px;
+        padding: 16px 12px;
+        box-shadow: 0 14px 28px rgba(2, 44, 34, 0.16);
+    }
+
+    .admin-action-rail h2 {
+        color: #fffef0;
+        font-size: 13px;
+        margin: 0 8px 12px;
+    }
+
+    .admin-action-rail .quick-actions-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        margin: 0;
+    }
+
+    .admin-action-rail .quick-action-btn {
+        background: transparent;
+        border-color: rgba(232, 245, 233, 0.16);
+        color: #d4eadb;
+        font-size: 12px;
+        padding: 10px;
+    }
+
+    .admin-action-rail .quick-action-btn:hover {
+        background: rgba(223, 244, 232, 0.14);
+        border-color: #f7d774;
+        color: #fffef0;
+    }
+
+    .admin-action-rail .quick-action-btn i { color: #f7d774; }
+    .action-badge { margin-left: auto; background: #f7d774; color: #022c22; border-radius: 999px; padding: 2px 7px; font-size: 10px; font-weight: 800; }
+    .admin-dashboard-main {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 20px;
+    }
+    .admin-dashboard-main > .dashboard-intro,
+    .admin-dashboard-main > .status-strip { grid-column: 1 / -1; }
+    .admin-dashboard-main > .stats-grid,
+    .admin-dashboard-main > .stats-row-2,
+    .admin-dashboard-main > .recent-activities,
+    .admin-dashboard-main > div[style] { grid-column: 1; }
+    .admin-dashboard-main > .analytics-grid {
+        grid-column: 2;
+        grid-row: 3 / span 2;
+        display: grid;
+        grid-template-columns: 1fr;
+        align-self: start;
+    }
+
     .dashboard-intro {
         display: flex;
         justify-content: space-between;
@@ -269,7 +334,7 @@
 
     .analytics-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
         gap: 20px;
         margin-bottom: 30px;
     }
@@ -356,6 +421,10 @@
     
     /* Responsive */
     @media (max-width: 768px) {
+        .admin-dashboard-layout { grid-template-columns: 1fr; }
+        .admin-dashboard-main { display: block; }
+        .admin-action-rail { position: static; }
+        .admin-action-rail .quick-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .dashboard-intro { align-items: start; flex-direction: column; }
         .analytics-grid { grid-template-columns: 1fr; }
         .status-strip { grid-template-columns: repeat(2, 1fr); }
@@ -385,6 +454,21 @@
 
 {% block content %}
 <div id="content-main" class="winda-dashboard">
+    <div class="admin-dashboard-layout">
+        <aside class="admin-action-rail">
+            <h2><i class="fas fa-bolt" style="color:#f7d774;margin-right:7px;"></i>Quick actions</h2>
+            <div class="quick-actions-grid">
+                {% for action in quick_actions %}
+                    <a href="{{ action.url }}" class="quick-action-btn">
+                        <i class="fas {{ action.icon }} icon-{{ action.color }}"></i>
+                        <span>{{ action.name }}</span>
+                        {% if action.name == 'Verify Properties' and stats.properties.pending %}<span class="action-badge">{{ stats.properties.pending }}</span>{% endif %}
+                        {% if action.name == 'All Payments' and stats.payments.pending %}<span class="action-badge">{{ stats.payments.pending }}</span>{% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        </aside>
+        <section class="admin-dashboard-main">
     <div class="dashboard-intro">
         <div>
             <h1>Platform command centre</h1>
@@ -477,19 +561,6 @@
         </section>
     </div>
     
-    <!-- Quick Actions -->
-    <h2 style="font-size:16px;font-weight:600;color:#111827;margin-bottom:14px;">
-        <i class="fas fa-bolt" style="color:#f59e0b;margin-right:8px;"></i> Quick Actions
-    </h2>
-    <div class="quick-actions-grid">
-        {% for action in quick_actions %}
-            <a href="{{ action.url }}" class="quick-action-btn">
-                <i class="fas {{ action.icon }} icon-{{ action.color }}"></i>
-                {{ action.name }}
-            </a>
-        {% endfor %}
-    </div>
-    
     <!-- Recent Activities -->
     <div class="recent-activities">
         <div class="activity-header">
@@ -515,7 +586,8 @@
     <div style="margin-top:20px;">
         {{ block.super }}
     </div>
-    
+        </section>
+    </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>

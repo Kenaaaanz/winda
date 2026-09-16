@@ -177,7 +177,7 @@ if (revenueCtx) {
             datasets: [{
                 label: 'Revenue (KES)',
                 data: {{ chart_data.revenue.data|safe }},
-                borderColor: '#3b82f6',
+                borderColor: '#064e3b',
                 backgroundColor: 'rgba(59, 130, 246, 0.2)',
                 fill: true,
                 tension: 0.4
@@ -222,7 +222,7 @@ if (tenantCtx) {
                 {
                     label: 'Total Tenants',
                     data: {{ chart_data.tenants.total_tenants|safe }},
-                    borderColor: '#3b82f6',
+                    borderColor: '#064e3b',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                     fill: true,
                     tension: 0.4,
@@ -261,7 +261,7 @@ if (maintenanceCtx) {
                 {
                     label: 'Total',
                     data: {{ chart_data.maintenance.total|safe }},
-                    backgroundColor: '#3b82f6',
+                    backgroundColor: '#064e3b',
                     borderRadius: 4
                 },
                 {

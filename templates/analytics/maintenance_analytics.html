@@ -163,7 +163,7 @@ new Chart(trendCtx, {
             {
                 label: 'Total',
                 data: {{ chart_data.total|safe }},
-                backgroundColor: '#3b82f6'
+                backgroundColor: '#064e3b'
             },
             {
                 label: 'Resolved',
@@ -202,7 +202,7 @@ new Chart(categoryCtx, {
         labels: {{ category_data.labels|safe }},
         datasets: [{
             data: {{ category_data.values|safe }},
-            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
+            backgroundColor: ['#064e3b', '#0f766e', '#b38b2e', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
         }]
     },
     options: {
