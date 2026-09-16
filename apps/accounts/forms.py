@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from django.core.validators import RegexValidator
-from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
 
 from apps.properties.models import Property
@@ -291,11 +291,32 @@ class UserLoginForm(AuthenticationForm):
     }))
 
     def __init__(self, *args, **kwargs):
-        from apps.payments.models import SubscriptionPlan
         super().__init__(*args, **kwargs)
-        self.fields['subscription_plan'].queryset = SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly', 'name')
         self.fields['username'].widget.attrs.update({'placeholder': 'Enter your email'})
         self.fields['password'].widget.attrs.update({'placeholder': 'Enter your password'})
+
+    def clean(self):
+        """Authenticate by the account email, regardless of email casing."""
+        email = self.cleaned_data.get('username', '').strip().lower()
+        password = self.cleaned_data.get('password')
+        if email and password:
+            user = User.objects.filter(email__iexact=email).first()
+            if user:
+                self.user_cache = authenticate(
+                    self.request,
+                    username=user.username,
+                    password=password,
+                )
+            else:
+                self.user_cache = None
+            if self.user_cache is None:
+                raise forms.ValidationError(
+                    self.error_messages['invalid_login'],
+                    code='invalid_login',
+                    params={'username': self.username_field.verbose_name},
+                )
+            self.confirm_login_allowed(self.user_cache)
+        return self.cleaned_data
 
 
 class UserProfileForm(forms.ModelForm):

@@ -142,7 +142,7 @@
         <h2 class="text-3xl font-bold text-center mb-12">Why Choose Winda?</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-handshake text-3xl text-emerald-800 mb-4"></i><h3 class="text-xl font-semibold mb-2">Direct Connection</h3><p class="text-gray-600">Connect directly with property owners without middlemen.</p></div>
-            <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Verified Properties</h3><p class="text-gray-600">Browse properties verified with proper documentation.</p></div>
+            <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-check-circle text-3xl text-green-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Verified Properties</h3><p class="text-gray-600">Hunt properties verified with proper documentation.</p></div>
             <div class="bg-white p-6 rounded-xl shadow-md text-center"><i class="fas fa-lock text-3xl text-purple-600 mb-4"></i><h3 class="text-xl font-semibold mb-2">Secure Payments</h3><p class="text-gray-600">Make payments securely through Winda.</p></div>
         </div>
     </div>
@@ -250,7 +250,7 @@
             </div>
             <div class="text-center">
                 <div class="bg-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-emerald-800">2</div>
-                <h4 class="font-semibold mb-2">List or Browse</h4>
+                <h4 class="font-semibold mb-2">List or Hunt</h4>
                 <p class="text-gray-600 text-sm">List your property or find your dream home</p>
             </div>
             <div class="text-center">
@@ -340,7 +340,7 @@
         <p class="text-xl text-emerald-100 mb-8">Join thousands of happy tenants and property owners on Winda today.</p>
         <div class="flex flex-wrap justify-center gap-4">
             <a href="{% url 'properties:list' %}" class="bg-white text-emerald-800 px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200">
-                <i class="fas fa-search mr-2"></i> Browse Properties
+                <i class="fas fa-search mr-2"></i> Hunt Properties
             </a>
             {% if not user.is_authenticated %}
                 <a href="{% url 'accounts:register' %}" class="bg-emerald-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">

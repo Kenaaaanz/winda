@@ -30,7 +30,7 @@ from .forms import (
     UserRegistrationForm, UserLoginForm, UserProfileForm,
     OwnerProfileForm, TenantProfileForm, UserUpdateForm,
     CustomPasswordChangeForm, PasswordResetForm,
-    RegistrationStep1Form, RegistrationPlanForm, RegistrationStep2Form, RegistrationStep3Form, ScoutCreationForm
+    RegistrationStep1Form, RegistrationPlanForm, RegistrationStep2Form, RegistrationStep3Form, ScoutCreationForm, UserLoginForm
 )
 from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required, superadmin_required
@@ -516,6 +516,7 @@ def get_property_model():
 class CustomLoginView(LoginView):
     """Custom login view that redirects based on user type"""
     template_name = 'accounts/login.html'
+    authentication_form = UserLoginForm
     
     def form_valid(self, form):
         """If the form is valid, redirect to the appropriate dashboard"""
