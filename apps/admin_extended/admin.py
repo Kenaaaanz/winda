@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Import all models from all apps
@@ -286,7 +286,9 @@ class WindaAdminSite(AdminSite):
                 'time_ago': self.get_time_ago(req.created_at),
             })
         
-        activities.sort(key=lambda x: x['time'], reverse=True)
+        # Some completed payments may not have a callback timestamp yet.
+        # Keep those activities in the feed without comparing None to datetimes.
+        activities.sort(key=lambda x: x['time'] or timezone.make_aware(datetime.min), reverse=True)
         return activities[:10]
     
     def get_quick_actions(self):
