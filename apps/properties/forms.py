@@ -2,6 +2,7 @@ from django import forms
 from django_ckeditor_5.widgets import CKEditor5Widget
 from django.forms import modelformset_factory
 from .models import Property, PropertyDocument, Unit
+from apps.accounts.models import OwnerProfile
 
 class PropertyBaseForm(forms.ModelForm):
     """Base property form (single unit)"""
@@ -19,12 +20,14 @@ class PropertyBaseForm(forms.ModelForm):
         choices=[],  # Will be set in __init__
         label='Features'
     )
+
+    property_owner = forms.ModelChoiceField(queryset=OwnerProfile.objects.none(), required=False, label='Property owner')
     
     class Meta:
         model = Property
         fields = [
             'title', 'description', 'property_type', 'furnishing_status',
-            'address', 'city', 'state', 'postal_code',
+            'address', 'city', 'state', 'postal_code', 'land_reference_number',
             'rental_price', 'service_charge', 'security_deposit', 'negotiation_allowed',
             'bedrooms', 'bathrooms', 'parking_spaces', 'square_feet',
             'floor_number', 'total_floors', 'year_built',
@@ -37,6 +40,7 @@ class PropertyBaseForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'state': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'postal_code': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
+            'land_reference_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'e.g. L.R. No. 12345/67'}),
             'rental_price': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'step': '1000'}),
             'service_charge': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'step': '100'}),
             'security_deposit': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'step': '1000'}),
@@ -53,12 +57,19 @@ class PropertyBaseForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        listing_user = kwargs.pop('listing_user', None)
         super().__init__(*args, **kwargs)
         from .services import PropertyService
         amenities_choices = [(a, a) for a in PropertyService.get_amenities_list()]
         features_choices = [(f, f) for f in PropertyService.get_features_list()]
         self.fields['amenities'].choices = amenities_choices
         self.fields['features'].choices = features_choices
+        self.fields['land_reference_number'].required = True
+        if listing_user and listing_user.user_type == 'PROPERTY_SCOUT':
+            self.fields['property_owner'].queryset = OwnerProfile.objects.filter(user__verification_status='VERIFIED').order_by('company_name')
+            self.fields['property_owner'].required = True
+        else:
+            self.fields.pop('property_owner')
         
         # If instance exists, set initial values
         if self.instance and self.instance.pk:
@@ -84,6 +95,8 @@ class PropertyMultiUnitForm(forms.ModelForm):
         choices=[],  # Will be set in __init__
         label='Features'
     )
+
+    property_owner = forms.ModelChoiceField(queryset=OwnerProfile.objects.none(), required=False, label='Property owner')
     
     # Add a hidden field for is_multi_unit
     is_multi_unit = forms.BooleanField(
@@ -96,7 +109,7 @@ class PropertyMultiUnitForm(forms.ModelForm):
         model = Property
         fields = [
             'title', 'description', 'property_type', 'furnishing_status',
-            'address', 'city', 'state', 'postal_code',
+            'address', 'city', 'state', 'postal_code', 'land_reference_number',
             'parking_spaces', 'square_feet', 'total_floors', 'year_built',
             'main_image', 'video_url', 'virtual_tour_url'
         ]
@@ -107,6 +120,7 @@ class PropertyMultiUnitForm(forms.ModelForm):
             'city': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'state': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'postal_code': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
+            'land_reference_number': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'e.g. L.R. No. 12345/67'}),
             'parking_spaces': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'square_feet': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'total_floors': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
@@ -117,12 +131,19 @@ class PropertyMultiUnitForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        listing_user = kwargs.pop('listing_user', None)
         super().__init__(*args, **kwargs)
         from .services import PropertyService
         amenities_choices = [(a, a) for a in PropertyService.get_amenities_list()]
         features_choices = [(f, f) for f in PropertyService.get_features_list()]
         self.fields['amenities'].choices = amenities_choices
         self.fields['features'].choices = features_choices
+        self.fields['land_reference_number'].required = True
+        if listing_user and listing_user.user_type == 'PROPERTY_SCOUT':
+            self.fields['property_owner'].queryset = OwnerProfile.objects.filter(user__verification_status='VERIFIED').order_by('company_name')
+            self.fields['property_owner'].required = True
+        else:
+            self.fields.pop('property_owner')
         
         # Set is_multi_unit to True
         self.fields['is_multi_unit'].initial = True
@@ -138,6 +159,8 @@ class PropertyMultiUnitForm(forms.ModelForm):
         self.fields['property_type'].required = True
         self.fields['address'].required = True
         self.fields['city'].required = True
+        if listing_user and listing_user.user_type == 'PROPERTY_SCOUT':
+            self.fields['property_owner'].required = True
         
         # If instance exists, set initial values
         if self.instance and self.instance.pk:

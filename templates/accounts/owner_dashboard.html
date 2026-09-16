@@ -122,6 +122,13 @@
                                 <p class="text-sm text-gray-500">{{ stats.pending_applications }} pending</p>
                             </div>
                         </a>
+                        <a href="{% url 'tenants:lease_list' %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-file-contract text-indigo-500 mr-3 text-xl"></i>
+                            <div>
+                                <p class="font-medium">Lease Management</p>
+                                <p class="text-sm text-gray-500">View and manage lease agreements</p>
+                            </div>
+                        </a>
                         <a href="{% url 'payments:list' %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                             <i class="fas fa-credit-card text-purple-500 mr-3 text-xl"></i>
                             <div>

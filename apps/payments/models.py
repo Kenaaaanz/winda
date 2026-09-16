@@ -110,6 +110,31 @@ class Payment(models.Model):
         self.save()
 
 
+class ScoutCommission(models.Model):
+    COMMISSION_STATUS = (
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('PAID', 'Paid'),
+        ('VOID', 'Void'),
+    )
+    scout = models.ForeignKey('accounts.User', on_delete=models.PROTECT, related_name='scout_commissions')
+    property = models.ForeignKey('properties.Property', on_delete=models.PROTECT, related_name='scout_commissions')
+    payment = models.OneToOneField(Payment, on_delete=models.PROTECT, related_name='scout_commission')
+    company_fee = models.DecimalField(max_digits=12, decimal_places=2)
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'))
+    commission_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=10, choices=COMMISSION_STATUS, default='PENDING')
+    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'scout_commissions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.scout} - {self.commission_amount}'
+
+
 class SubscriptionPlan(models.Model):
     PLAN_TYPES = (
         ('BASIC', 'Basic'),

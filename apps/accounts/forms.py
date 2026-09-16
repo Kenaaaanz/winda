@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from apps.properties.models import Property
-from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, PaystackSubaccount
+from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, ScoutProfile, PaystackSubaccount
 from apps.payments.models import SubscriptionPlan
 
 User = get_user_model()
@@ -81,17 +81,58 @@ class RegistrationStep1Form(forms.ModelForm):
         return phone
 
 
-class RegistrationStep2Form(forms.ModelForm):
-    """Step 2: Business Details (for owners)"""
+class ScoutCreationForm(forms.ModelForm):
+    password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}), label='Password')
+    password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}), label='Confirm Password')
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'phone']
+        widgets = {
+            'email': forms.EmailInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+            'first_name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+            'last_name': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+            'phone': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('A user with this email already exists.')
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('password1') != cleaned_data.get('password2'):
+            raise forms.ValidationError('Passwords do not match.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.username = user.email
+        user.user_type = 'PROPERTY_SCOUT'
+        user.verification_status = 'PENDING'
+        user.is_active = True
+        user.set_password(self.cleaned_data['password1'])
+        if commit:
+            user.save()
+            UserProfile.objects.get_or_create(user=user)
+            ScoutProfile.objects.create(user=user)
+        return user
+
+
+class RegistrationPlanForm(forms.Form):
+    """Step 2: Select an active subscription plan."""
 
     subscription_plan = forms.ModelChoiceField(
-        queryset=SubscriptionPlan.objects.none(),
-        required=False,
-        empty_label='Select a package (Base 3% fee applies by default)',
-        widget=forms.Select(attrs={
-            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'
-        }),
+        queryset=SubscriptionPlan.objects.filter(is_active=True).order_by('price_monthly', 'name'),
+        required=True,
+        empty_label=None,
     )
+
+
+class RegistrationStep2Form(forms.ModelForm):
+    """Step 3: Business Details (for owners)"""
     
     class Meta:
         model = OwnerProfile

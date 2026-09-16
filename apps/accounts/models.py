@@ -11,6 +11,7 @@ class User(AbstractUser):
         ('SUPER_ADMIN', 'Super Admin'),
         ('HOUSE_OWNER', 'House Owner'),
         ('CARETAKER', 'Caretaker'),
+        ('PROPERTY_SCOUT', 'Property Scout'),
         ('TENANT', 'Tenant'),
         ('GUEST', 'Guest'),
     )
@@ -162,6 +163,25 @@ class OwnerProfile(models.Model):
     def has_active_subaccount(self):
         """Check if owner has an active Paystack subaccount"""
         return hasattr(self, 'paystack_subaccount') and self.paystack_subaccount.is_active
+
+
+class ScoutProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='scout_profile')
+    employee_or_agent_id = models.CharField(max_length=100, blank=True)
+    payout_account_name = models.CharField(max_length=200, blank=True)
+    payout_account_number = models.CharField(max_length=50, blank=True)
+    payout_bank_code = models.CharField(max_length=20, blank=True)
+    payout_paystack_subaccount = models.CharField(max_length=100, blank=True)
+    total_properties_listed = models.PositiveIntegerField(default=0)
+    total_earnings = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'scout_profiles'
+
+    def __str__(self):
+        return f'Scout: {self.user.get_full_name() or self.user.email}'
 
 
 class PaystackSubaccount(models.Model):

@@ -1,4 +1,45 @@
 {% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Choose a Plan - Winda{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl w-full space-y-8">
+        <div>
+            <div class="flex justify-center"><div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center"><span class="text-white font-bold text-3xl">W</span></div></div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">Choose your plan</h2>
+            <p class="mt-2 text-center text-sm text-gray-600">Step {{ step }} of {{ total_steps }}</p>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5"><div class="bg-blue-600 h-2.5 rounded-full" style="width: {% widthratio step total_steps 100 %}%"></div></div>
+        <form method="POST">
+            {% csrf_token %}
+            {% if form.errors %}<div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 text-sm text-red-600">Please select a plan to continue.</div>{% endif %}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {% for plan in plans %}
+                    <label class="relative cursor-pointer">
+                        <input type="radio" name="subscription_plan" value="{{ plan.pk }}" class="peer sr-only" {% if form.subscription_plan.value|stringformat:'s' == plan.pk|stringformat:'s' %}checked{% endif %} required>
+                        <div class="h-full bg-white border-2 border-gray-200 rounded-xl p-6 shadow-sm peer-checked:border-blue-600 peer-checked:ring-2 peer-checked:ring-blue-200 hover:border-blue-400">
+                            <h3 class="text-xl font-bold text-gray-900">{{ plan.name }}</h3>
+                            <p class="text-sm text-gray-600 mt-2 min-h-12">{{ plan.description }}</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-5">KES {{ plan.price_monthly|intcomma }} <span class="text-sm font-normal text-gray-500">/ month</span></p>
+                            <ul class="mt-5 space-y-2 text-sm text-gray-700">
+                                <li><i class="fas fa-check text-green-600 mr-2"></i>Up to {{ plan.max_properties }} properties</li>
+                                <li><i class="fas fa-check text-green-600 mr-2"></i>Up to {{ plan.max_tenants }} tenants</li>
+                                {% if plan.featured_listings %}<li><i class="fas fa-check text-green-600 mr-2"></i>Featured listings</li>{% endif %}
+                                {% if plan.priority_support %}<li><i class="fas fa-check text-green-600 mr-2"></i>Priority support</li>{% endif %}
+                                {% if plan.advanced_analytics %}<li><i class="fas fa-check text-green-600 mr-2"></i>Advanced analytics</li>{% endif %}
+                                {% if plan.api_access %}<li><i class="fas fa-check text-green-600 mr-2"></i>API access</li>{% endif %}
+                            </ul>
+                        </div>
+                    </label>
+                {% empty %}<p class="md:col-span-3 text-center text-gray-600">No active plans are available. Please contact support.</p>{% endfor %}
+            </div>
+            <button type="submit" class="mt-8 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg hover:shadow-lg transition-all">Continue to Business Details</button>
+        </form>
+    </div>
+</div>
+{% endblock %}{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}Business Details - Step 2 - Winda{% endblock %}

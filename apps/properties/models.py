@@ -42,6 +42,10 @@ class Property(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey('accounts.OwnerProfile', on_delete=models.CASCADE, related_name='properties')
+    scouted_by = models.ForeignKey(
+        'accounts.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='scouted_properties', limit_choices_to={'user_type': 'PROPERTY_SCOUT'},
+    )
     
     # Basic Information
     title = models.CharField(max_length=200)
@@ -55,6 +59,7 @@ class Property(models.Model):
     state = models.CharField(max_length=100)
     country = models.CharField(max_length=100, default='Kenya')
     postal_code = models.CharField(max_length=20, blank=True)
+    land_reference_number = models.CharField(max_length=100, null=True, blank=True, help_text='Land reference number (L.R. No.) from the land registrar.')
     latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
     

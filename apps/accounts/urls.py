@@ -12,6 +12,10 @@ urlpatterns = [
         
     # Owner pending approval page
     path('owner-pending/', views.owner_pending_approval, name='owner_pending_approval'),
+    path('scout/pending/', views.scout_pending, name='scout_pending'),
+    path('scout/dashboard/', views.scout_dashboard, name='scout_dashboard'),
+    path('admin/scouts/create/', views.admin_create_scout, name='admin_create_scout'),
+    path('admin/scouts/verify/', views.admin_verify_scouts, name='admin_verify_scouts'),
     
     # Admin verification for owners (staff only)
     path('admin/verify-owners/', views.admin_verify_owners, name='admin_verify_owners'),

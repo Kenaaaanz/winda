@@ -24,16 +24,16 @@ from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImag
 from apps.notifications.models import Notification
 from apps.properties.models import Property
 
-from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, LoginHistory, PaystackSubaccount
+from .models import CaretakerProfile, CaretakerPropertyAssignment, User, UserProfile, OwnerProfile, TenantProfile, ScoutProfile, LoginHistory, PaystackSubaccount
 from .forms import (
     CaretakerInviteForm, CaretakerUpdateForm, PaystackSubaccountForm, 
     UserRegistrationForm, UserLoginForm, UserProfileForm,
     OwnerProfileForm, TenantProfileForm, UserUpdateForm,
     CustomPasswordChangeForm, PasswordResetForm,
-    RegistrationStep1Form, RegistrationStep2Form, RegistrationStep3Form
+    RegistrationStep1Form, RegistrationPlanForm, RegistrationStep2Form, RegistrationStep3Form, ScoutCreationForm
 )
 from .tokens import account_activation_token
-from .decorators import user_type_required, owner_required, tenant_required
+from .decorators import user_type_required, owner_required, tenant_required, superadmin_required
 from apps.emails.utils import EmailService
 
 
@@ -101,11 +101,32 @@ def register_wizard(request):
             'form': form,
             'user_type': user_type,
             'step': step,
-            'total_steps': 3 if user_type == 'HOUSE_OWNER' else 1,
+            'total_steps': 4 if user_type == 'HOUSE_OWNER' else 1,
         })
     
-    # Step 2: Business Details (Owner only)
+    # Step 2: Subscription plan (Owner only)
     if step == 2 and user_type == 'HOUSE_OWNER':
+        if request.method == 'POST':
+            form = RegistrationPlanForm(request.POST)
+            if form.is_valid():
+                request.session['registration_plan_id'] = form.cleaned_data['subscription_plan'].id
+                request.session['registration_step'] = 3
+                return redirect('accounts:register')
+        else:
+            form = RegistrationPlanForm(initial={
+                'subscription_plan': request.session.get('registration_plan_id'),
+            })
+
+        return render(request, 'accounts/register_wizard_step2.html', {
+            'form': form,
+            'plans': form.fields['subscription_plan'].queryset,
+            'user_type': user_type,
+            'step': step,
+            'total_steps': 4,
+        })
+
+    # Step 3: Business Details (Owner only)
+    if step == 3 and user_type == 'HOUSE_OWNER':
         if request.method == 'POST':
             form = RegistrationStep2Form(request.POST, request.FILES)
             if form.is_valid():
@@ -114,7 +135,7 @@ def register_wizard(request):
                     'company_name': form.cleaned_data['company_name'],
                     'company_registration_number': form.cleaned_data.get('company_registration_number', ''),
                     'tax_pin': form.cleaned_data.get('tax_pin', ''),
-                    'subscription_plan_id': form.cleaned_data.get('subscription_plan').id if form.cleaned_data.get('subscription_plan') else None,
+                    'subscription_plan_id': request.session.get('registration_plan_id'),
                 }
                 
                 # Store the file in a temporary location or in memory
@@ -126,20 +147,20 @@ def register_wizard(request):
                     # Store the file temporarily (we'll process it in create_owner_account)
                     request._business_license_file = request.FILES['business_license']
                 
-                request.session['registration_step'] = 3
+                request.session['registration_step'] = 4
                 return redirect('accounts:register')
         else:
             form = RegistrationStep2Form()
         
-        return render(request, 'accounts/register_wizard_step2.html', {
+        return render(request, 'accounts/register_wizard_step3.html', {
             'form': form,
             'user_type': user_type,
             'step': step,
-            'total_steps': 3,
+                'total_steps': 4,
         })
     
-    # Step 3: Bank Details (Owner only) - Use existing template
-    if step == 3 and user_type == 'HOUSE_OWNER':
+    # Step 4: Bank Details (Owner only) - Use existing template
+    if step == 4 and user_type == 'HOUSE_OWNER':
         # Get bank choices from Paystack
         from .views import _get_paystack_bank_choices
         bank_choices, bank_error = _get_paystack_bank_choices()
@@ -375,6 +396,7 @@ def create_owner_account(request):
         # Clear session
         request.session.pop('registration_data', None)
         request.session.pop('registration_business_data', None)
+        request.session.pop('registration_plan_id', None)
         request.session.pop('registration_bank_data', None)
         request.session.pop('registration_step', None)
         request.session.pop('registration_user_type', None)
@@ -514,6 +536,10 @@ class CustomLoginView(LoginView):
         # Redirect based on user type
         if user.user_type == 'CARETAKER':
             return redirect('accounts:caretaker_dashboard')
+        elif user.user_type == 'PROPERTY_SCOUT':
+            if user.verification_status == 'VERIFIED':
+                return redirect('accounts:scout_dashboard')
+            return redirect('accounts:scout_pending')
         elif user.user_type == 'HOUSE_OWNER':
             return redirect('dashboard')
         elif user.user_type == 'TENANT':
@@ -544,6 +570,11 @@ def dashboard(request):
     # Check if user is a caretaker
     if user.user_type == 'CARETAKER':
         return redirect('accounts:caretaker_dashboard')
+
+    if user.user_type == 'PROPERTY_SCOUT':
+        if user.verification_status == 'VERIFIED':
+            return redirect('accounts:scout_dashboard')
+        return redirect('accounts:scout_pending')
     
     # Check if user is super admin
     if user.is_superuser:
@@ -567,6 +598,80 @@ def dashboard(request):
     
     # Guest or unknown user type
     return render(request, 'accounts/guest_dashboard.html', {'user': user})
+
+
+@login_required
+def scout_pending(request):
+    if request.user.user_type != 'PROPERTY_SCOUT':
+        return redirect('dashboard')
+    return render(request, 'accounts/scout_pending.html')
+
+
+@login_required
+def scout_dashboard(request):
+    if request.user.user_type != 'PROPERTY_SCOUT' or request.user.verification_status != 'VERIFIED':
+        return redirect('accounts:scout_pending')
+
+    from apps.payments.models import ScoutCommission
+    properties = Property.objects.filter(scouted_by=request.user).select_related('owner')
+    commissions = ScoutCommission.objects.filter(scout=request.user).select_related('property', 'payment')
+    stats = {
+        'total_properties': properties.count(),
+        'verified_properties': properties.filter(verification_status='VERIFIED').count(),
+        'total_views': properties.aggregate(total=models.Sum('view_count'))['total'] or 0,
+        'total_inquiries': properties.aggregate(total=models.Sum('inquiry_count'))['total'] or 0,
+        'pending_earnings': commissions.filter(status='PENDING').aggregate(total=models.Sum('commission_amount'))['total'] or 0,
+        'paid_earnings': commissions.filter(status='PAID').aggregate(total=models.Sum('commission_amount'))['total'] or 0,
+    }
+    return render(request, 'accounts/scout_dashboard.html', {
+        'properties': properties,
+        'commissions': commissions[:10],
+        'stats': stats,
+    })
+
+
+@superadmin_required
+def admin_create_scout(request):
+    form = ScoutCreationForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        scout = form.save()
+        Notification.objects.create(
+            user=scout,
+            notification_type='SYSTEM',
+            title='Scout account created',
+            message='Your Property Scout account is awaiting superadmin verification.',
+            related_object_type='user',
+            related_object_id=str(scout.id),
+        )
+        messages.success(request, f'{scout.get_full_name()} was created and is awaiting verification.')
+        return redirect('accounts:admin_verify_scouts')
+    return render(request, 'accounts/admin_create_scout.html', {'form': form})
+
+
+@superadmin_required
+def admin_verify_scouts(request):
+    pending_scouts = User.objects.filter(
+        user_type='PROPERTY_SCOUT', verification_status='PENDING'
+    ).select_related('scout_profile')
+    if request.method == 'POST':
+        scout = get_object_or_404(User, id=request.POST.get('user_id'), user_type='PROPERTY_SCOUT')
+        action = request.POST.get('action')
+        scout.admin_notes = request.POST.get('notes', '')
+        scout.verified_by = request.user
+        scout.verified_at = timezone.now()
+        if action == 'approve':
+            scout.verification_status = 'VERIFIED'
+            scout.is_email_verified = True
+            message = 'Your Property Scout account has been verified. You can now submit listings.'
+        else:
+            scout.verification_status = 'REJECTED'
+            scout.is_active = False
+            message = 'Your Property Scout account application was rejected.'
+        scout.save(update_fields=['verification_status', 'is_email_verified', 'admin_notes', 'verified_by', 'verified_at', 'is_active'])
+        Notification.objects.create(user=scout, notification_type='SYSTEM', title='Scout verification update', message=message, related_object_type='user', related_object_id=str(scout.id))
+        messages.success(request, f'{scout.get_full_name()} was updated.')
+        return redirect('accounts:admin_verify_scouts')
+    return render(request, 'accounts/admin_verify_scouts.html', {'pending_scouts': pending_scouts})
 
 
 def get_owner_stats(user):

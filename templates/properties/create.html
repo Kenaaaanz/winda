@@ -164,6 +164,13 @@
                     <div class="mb-8">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {% if form.property_owner %}
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Property owner</label>
+                                    {{ form.property_owner }}
+                                    <p class="text-xs text-gray-500 mt-1">Select the verified owner represented by this listing.</p>
+                                </div>
+                            {% endif %}
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Title</label>
                                 {{ form.title }}
@@ -208,6 +215,13 @@
                                 {{ form.city }}
                                 {% if form.city.errors %}
                                     <div class="form-error">{{ form.city.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2 required-field">Land Reference Number (L.R. No.)</label>
+                                {{ form.land_reference_number }}
+                                {% if form.land_reference_number.errors %}
+                                    <div class="form-error">{{ form.land_reference_number.errors }}</div>
                                 {% endif %}
                             </div>
                             <div>

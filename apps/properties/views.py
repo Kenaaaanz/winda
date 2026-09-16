@@ -14,7 +14,7 @@ from django.utils import timezone
 from .models import Property, PropertyImage, PropertyDocument, Favorite, Unit
 from .forms import PropertySearchForm, PropertyDocumentForm, UnitForm, UnitFormSet
 from .services import PropertyService
-from ..accounts.decorators import owner_required
+from ..accounts.decorators import owner_required, listing_required
 from ..tenants.models import TenantApplication
 from ..payments.models import Payment
 from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
@@ -194,7 +194,7 @@ def property_search_autocomplete(request):
 # ==================== OWNER VIEWS ====================
 
 @login_required
-@owner_required
+@listing_required
 def property_create(request):
     """Create new property listing with simplified flow"""
     from .forms import PropertyMultiUnitForm, PropertyBaseForm
@@ -215,13 +215,14 @@ def property_create(request):
         
         if is_multi_unit:
             # Multi-unit property form
-            form = PropertyMultiUnitForm(request.POST, request.FILES)
+            form = PropertyMultiUnitForm(request.POST, request.FILES, listing_user=request.user)
             
             if form.is_valid():
                 try:
                     # Create the property
                     property_obj = form.save(commit=False)
-                    property_obj.owner = request.user.owner_profile
+                    property_obj.owner = form.cleaned_data.get('property_owner') or request.user.owner_profile
+                    property_obj.scouted_by = request.user if request.user.user_type == 'PROPERTY_SCOUT' else None
                     
                     # Set multi-unit flag
                     property_obj.is_multi_unit = True
@@ -272,6 +273,8 @@ def property_create(request):
                                 property_obj.save(update_fields=['main_image'])
                     
                     messages.success(request, 'Building created! Now add your units.')
+                    if request.user.user_type == 'PROPERTY_SCOUT':
+                        return redirect('properties:detail', pk=property_obj.pk)
                     return redirect('properties:manage_units', pk=property_obj.pk)
                     
                 except Exception as e:
@@ -291,12 +294,13 @@ def property_create(request):
             
         else:
             # Single unit property form
-            form = PropertyBaseForm(request.POST, request.FILES)
+            form = PropertyBaseForm(request.POST, request.FILES, listing_user=request.user)
             
             if form.is_valid():
                 try:
                     property_obj = form.save(commit=False)
-                    property_obj.owner = request.user.owner_profile
+                    property_obj.owner = form.cleaned_data.get('property_owner') or request.user.owner_profile
+                    property_obj.scouted_by = request.user if request.user.user_type == 'PROPERTY_SCOUT' else None
                     property_obj.is_multi_unit = False
                     property_obj.total_units = 1
                     property_obj.available_units = 1
@@ -355,9 +359,9 @@ def property_create(request):
     else:
         # GET request - display the appropriate form
         if property_type == 'multi':
-            form = PropertyMultiUnitForm()
+            form = PropertyMultiUnitForm(listing_user=request.user)
         else:
-            form = PropertyBaseForm()
+            form = PropertyBaseForm(listing_user=request.user)
         
         return render(request, 'properties/create.html', {
             'form': form,

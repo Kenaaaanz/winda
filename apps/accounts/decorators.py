@@ -49,3 +49,25 @@ def superadmin_required(view_func):
         login_url='accounts:login'
     )
     return decorator(view_func)
+
+
+def scout_required(view_func):
+    """Allow only verified property scouts and superadmins."""
+    decorator = user_passes_test(
+        lambda u: u.is_authenticated and (u.is_superuser or (
+            u.user_type == 'PROPERTY_SCOUT' and u.verification_status == 'VERIFIED'
+        )),
+        login_url='accounts:login'
+    )
+    return decorator(view_func)
+
+
+def listing_required(view_func):
+    """Allow verified owners, verified scouts, and superadmins to submit listings."""
+    decorator = user_passes_test(
+        lambda u: u.is_authenticated and (u.is_superuser or (
+            u.user_type in ('HOUSE_OWNER', 'PROPERTY_SCOUT') and u.verification_status == 'VERIFIED'
+        )),
+        login_url='accounts:login'
+    )
+    return decorator(view_func)

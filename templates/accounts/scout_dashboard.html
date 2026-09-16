@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Property Scout Dashboard - Winda{% endblock %}
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-center justify-between mb-6">
+            <div><h1 class="text-2xl font-bold text-gray-900">Property Scout Dashboard</h1><p class="text-gray-600 mt-1">Track your listings, reach, and verified earnings.</p></div>
+            <a href="{% url 'properties:create' %}" class="bg-blue-600 text-white px-5 py-2 rounded-lg"><i class="fas fa-plus mr-2"></i>Submit Listing</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Listings</p><p class="text-2xl font-bold">{{ stats.total_properties }}</p></div>
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Verified</p><p class="text-2xl font-bold">{{ stats.verified_properties }}</p></div>
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Views</p><p class="text-2xl font-bold">{{ stats.total_views|intcomma }}</p></div>
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Inquiries</p><p class="text-2xl font-bold">{{ stats.total_inquiries|intcomma }}</p></div>
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Pending earnings</p><p class="text-xl font-bold">KES {{ stats.pending_earnings|intcomma }}</p></div>
+            <div class="bg-white rounded-xl shadow-sm p-5"><p class="text-sm text-gray-500">Paid earnings</p><p class="text-xl font-bold">KES {{ stats.paid_earnings|intcomma }}</p></div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-6"><h2 class="text-lg font-semibold mb-4">Your properties</h2><div class="space-y-3">
+                {% for property in properties %}<div class="border-b border-gray-100 pb-3 flex items-center justify-between"><div><p class="font-medium">{{ property.title }}</p><p class="text-sm text-gray-500">{{ property.city }} · {{ property.view_count }} views · {{ property.inquiry_count }} inquiries</p></div><a class="text-blue-600 text-sm" href="{% url 'properties:detail' property.id %}">View</a></div>{% empty %}<p class="text-gray-500">No properties attributed to you yet.</p>{% endfor %}
+            </div></div>
+            <div class="bg-white rounded-xl shadow-sm p-6"><h2 class="text-lg font-semibold mb-4">Recent commissions</h2><div class="space-y-3">
+                {% for commission in commissions %}<div class="border-b border-gray-100 pb-3"><p class="font-medium">KES {{ commission.commission_amount|intcomma }}</p><p class="text-sm text-gray-500">{{ commission.property.title }} · {{ commission.get_status_display }}</p></div>{% empty %}<p class="text-gray-500">No commissions yet.</p>{% endfor %}
+            </div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

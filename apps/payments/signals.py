@@ -1,8 +1,9 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Payment, Invoice
+from .models import Payment, Invoice, ScoutCommission
 from apps.notifications.models import Notification
 from django.utils import timezone
+from decimal import Decimal
 from .services import PaymentService
 
 @receiver(post_save, sender=Payment)
@@ -20,6 +21,17 @@ def create_payment_notification(sender, instance, created, **kwargs):
         )
     
     if instance.status == 'COMPLETED':
+        if instance.property_id and instance.property.scouted_by_id and instance.platform_fee:
+            commission_amount = (instance.platform_fee * Decimal('0.10')).quantize(Decimal('0.01'))
+            ScoutCommission.objects.get_or_create(
+                payment=instance,
+                defaults={
+                    'scout_id': instance.property.scouted_by_id,
+                    'property_id': instance.property_id,
+                    'company_fee': instance.platform_fee,
+                    'commission_amount': commission_amount,
+                },
+            )
         # Completion can be delivered more than once (callback reloads, webhooks,
         # or manual verification), so invoice creation must be idempotent.
         invoice, invoice_created = Invoice.objects.get_or_create(
