@@ -81,9 +81,95 @@
         .avatar-ring:hover {
             border-color: #3B82F6;
         }
+
+        /* Tenant-facing visual language: emerald, ivory, and restrained brass. */
+        body.tenant-experience {
+            --tenant-emerald: #064e3b;
+            --tenant-emerald-light: #dff4e8;
+            --tenant-ivory: #FDFBD4;
+            --tenant-brass: #b38b2e;
+            background: var(--tenant-ivory);
+            color: #18352b;
+        }
+        body.tenant-experience .nav-glass {
+            background: rgba(253, 251, 212, 0.94);
+            border-color: rgba(6, 78, 59, 0.18);
+        }
+        body.tenant-experience main {
+            background: var(--tenant-ivory);
+        }
+        body.tenant-experience main > div {
+            background-color: transparent;
+        }
+        body.tenant-experience .bg-gray-50,
+        body.tenant-experience .bg-gray-100 {
+            background-color: var(--tenant-ivory) !important;
+        }
+        body.tenant-experience .bg-white {
+            background-color: #fffef0 !important;
+            border-color: rgba(6, 78, 59, 0.16) !important;
+        }
+        body.tenant-experience .bg-blue-500,
+        body.tenant-experience .bg-blue-600,
+        body.tenant-experience .btn-gradient {
+            background: var(--tenant-emerald) !important;
+        }
+        body.tenant-experience .bg-blue-50,
+        body.tenant-experience .bg-blue-100 {
+            background-color: var(--tenant-emerald-light) !important;
+        }
+        body.tenant-experience .text-blue-500,
+        body.tenant-experience .text-blue-600,
+        body.tenant-experience .text-blue-700,
+        body.tenant-experience .text-blue-800,
+        body.tenant-experience .text-blue-900 {
+            color: var(--tenant-emerald) !important;
+        }
+        body.tenant-experience .border-blue-500,
+        body.tenant-experience .border-blue-600 {
+            border-color: var(--tenant-emerald) !important;
+        }
+        body.tenant-experience a:hover,
+        body.tenant-experience button:hover {
+            color: var(--tenant-brass);
+        }
+        body.tenant-experience .text-green-500,
+        body.tenant-experience .text-green-600,
+        body.tenant-experience .text-green-700,
+        body.tenant-experience .text-green-800,
+        body.tenant-experience .text-green-900 {
+            color: var(--tenant-emerald) !important;
+        }
+        body.tenant-experience input:focus,
+        body.tenant-experience textarea:focus,
+        body.tenant-experience select:focus {
+            border-color: var(--tenant-emerald) !important;
+            --tw-ring-color: rgba(6, 78, 59, 0.3) !important;
+        }
+        body.tenant-experience footer {
+            background: var(--tenant-emerald) !important;
+        }
+        body.tenant-experience .tenant-card {
+            box-shadow: 0 16px 36px rgba(6, 78, 59, 0.1);
+        }
+        body.tenant-experience .tenant-reveal {
+            animation: tenant-reveal 0.5s ease both;
+        }
+        body.tenant-experience label[data-selected-files]::after {
+            content: attr(data-selected-files);
+            display: block;
+            margin-top: 0.35rem;
+            color: var(--tenant-emerald);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        @keyframes tenant-reveal {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body>
+<body class="{% if request.path|slice:':9' == '/tenants/' %}tenant-experience{% endif %}">
     <!-- Navigation -->
     <nav class="nav-glass shadow-sm border-b border-gray-200/80 fixed w-full z-50 top-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -144,6 +230,15 @@
                         {% if user.is_owner %}
                             <a href="{% url 'properties:create' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
                                 <i class="fas fa-plus-circle mr-2"></i> List Property
+                            </a>
+                        {% endif %}
+
+                        {% if user.user_type == 'TENANT' %}
+                            <a href="{% url 'tenants:applications' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-file-signature mr-2"></i> Applications
+                            </a>
+                            <a href="{% url 'tenants:lease_list' %}" class="px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                                <i class="fas fa-file-contract mr-2"></i> Leases
                             </a>
                         {% endif %}
                         
@@ -259,6 +354,15 @@
                         </a>
                         <a href="{% url 'accounts:caretaker_list' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
                             <i class="fas fa-users-cog mr-3 w-5 text-gray-400"></i> Caretakers
+                        </a>
+                    {% endif %}
+
+                    {% if user.user_type == 'TENANT' %}
+                        <a href="{% url 'tenants:applications' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-file-signature mr-3 w-5 text-gray-400"></i> Applications
+                        </a>
+                        <a href="{% url 'tenants:lease_list' %}" class="flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-file-contract mr-3 w-5 text-gray-400"></i> Leases
                         </a>
                     {% endif %}
                     
@@ -591,6 +695,35 @@
                 }
             }
         });
+
+        // Tenant UX: reveal page sections gently, preview selected documents, and
+        // protect destructive actions without changing their existing endpoints.
+        if (document.body.classList.contains('tenant-experience')) {
+            document.querySelectorAll('main > div > div, main section').forEach((section, index) => {
+                section.classList.add('tenant-reveal');
+                section.style.animationDelay = `${Math.min(index * 60, 300)}ms`;
+            });
+            document.querySelectorAll('input[type="file"]').forEach(input => {
+                input.addEventListener('change', () => {
+                    const label = document.querySelector(`label[for="${input.id}"]`);
+                    if (label && input.files.length) {
+                        const count = input.files.length;
+                        label.dataset.selectedFiles = `${count} file${count === 1 ? '' : 's'} selected`;
+                        label.classList.add('text-emerald-800');
+                    }
+                });
+            });
+            document.querySelectorAll('form').forEach(form => {
+                const destructive = form.querySelector('button[name="action"][value="reject"], button[type="submit"].bg-red-600');
+                if (destructive) {
+                    form.addEventListener('submit', event => {
+                        if (!window.confirm('Are you sure you want to continue with this action?')) {
+                            event.preventDefault();
+                        }
+                    });
+                }
+            });
+        }
     </script>
     
     {% block extra_js %}{% endblock %}
