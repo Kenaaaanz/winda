@@ -652,7 +652,8 @@ def admin_create_scout(request):
 @superadmin_required
 def admin_verify_scouts(request):
     pending_scouts = User.objects.filter(
-        user_type='PROPERTY_SCOUT', verification_status='PENDING'
+        Q(user_type='PROPERTY_SCOUT', verification_status='PENDING')
+        | Q(user_type='PROPERTY_SCOUT', verification_status='VERIFIED', is_active=False)
     ).select_related('scout_profile')
     if request.method == 'POST':
         scout = get_object_or_404(User, id=request.POST.get('user_id'), user_type='PROPERTY_SCOUT')
