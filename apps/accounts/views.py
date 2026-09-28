@@ -663,6 +663,10 @@ def admin_verify_scouts(request):
         if action == 'approve':
             scout.verification_status = 'VERIFIED'
             scout.is_email_verified = True
+            # Django's authentication backends reject inactive users before
+            # the scout dashboard redirect can run. Approval must therefore
+            # restore account access as well as verification status.
+            scout.is_active = True
             message = 'Your Property Scout account has been verified. You can now submit listings.'
         else:
             scout.verification_status = 'REJECTED'
