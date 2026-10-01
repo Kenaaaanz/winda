@@ -1,4 +1,8 @@
 import json
+import uuid
+import hashlib
+import hmac
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -13,12 +17,15 @@ from django.urls import reverse
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.db import models
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.db import transaction
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from apps.common.utils.cloudinary_utils import CloudinaryService, CloudinaryImageHandler
 from apps.notifications.models import Notification
@@ -30,7 +37,8 @@ from .forms import (
     UserRegistrationForm, UserLoginForm, UserProfileForm,
     OwnerProfileForm, TenantProfileForm, UserUpdateForm,
     CustomPasswordChangeForm, PasswordResetForm,
-    RegistrationStep1Form, RegistrationPlanForm, RegistrationStep2Form, RegistrationStep3Form, ScoutCreationForm, UserLoginForm
+    RegistrationStep1Form, RegistrationPlanForm, RegistrationStep2Form, RegistrationStep3Form, ScoutCreationForm, UserLoginForm,
+    ScoutPayoutAccountForm,
 )
 from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required, superadmin_required
@@ -800,7 +808,204 @@ def get_next_payment_due(user):
 @login_required
 def profile(request):
     """User profile view"""
-    return render(request, 'accounts/profile.html', {'user': request.user})
+    context = {'user': request.user}
+    if request.user.user_type == 'PROPERTY_SCOUT':
+        from apps.payments.models import ScoutCommission, ScoutPayout
+
+        scout_profile, _ = ScoutProfile.objects.get_or_create(user=request.user)
+        bank_choices, bank_error = _get_paystack_bank_choices()
+        commissions = ScoutCommission.objects.filter(scout=request.user)
+        totals = commissions.values('status').annotate(total=Sum('commission_amount'))
+        totals_by_status = {item['status']: item['total'] for item in totals}
+        context.update({
+            'scout_profile': scout_profile,
+            'scout_payout_form': ScoutPayoutAccountForm(
+                bank_choices=bank_choices,
+                initial={
+                    'bank_code': scout_profile.payout_bank_code,
+                    'account_number': scout_profile.payout_account_number,
+                    'account_name': scout_profile.payout_account_name,
+                },
+            ),
+            'scout_payout_bank_error': bank_error,
+            'scout_pending_amount': totals_by_status.get('PENDING', Decimal('0.00')),
+            'scout_processing_amount': totals_by_status.get('APPROVED', Decimal('0.00')),
+            'scout_paid_amount': totals_by_status.get('PAID', Decimal('0.00')),
+            'scout_payouts': ScoutPayout.objects.filter(scout=request.user)[:5],
+        })
+    return render(request, 'accounts/profile.html', context)
+
+
+@login_required
+@require_POST
+def update_scout_payout_account(request):
+    if request.user.user_type != 'PROPERTY_SCOUT':
+        messages.error(request, 'Only property scouts can set up scout payouts.')
+        return redirect('accounts:profile')
+
+    bank_choices, bank_error = _get_paystack_bank_choices()
+    form = ScoutPayoutAccountForm(request.POST, bank_choices=bank_choices)
+    if not form.is_valid():
+        errors = '; '.join(error for error_list in form.errors.values() for error in error_list)
+        messages.error(request, errors or bank_error or 'Check the bank account details and try again.')
+        return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+    from apps.payments.services import PaystackService
+
+    response = PaystackService().create_transfer_recipient(
+        name=form.cleaned_data['account_name'],
+        account_number=form.cleaned_data['account_number'],
+        bank_code=form.cleaned_data['bank_code'],
+    )
+    data = response.get('data', {})
+    recipient_code = data.get('recipient_code')
+    if not response.get('status') or not recipient_code:
+        messages.error(request, f"Could not save payout account: {response.get('message', 'Paystack did not return a recipient code.')}")
+        return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+    scout_profile, _ = ScoutProfile.objects.get_or_create(user=request.user)
+    scout_profile.payout_account_name = form.cleaned_data['account_name']
+    scout_profile.payout_account_number = form.cleaned_data['account_number']
+    scout_profile.payout_bank_code = form.cleaned_data['bank_code']
+    scout_profile.payout_paystack_recipient_code = recipient_code
+    scout_profile.save(update_fields=[
+        'payout_account_name', 'payout_account_number', 'payout_bank_code',
+        'payout_paystack_recipient_code', 'updated_at',
+    ])
+    messages.success(request, 'Scout payout account saved successfully.')
+    return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+
+@login_required
+@require_POST
+def request_scout_payout(request):
+    if request.user.user_type != 'PROPERTY_SCOUT':
+        messages.error(request, 'Only property scouts can request scout payouts.')
+        return redirect('accounts:profile')
+    if request.user.verification_status != 'VERIFIED':
+        messages.error(request, 'Your scout account must be verified before requesting a payout.')
+        return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+    from apps.payments.models import ScoutCommission, ScoutPayout
+    from apps.payments.services import PaystackService
+
+    scout_profile = get_object_or_404(ScoutProfile, user=request.user)
+    if not scout_profile.payout_paystack_recipient_code:
+        messages.error(request, 'Set up your bank payout account before requesting a payout.')
+        return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+    with transaction.atomic():
+        commissions = list(ScoutCommission.objects.select_for_update().filter(
+            scout=request.user,
+            status='PENDING',
+            commission_amount__gt=0,
+        ).order_by('id'))
+        amount = sum((commission.commission_amount for commission in commissions), Decimal('0.00'))
+        if not commissions or amount <= 0:
+            messages.info(request, 'There are no payable scout commissions yet.')
+            return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+        payout = ScoutPayout.objects.create(
+            scout=request.user,
+            amount=amount,
+            reference=f'scout-{uuid.uuid4().hex}',
+        )
+        payout.commissions.set(commissions)
+        ScoutCommission.objects.filter(pk__in=[commission.pk for commission in commissions]).update(status='APPROVED')
+
+    response = PaystackService().initiate_transfer(
+        amount=payout.amount,
+        recipient_code=scout_profile.payout_paystack_recipient_code,
+        reference=payout.reference,
+        reason='Property scout commission payout',
+    )
+    data = response.get('data', {})
+    payout.transfer_code = data.get('transfer_code', '')
+    payout.paystack_response = {
+        'message': response.get('message', ''),
+        'status': data.get('status', ''),
+        'currency': data.get('currency', 'KES'),
+    }
+    transfer_status = data.get('status', '').lower()
+    if response.get('status') and transfer_status == 'success':
+        _set_scout_payout_status(payout, 'success')
+    elif response.get('status') and transfer_status not in {'failed', 'reversed', 'rejected', 'abandoned', 'blocked'}:
+        payout.status = 'PROCESSING'
+        payout.save(update_fields=['transfer_code', 'paystack_response', 'status', 'updated_at'])
+        messages.success(request, 'Your payout is processing. The payable balance will update when Paystack confirms it.')
+    else:
+        _set_scout_payout_status(payout, transfer_status or 'failed')
+        messages.error(request, f"Paystack could not start the payout: {response.get('message', 'Transfer was rejected.')}")
+    return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+
+@login_required
+@require_POST
+def refresh_scout_payout(request, payout_id):
+    from apps.payments.models import ScoutPayout
+    from apps.payments.services import PaystackService
+
+    payout = get_object_or_404(ScoutPayout, id=payout_id, scout=request.user)
+    if payout.status == 'PROCESSING':
+        response = PaystackService().verify_transfer(payout.reference)
+        if response.get('status'):
+            data = response.get('data', {})
+            _set_scout_payout_status(payout, data.get('status', 'pending'))
+            messages.info(request, f"Latest Paystack transfer status: {data.get('status', 'unknown')}.")
+        else:
+            messages.error(request, f"Could not check payout status: {response.get('message', 'Please try again.')}")
+    return redirect(f"{reverse('accounts:profile')}#scout-payout")
+
+
+def _set_scout_payout_status(payout, transfer_status):
+    from apps.payments.models import ScoutCommission
+
+    normalized_status = transfer_status.lower()
+    if normalized_status == 'success':
+        payout.status = 'PAID'
+        payout.paid_at = timezone.now()
+        commission_status = 'PAID'
+        update_fields = ['status', 'paid_at', 'transfer_code', 'paystack_response', 'updated_at']
+    elif normalized_status in {'failed', 'reversed', 'rejected', 'abandoned', 'blocked'}:
+        payout.status = 'FAILED'
+        payout.paid_at = None
+        commission_status = 'PENDING'
+        update_fields = ['status', 'paid_at', 'transfer_code', 'paystack_response', 'updated_at']
+    else:
+        payout.status = 'PROCESSING'
+        commission_status = 'APPROVED'
+        update_fields = ['status', 'transfer_code', 'paystack_response', 'updated_at']
+    payout.save(update_fields=update_fields)
+    ScoutCommission.objects.filter(payouts=payout).update(
+        status=commission_status,
+        paid_at=payout.paid_at if commission_status == 'PAID' else None,
+    )
+
+
+@csrf_exempt
+@require_POST
+def paystack_transfer_webhook(request):
+    signature = request.headers.get('X-Paystack-Signature', '')
+    expected = hmac.new(
+        settings.PAYSTACK_SECRET_KEY.encode(), request.body, hashlib.sha512,
+    ).hexdigest()
+    if not signature or not hmac.compare_digest(signature, expected):
+        return JsonResponse({'status': 'invalid signature'}, status=401)
+
+    try:
+        payload = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'invalid payload'}, status=400)
+
+    event = payload.get('event')
+    data = payload.get('data', {})
+    if event in {'transfer.success', 'transfer.failed', 'transfer.reversed'}:
+        from apps.payments.models import ScoutPayout
+
+        payout = ScoutPayout.objects.filter(reference=data.get('reference', '')).first()
+        if payout:
+            _set_scout_payout_status(payout, event.removeprefix('transfer.'))
+    return JsonResponse({'status': 'ok'})
 
 
 @login_required

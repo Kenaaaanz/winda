@@ -150,6 +150,40 @@ class PaystackService:
             return self._request('get', '/bank', params={'country': country, 'perPage': 100})
         except Exception as exc:
             return {'status': False, 'message': str(exc)}
+
+    def create_transfer_recipient(self, name, account_number, bank_code):
+        """Create a Kenyan bank recipient for scout commission payouts."""
+        try:
+            return self._request('post', '/transferrecipient', json={
+                'type': 'kepss',
+                'name': name,
+                'account_number': account_number,
+                'bank_code': bank_code,
+                'currency': 'KES',
+            })
+        except Exception as exc:
+            return {'status': False, 'message': str(exc)}
+
+    def initiate_transfer(self, amount, recipient_code, reference, reason):
+        """Send a KES transfer from the Paystack balance."""
+        try:
+            return self._request('post', '/transfer', json={
+                'source': 'balance',
+                'amount': int(Decimal(amount) * 100),
+                'recipient': recipient_code,
+                'reference': reference,
+                'reason': reason,
+                'currency': 'KES',
+            })
+        except Exception as exc:
+            return {'status': False, 'message': str(exc)}
+
+    def verify_transfer(self, reference):
+        """Fetch the latest state of a transfer from Paystack."""
+        try:
+            return self._request('get', f'/transfer/verify/{reference}')
+        except Exception as exc:
+            return {'status': False, 'message': str(exc)}
     
     def initialize_transaction_with_subaccount(self, email, amount, reference, subaccount_code, metadata=None, transaction_charge=None):
         """Initialize a transaction to be settled to a subaccount.

@@ -1,10 +1,16 @@
 from decimal import Decimal
+import hashlib
+import hmac
+import json
+import uuid
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.urls import reverse
+from django.utils import timezone
 
-from apps.accounts.models import OwnerProfile, User
-from apps.payments.models import OwnerSubscription, SubscriptionPlan
+from apps.accounts.models import OwnerProfile, ScoutProfile, User
+from apps.payments.models import OwnerSubscription, Payment, ScoutCommission, ScoutPayout, SubscriptionPlan
 from apps.payments.services import PaymentService, PaystackService
 from apps.properties.models import Property
 
@@ -129,3 +135,185 @@ class PaystackServiceTests(TestCase):
         self.assertEqual(mock_request.call_args.kwargs['json']['email'], 'tenant@example.com')
         self.assertEqual(mock_request.call_args.kwargs['json']['amount'], 50000)
         self.assertEqual(mock_request.call_args.kwargs['json']['reference'], 'REF-001-TEST')
+
+    @patch.object(PaystackService, '_request')
+    def test_create_kenyan_transfer_recipient(self, mock_request):
+        mock_request.return_value = {'status': True, 'data': {'recipient_code': 'RCP_test'}}
+
+        response = PaystackService().create_transfer_recipient(
+            name='Property Scout',
+            account_number='1234567890',
+            bank_code='TEST001',
+        )
+
+        self.assertTrue(response['status'])
+        self.assertEqual(mock_request.call_args.args[:2], ('post', '/transferrecipient'))
+        self.assertEqual(mock_request.call_args.kwargs['json']['type'], 'kepss')
+        self.assertEqual(mock_request.call_args.kwargs['json']['currency'], 'KES')
+
+    @patch.object(PaystackService, '_request')
+    def test_initiate_scout_transfer_converts_kes_to_minor_units(self, mock_request):
+        mock_request.return_value = {'status': True, 'data': {'status': 'pending'}}
+
+        PaystackService().initiate_transfer(
+            amount=Decimal('125.50'),
+            recipient_code='RCP_test',
+            reference='scout-0123456789abcdef0123456789abcdef',
+            reason='Property scout commission payout',
+        )
+
+        payload = mock_request.call_args.kwargs['json']
+        self.assertEqual(payload['amount'], 12550)
+        self.assertEqual(payload['currency'], 'KES')
+
+
+class ScoutPayoutTests(TestCase):
+    def setUp(self):
+        self.owner_user = User.objects.create_user(
+            username='payout-owner@example.com',
+            email='payout-owner@example.com',
+            password='StrongPass123!',
+            user_type='HOUSE_OWNER',
+        )
+        self.owner_profile, _ = OwnerProfile.objects.get_or_create(
+            user=self.owner_user,
+            defaults={'company_name': 'Payout Holdings'},
+        )
+        self.scout = User.objects.create_user(
+            username='scout-payout@example.com',
+            email='scout-payout@example.com',
+            password='StrongPass123!',
+            user_type='PROPERTY_SCOUT',
+        )
+        self.scout_profile = ScoutProfile.objects.create(
+            user=self.scout,
+            payout_paystack_recipient_code='RCP_test',
+        )
+        self.property = Property.objects.create(
+            owner=self.owner_profile,
+            scouted_by=self.scout,
+            title='Scouted Apartment',
+            description='A test property',
+            property_type='APARTMENT',
+            furnishing_status='FURNISHED',
+            address='123 Main Street',
+            city='Nairobi',
+            state='Nairobi',
+            country='Kenya',
+            rental_price=Decimal('15000.00'),
+            bedrooms=2,
+            bathrooms=1,
+        )
+        self.payer = User.objects.create_user(
+            username='payout-tenant@example.com',
+            email='payout-tenant@example.com',
+            password='StrongPass123!',
+            user_type='TENANT',
+        )
+
+    @patch('apps.accounts.views._get_paystack_bank_choices', return_value=([('TEST001', 'Test Bank')], None))
+    @patch('apps.payments.services.PaystackService.create_transfer_recipient')
+    def test_scout_profile_can_save_payout_recipient(self, mock_create_recipient, mock_banks):
+        mock_create_recipient.return_value = {
+            'status': True,
+            'data': {'recipient_code': 'RCP_created'},
+        }
+        self.client.force_login(self.scout)
+
+        profile_response = self.client.get(reverse('accounts:profile'), secure=True)
+        save_response = self.client.post(
+            reverse('accounts:update_scout_payout_account'),
+            {
+                'bank_code': 'TEST001',
+                'account_number': '1234567890',
+                'account_name': 'Property Scout',
+            },
+            secure=True,
+        )
+
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertContains(profile_response, 'Scout commissions and payout account')
+        self.assertEqual(save_response.status_code, 302)
+        self.scout_profile.refresh_from_db()
+        self.assertEqual(self.scout_profile.payout_paystack_recipient_code, 'RCP_created')
+        self.assertEqual(self.scout_profile.payout_account_number, '1234567890')
+
+    def make_payment(self, platform_fee):
+        return Payment.objects.create(
+            payer=self.payer,
+            recipient=self.owner_user,
+            property=self.property,
+            payment_type='RENT',
+            amount=Decimal('10000.00'),
+            platform_fee=Decimal(platform_fee),
+            owner_amount=Decimal('10000.00') - Decimal(platform_fee),
+            payment_reference=f'REF-{uuid.uuid4().hex}',
+            due_date=timezone.now(),
+            status='COMPLETED',
+        )
+
+    def test_completed_payment_assigns_scout_ten_percent_of_actual_fee(self):
+        payment = self.make_payment('500.00')
+        commission = ScoutCommission.objects.get(payment=payment)
+
+        self.assertEqual(commission.company_fee, Decimal('500.00'))
+        self.assertEqual(commission.commission_amount, Decimal('50.00'))
+
+    def test_completed_zero_fee_payment_creates_no_commission(self):
+        payment = self.make_payment('0.00')
+
+        self.assertFalse(ScoutCommission.objects.filter(payment=payment).exists())
+
+    @patch('apps.payments.services.PaystackService.initiate_transfer')
+    def test_scout_can_request_pending_commission_payout(self, mock_transfer):
+        self.scout.verification_status = 'VERIFIED'
+        self.scout.save(update_fields=['verification_status'])
+        payment = self.make_payment('500.00')
+        commission = ScoutCommission.objects.get(payment=payment)
+        mock_transfer.return_value = {
+            'status': True,
+            'data': {'status': 'pending', 'transfer_code': 'TRF_test', 'currency': 'KES'},
+        }
+        self.client.force_login(self.scout)
+
+        response = self.client.post(reverse('accounts:request_scout_payout'), secure=True)
+
+        self.assertEqual(response.status_code, 302)
+        payout = ScoutPayout.objects.get(scout=self.scout)
+        commission.refresh_from_db()
+        self.assertEqual(payout.amount, Decimal('50.00'))
+        self.assertEqual(payout.status, 'PROCESSING')
+        self.assertEqual(commission.status, 'APPROVED')
+        mock_transfer.assert_called_once()
+
+    @override_settings(PAYSTACK_SECRET_KEY='test-paystack-secret')
+    def test_transfer_webhook_requires_valid_signature_and_marks_payout_paid(self):
+        payment = self.make_payment('500.00')
+        commission = ScoutCommission.objects.get(payment=payment)
+        payout = ScoutPayout.objects.create(
+            scout=self.scout,
+            amount=commission.commission_amount,
+            reference='scout-0123456789abcdef0123456789abcdef',
+        )
+        payout.commissions.add(commission)
+        commission.status = 'APPROVED'
+        commission.save(update_fields=['status'])
+        payload = json.dumps({
+            'event': 'transfer.success',
+            'data': {'reference': payout.reference},
+        }).encode()
+        signature = hmac.new(b'test-paystack-secret', payload, hashlib.sha512).hexdigest()
+
+        response = self.client.post(
+            reverse('accounts:paystack_transfer_webhook'),
+            data=payload,
+            content_type='application/json',
+            HTTP_X_PAYSTACK_SIGNATURE=signature,
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payout.refresh_from_db()
+        commission.refresh_from_db()
+        self.assertEqual(payout.status, 'PAID')
+        self.assertEqual(commission.status, 'PAID')

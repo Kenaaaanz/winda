@@ -135,6 +135,34 @@ class ScoutCommission(models.Model):
         return f'{self.scout} - {self.commission_amount}'
 
 
+class ScoutPayout(models.Model):
+    PAYOUT_STATUS = (
+        ('PROCESSING', 'Processing'),
+        ('PAID', 'Paid'),
+        ('FAILED', 'Failed'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    scout = models.ForeignKey('accounts.User', on_delete=models.PROTECT, related_name='scout_payouts')
+    commissions = models.ManyToManyField(ScoutCommission, related_name='payouts')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3, default='KES')
+    reference = models.CharField(max_length=50, unique=True)
+    transfer_code = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=10, choices=PAYOUT_STATUS, default='PROCESSING')
+    paystack_response = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'scout_payouts'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.scout} - {self.amount} {self.currency} ({self.status})'
+
+
 class SubscriptionPlan(models.Model):
     PLAN_TYPES = (
         ('BASIC', 'Basic'),

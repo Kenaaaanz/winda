@@ -501,6 +501,42 @@ class PaystackSubaccountForm(forms.ModelForm):
         return bank_code
 
 
+class ScoutPayoutAccountForm(forms.Form):
+    bank_code = forms.ChoiceField(
+        choices=[('', 'Select bank')],
+        label='Bank',
+        widget=forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg'}),
+    )
+    account_number = forms.CharField(
+        max_length=20,
+        label='Account number',
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg',
+            'inputmode': 'numeric',
+            'autocomplete': 'off',
+        }),
+    )
+    account_name = forms.CharField(
+        max_length=200,
+        label='Account holder name',
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg',
+            'autocomplete': 'name',
+        }),
+    )
+
+    def __init__(self, *args, bank_choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if bank_choices is not None:
+            self.fields['bank_code'].choices = [('', 'Select bank')] + bank_choices
+
+    def clean_account_number(self):
+        account_number = ''.join(filter(str.isdigit, self.cleaned_data['account_number']))
+        if not 5 <= len(account_number) <= 20:
+            raise forms.ValidationError('Enter a valid account number.')
+        return account_number
+
+
 # ==================== CARETAKER FORMS ====================
 
 class CaretakerInviteForm(forms.Form):

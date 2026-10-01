@@ -66,6 +66,10 @@ urlpatterns = [
     # ==================== PROFILE ====================
     path('profile/', views.profile, name='profile'),
     path('profile/update/', views.update_profile, name='update_profile'),
+    path('profile/scout-payout-account/', views.update_scout_payout_account, name='update_scout_payout_account'),
+    path('profile/scout-payout/', views.request_scout_payout, name='request_scout_payout'),
+    path('profile/scout-payout/<uuid:payout_id>/refresh/', views.refresh_scout_payout, name='refresh_scout_payout'),
+    path('paystack/transfer-webhook/', views.paystack_transfer_webhook, name='paystack_transfer_webhook'),
     path('profile/update-business/', views.update_business, name='update_business'),
     path('profile/change-password/', views.change_password, name='change_password'),
     path('profile/delete/', views.delete_account, name='delete_account'),
