@@ -298,6 +298,49 @@ class PaymentService:
             'plan_id': plan.id,
             'flat_fee_month': month_key,
         }
+
+    @staticmethod
+    def get_building_subscription_fee(amount, property_obj, platform_fee, at=None):
+        """Return this month's building fee collectible from this rent payment."""
+        from django.db.models import Sum
+        from .models import BuildingSubscriptionCharge, OwnerSubscription, Payment
+
+        empty_result = {'fee': Decimal('0.00'), 'charge': None}
+        if not property_obj or not property_obj.owner_id:
+            return empty_result
+        at = at or django_timezone.now()
+
+        owner = property_obj.owner
+        try:
+            subscription = owner.subscription
+        except OwnerSubscription.DoesNotExist:
+            return empty_result
+
+        plan = subscription.plan
+        if not subscription.is_active or not plan or plan.per_building_charge <= 0:
+            return empty_result
+
+        building_count = owner.properties.count()
+        if building_count < plan.building_threshold:
+            return empty_result
+
+        charge, _ = BuildingSubscriptionCharge.objects.get_or_create(
+            property=property_obj,
+            billing_month=at.strftime('%Y-%m'),
+            defaults={'amount_due': plan.per_building_charge},
+        )
+        already_collected = charge.payments.filter(status='COMPLETED').aggregate(
+            total=Sum('building_subscription_fee'),
+        )['total'] or Decimal('0.00')
+        pending_reserved = charge.payments.filter(status='PENDING').aggregate(
+            total=Sum('building_subscription_fee'),
+        )['total'] or Decimal('0.00')
+        outstanding = max(
+            Decimal('0.00'), charge.amount_due - already_collected - pending_reserved,
+        )
+        available_to_collect = max(Decimal('0.00'), amount - platform_fee)
+        fee = min(outstanding, available_to_collect).quantize(Decimal('0.01'))
+        return {'fee': fee, 'charge': charge if fee > 0 else None}
     
     @staticmethod
     def calculate_fee_split(amount, platform_fee_percent=None):

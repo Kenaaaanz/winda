@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import json
 import uuid
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.test import TestCase, override_settings
@@ -109,6 +110,71 @@ class PaymentServiceTests(TestCase):
         second_fee = PaymentService.get_fee_configuration(Decimal('250.00'), self.owner_profile)
         self.assertEqual(second_fee['platform_fee'], Decimal('250.00'))
         self.assertEqual(second_fee['flat_fee_balance_after'], Decimal('50.00'))
+
+    def test_per_building_charge_carries_forward_then_recurs_next_month(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Building Charge',
+            plan_type='ENTERPRISE',
+            fee_mode='PERCENTAGE',
+            price_monthly=Decimal('0.00'),
+            price_yearly=Decimal('0.00'),
+            building_threshold=1,
+            per_building_charge=Decimal('500.00'),
+        )
+        OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
+
+        first_config = PaymentService.get_fee_configuration(Decimal('200.00'), self.owner_profile)
+        billing_date = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        first_building_fee = PaymentService.get_building_subscription_fee(
+            Decimal('200.00'), self.property, first_config['platform_fee'], at=billing_date,
+        )
+        self.assertEqual(first_building_fee['fee'], Decimal('194.00'))
+
+        first_payment = Payment.objects.create(
+            payer=self.user,
+            property=self.property,
+            payment_type='RENT',
+            amount=Decimal('200.00'),
+            platform_fee=first_config['platform_fee'],
+            building_subscription_charge=first_building_fee['charge'],
+            building_subscription_fee=first_building_fee['fee'],
+            payment_reference='BUILDING-CHARGE-FIRST',
+            due_date=timezone.now(),
+            status='COMPLETED',
+        )
+        second_config = PaymentService.get_fee_configuration(Decimal('500.00'), self.owner_profile)
+        second_building_fee = PaymentService.get_building_subscription_fee(
+            Decimal('500.00'), self.property, second_config['platform_fee'], at=billing_date,
+        )
+
+        self.assertEqual(second_building_fee['fee'], Decimal('306.00'))
+        first_payment.refresh_from_db()
+        self.assertEqual(first_payment.building_subscription_charge.amount_due, Decimal('500.00'))
+
+        next_month_fee = PaymentService.get_building_subscription_fee(
+            Decimal('1000.00'), self.property, Decimal('30.00'), at=billing_date + timedelta(days=32),
+        )
+        self.assertEqual(next_month_fee['fee'], Decimal('500.00'))
+        self.assertNotEqual(next_month_fee['charge'].id, first_building_fee['charge'].id)
+
+    def test_building_charge_waits_until_owner_reaches_admin_threshold(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Threshold Building Charge',
+            plan_type='ENTERPRISE',
+            fee_mode='PERCENTAGE',
+            price_monthly=Decimal('0.00'),
+            price_yearly=Decimal('0.00'),
+            building_threshold=2,
+            per_building_charge=Decimal('500.00'),
+        )
+        OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
+
+        result = PaymentService.get_building_subscription_fee(
+            Decimal('1000.00'), self.property, Decimal('30.00'),
+        )
+
+        self.assertEqual(result['fee'], Decimal('0.00'))
+        self.assertIsNone(result['charge'])
 
 
 class PaystackServiceTests(TestCase):

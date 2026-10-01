@@ -48,6 +48,11 @@ class Payment(models.Model):
     # Platform Fee Breakdown (3% to Winda, 97% to Owner)
     platform_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # 3% of amount
     owner_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # 97% of amount
+    building_subscription_charge = models.ForeignKey(
+        'BuildingSubscriptionCharge', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='payments',
+    )
+    building_subscription_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Payment Method
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='PAYSTACK')
@@ -190,6 +195,8 @@ class SubscriptionPlan(models.Model):
     price_yearly = models.DecimalField(max_digits=10, decimal_places=2)
     platform_fee_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('3.00'))
     monthly_charge = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    building_threshold = models.PositiveIntegerField(default=15)
+    per_building_charge = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     # Features
     max_properties = models.PositiveIntegerField(default=5)
@@ -240,6 +247,29 @@ class OwnerSubscription(models.Model):
 
     def __str__(self):
         return f'{self.owner} - {self.plan.name if self.plan else "No package"}'
+
+
+class BuildingSubscriptionCharge(models.Model):
+    """Monthly subscription fee assigned to a property/building."""
+    property = models.ForeignKey(
+        'properties.Property', on_delete=models.CASCADE, related_name='building_subscription_charges',
+    )
+    billing_month = models.CharField(max_length=7)
+    amount_due = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'building_subscription_charges'
+        ordering = ['-billing_month']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['property', 'billing_month'],
+                name='unique_property_building_charge_month',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.property} - {self.amount_due}'
 
 
 class Invoice(models.Model):

@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin, GroupAdmin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from decimal import Decimal
 
 # Import the admin_site from admin.py
 from .admin import admin_site
@@ -11,7 +12,9 @@ from .admin import admin_site
 from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
-from apps.payments.models import Payment, Invoice, SubscriptionPlan, OwnerSubscription
+from apps.payments.models import (
+    Payment, Invoice, SubscriptionPlan, OwnerSubscription, BuildingSubscriptionCharge,
+)
 from apps.maintenance.models import MaintenanceRequest, MaintenanceTask
 from apps.communications.models import ChatRoom, Message, MessageTemplate
 from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
@@ -349,7 +352,10 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionPlan, site=admin_site)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units', 'minimum_tenants', 'is_active')
+    list_display = (
+        'name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units',
+        'minimum_tenants', 'building_threshold', 'per_building_charge', 'is_active',
+    )
     list_filter = ('is_active',)
 
 
@@ -358,6 +364,30 @@ class OwnerSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('owner', 'plan', 'is_active', 'discounted_months_remaining', 'free_months_remaining', 'flat_fee_balance', 'last_flat_fee_month')
     list_filter = ('is_active', 'plan__fee_mode')
     search_fields = ('owner__user__email', 'owner__company_name', 'plan__name')
+
+
+@admin.register(BuildingSubscriptionCharge, site=admin_site)
+class BuildingSubscriptionChargeAdmin(admin.ModelAdmin):
+    list_display = ('property', 'owner_email', 'amount_due', 'amount_collected', 'amount_outstanding')
+    search_fields = ('property__title', 'property__owner__user__email')
+    readonly_fields = ('amount_collected', 'amount_outstanding', 'created_at')
+
+    def owner_email(self, obj):
+        return obj.property.owner.user.email
+    owner_email.short_description = 'Owner'
+
+    def amount_collected(self, obj):
+        return obj.amount_due - self.amount_outstanding(obj)
+    amount_collected.short_description = 'Collected'
+
+    def amount_outstanding(self, obj):
+        from django.db.models import Sum
+
+        collected = obj.payments.filter(status='COMPLETED').aggregate(
+            total=Sum('building_subscription_fee'),
+        )['total'] or Decimal('0.00')
+        return max(Decimal('0.00'), obj.amount_due - collected)
+    amount_outstanding.short_description = 'Outstanding'
 
 
 # ========================================

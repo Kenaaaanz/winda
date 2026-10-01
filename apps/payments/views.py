@@ -413,8 +413,20 @@ def initiate_payment(request):
                 'transaction_charge': None,
                 'first_flat_charge': False,
             }
+            building_fee = {'fee': Decimal('0.00'), 'charge': None}
+            if payment.payment_type == 'RENT' and property_obj:
+                building_fee = PaymentService.get_building_subscription_fee(
+                    payment.amount, property_obj, fee_split['platform_fee'],
+                )
             payment.platform_fee = fee_split['platform_fee']
-            payment.owner_amount = fee_split['owner_amount']
+            payment.building_subscription_fee = building_fee['fee']
+            payment.building_subscription_charge = building_fee['charge']
+            payment.owner_amount = fee_split['owner_amount'] - building_fee['fee']
+            transaction_charge = fee_split.get('transaction_charge')
+            if building_fee['fee'] > 0:
+                transaction_charge = int(
+                    (fee_split['platform_fee'] + building_fee['fee']) * 100,
+                )
             payment.metadata.update({
                 'fee_mode': fee_split['fee_mode'],
                 'platform_percentage': str(fee_split['platform_percentage']),
@@ -422,6 +434,8 @@ def initiate_payment(request):
                 'flat_fee_month': fee_split.get('flat_fee_month'),
                 'first_flat_charge': fee_split.get('first_flat_charge', False),
                 'flat_fee_balance_after': str(fee_split.get('flat_fee_balance_after', '0.00')),
+                'building_subscription_fee': str(building_fee['fee']),
+                'building_subscription_charge_id': str(building_fee['charge'].id) if building_fee['charge'] else None,
             })
             
             # Get the owner's Paystack subaccount code
@@ -446,7 +460,7 @@ def initiate_payment(request):
                     subaccount_code,
                     percentage_charge=(
                         Decimal('0.00')
-                        if fee_split['fee_mode'] == 'FLAT_RATE'
+                        if fee_split['fee_mode'] == 'FLAT_RATE' or building_fee['fee'] > 0
                         else fee_split['platform_percentage']
                     ),
                 )
@@ -465,7 +479,7 @@ def initiate_payment(request):
                     'platform_fee': str(payment.platform_fee),
                     'fee_mode': fee_split['fee_mode'],
                 }
-                , transaction_charge=fee_split.get('transaction_charge')) if subaccount_code else paystack_service.initialize_transaction(
+                , transaction_charge=transaction_charge) if subaccount_code else paystack_service.initialize_transaction(
                 email=request.user.email,
                 amount=int(float(payment.amount) * 100),
                 reference=payment.payment_reference,
