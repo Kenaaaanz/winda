@@ -115,7 +115,7 @@ class PaymentServiceTests(TestCase):
         plan = SubscriptionPlan.objects.create(
             name='Building Charge',
             plan_type='ENTERPRISE',
-            fee_mode='PERCENTAGE',
+            fee_mode='PER_BUILDING',
             price_monthly=Decimal('0.00'),
             price_yearly=Decimal('0.00'),
             building_threshold=1,
@@ -124,11 +124,13 @@ class PaymentServiceTests(TestCase):
         OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
 
         first_config = PaymentService.get_fee_configuration(Decimal('200.00'), self.owner_profile)
+        self.assertEqual(first_config['platform_fee'], Decimal('0.00'))
+        self.assertEqual(first_config['fee_mode'], 'PER_BUILDING')
         billing_date = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         first_building_fee = PaymentService.get_building_subscription_fee(
             Decimal('200.00'), self.property, first_config['platform_fee'], at=billing_date,
         )
-        self.assertEqual(first_building_fee['fee'], Decimal('194.00'))
+        self.assertEqual(first_building_fee['fee'], Decimal('200.00'))
 
         first_payment = Payment.objects.create(
             payer=self.user,
@@ -147,7 +149,7 @@ class PaymentServiceTests(TestCase):
             Decimal('500.00'), self.property, second_config['platform_fee'], at=billing_date,
         )
 
-        self.assertEqual(second_building_fee['fee'], Decimal('306.00'))
+        self.assertEqual(second_building_fee['fee'], Decimal('300.00'))
         first_payment.refresh_from_db()
         self.assertEqual(first_payment.building_subscription_charge.amount_due, Decimal('500.00'))
 
@@ -161,10 +163,29 @@ class PaymentServiceTests(TestCase):
         plan = SubscriptionPlan.objects.create(
             name='Threshold Building Charge',
             plan_type='ENTERPRISE',
-            fee_mode='PERCENTAGE',
+            fee_mode='PER_BUILDING',
             price_monthly=Decimal('0.00'),
             price_yearly=Decimal('0.00'),
             building_threshold=2,
+            per_building_charge=Decimal('500.00'),
+        )
+        OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
+
+        result = PaymentService.get_building_subscription_fee(
+            Decimal('1000.00'), self.property, Decimal('0.00'),
+        )
+
+        self.assertEqual(result['fee'], Decimal('0.00'))
+        self.assertIsNone(result['charge'])
+
+    def test_percentage_package_does_not_collect_per_building_charge(self):
+        plan = SubscriptionPlan.objects.create(
+            name='Percentage Only',
+            plan_type='BASIC',
+            fee_mode='PERCENTAGE',
+            price_monthly=Decimal('0.00'),
+            price_yearly=Decimal('0.00'),
+            building_threshold=1,
             per_building_charge=Decimal('500.00'),
         )
         OwnerSubscription.objects.create(owner=self.owner_profile, plan=plan)
@@ -304,7 +325,7 @@ class ScoutPayoutTests(TestCase):
         self.assertEqual(self.scout_profile.payout_paystack_recipient_code, 'RCP_created')
         self.assertEqual(self.scout_profile.payout_account_number, '1234567890')
 
-    def make_payment(self, platform_fee):
+    def make_payment(self, platform_fee, building_fee='0.00'):
         return Payment.objects.create(
             payer=self.payer,
             recipient=self.owner_user,
@@ -312,7 +333,8 @@ class ScoutPayoutTests(TestCase):
             payment_type='RENT',
             amount=Decimal('10000.00'),
             platform_fee=Decimal(platform_fee),
-            owner_amount=Decimal('10000.00') - Decimal(platform_fee),
+            building_subscription_fee=Decimal(building_fee),
+            owner_amount=Decimal('10000.00') - Decimal(platform_fee) - Decimal(building_fee),
             payment_reference=f'REF-{uuid.uuid4().hex}',
             due_date=timezone.now(),
             status='COMPLETED',
@@ -329,6 +351,13 @@ class ScoutPayoutTests(TestCase):
         payment = self.make_payment('0.00')
 
         self.assertFalse(ScoutCommission.objects.filter(payment=payment).exists())
+
+    def test_completed_building_fee_payment_assigns_scout_ten_percent(self):
+        payment = self.make_payment('0.00', building_fee='500.00')
+        commission = ScoutCommission.objects.get(payment=payment)
+
+        self.assertEqual(commission.company_fee, Decimal('500.00'))
+        self.assertEqual(commission.commission_amount, Decimal('50.00'))
 
     @patch('apps.payments.services.PaystackService.initiate_transfer')
     def test_scout_can_request_pending_commission_payout(self, mock_transfer):

@@ -228,7 +228,7 @@ class PaymentService:
 
     @staticmethod
     def get_fee_configuration(amount, owner, at=None):
-        """Return the fee mode for this payment and whether a flat fee is due."""
+        """Return the selected package's platform-fee configuration for a payment."""
         from .models import OwnerSubscription
 
         at = at or django_timezone.now()
@@ -239,14 +239,41 @@ class PaymentService:
             return {**default, 'fee_mode': 'PERCENTAGE', 'transaction_charge': None}
 
         plan = subscription.plan
-        units, tenants = PaymentService.get_owner_scale(owner)
-        if not subscription.is_active or not plan or plan.fee_mode != 'FLAT_RATE' or not plan.matches_owner_scale(units, tenants):
+        if not subscription.is_active or not plan:
             percentage = plan.platform_fee_percent if plan else PaymentService.PLATFORM_FEE_PERCENT
             return {
                 **PaymentService.calculate_fee_split(amount, percentage),
                 'fee_mode': 'PERCENTAGE',
                 'transaction_charge': None,
                 'plan_id': plan.id if plan else None,
+            }
+
+        if plan.fee_mode == 'PER_BUILDING':
+            return {
+                'platform_fee': Decimal('0.00'),
+                'owner_amount': amount,
+                'platform_percentage': Decimal('0.00'),
+                'owner_percentage': Decimal('100.00'),
+                'fee_mode': 'PER_BUILDING',
+                'transaction_charge': None,
+                'plan_id': plan.id,
+            }
+
+        if plan.fee_mode == 'PERCENTAGE':
+            return {
+                **PaymentService.calculate_fee_split(amount, plan.platform_fee_percent),
+                'fee_mode': 'PERCENTAGE',
+                'transaction_charge': None,
+                'plan_id': plan.id,
+            }
+
+        units, tenants = PaymentService.get_owner_scale(owner)
+        if not plan.matches_owner_scale(units, tenants):
+            return {
+                **PaymentService.calculate_fee_split(amount, plan.platform_fee_percent),
+                'fee_mode': 'PERCENTAGE',
+                'transaction_charge': None,
+                'plan_id': plan.id,
             }
 
         month_key = at.strftime('%Y-%m')
@@ -317,7 +344,12 @@ class PaymentService:
             return empty_result
 
         plan = subscription.plan
-        if not subscription.is_active or not plan or plan.per_building_charge <= 0:
+        if (
+            not subscription.is_active
+            or not plan
+            or plan.fee_mode != 'PER_BUILDING'
+            or plan.per_building_charge <= 0
+        ):
             return empty_result
 
         building_count = owner.properties.count()

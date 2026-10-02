@@ -182,6 +182,7 @@ class SubscriptionPlan(models.Model):
     FEE_MODES = (
         ('PERCENTAGE', 'Percentage platform fee'),
         ('FLAT_RATE', 'Flat monthly platform fee'),
+        ('PER_BUILDING', 'Per-building fee'),
     )
     fee_mode = models.CharField(max_length=20, choices=FEE_MODES, default='PERCENTAGE')
     minimum_units = models.PositiveIntegerField(default=0)

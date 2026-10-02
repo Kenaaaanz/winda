@@ -356,7 +356,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
         'name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units',
         'minimum_tenants', 'building_threshold', 'per_building_charge', 'is_active',
     )
-    list_filter = ('is_active',)
+    list_filter = ('is_active', 'fee_mode')
 
 
 @admin.register(OwnerSubscription, site=admin_site)

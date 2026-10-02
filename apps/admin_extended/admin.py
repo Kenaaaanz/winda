@@ -517,8 +517,11 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(SubscriptionPlan, site=admin_site)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units', 'minimum_tenants', 'is_active')
-    list_filter = ('is_active',)
+    list_display = (
+        'name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units',
+        'minimum_tenants', 'building_threshold', 'per_building_charge', 'is_active',
+    )
+    list_filter = ('is_active', 'fee_mode')
     search_fields = ('name', 'description')
 
 

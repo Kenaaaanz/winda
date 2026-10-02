@@ -33,8 +33,14 @@
                             <span class="text-green-500 text-sm font-semibold ml-2">Save 20%</span>
                         </div>
                         <div class="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                            <p class="font-semibold">Platform fee: {{ plan.platform_fee_percent }}%</p>
-                            <p>{% if plan.monthly_charge == 0 %}No monthly charges{% else %}Monthly charge: KES {{ plan.monthly_charge|intcomma }}{% endif %}</p>
+                            {% if plan.fee_mode == 'PER_BUILDING' %}
+                                <p class="font-semibold">Per-building fee: KES {{ plan.per_building_charge|intcomma }} per month</p>
+                                <p>Applies to each property once you reach {{ plan.building_threshold }} properties.</p>
+                            {% elif plan.fee_mode == 'FLAT_RATE' %}
+                                <p class="font-semibold">Flat monthly platform fee: KES {{ plan.monthly_charge|intcomma }}</p>
+                            {% else %}
+                                <p class="font-semibold">Platform fee: {{ plan.platform_fee_percent }}%</p>
+                            {% endif %}
                         </div>
                         
                         <ul class="mt-6 space-y-3">
