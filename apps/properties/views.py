@@ -244,7 +244,7 @@ def property_create(request):
                     property_obj.features = features if features else []
                     
                     # Handle main image
-                    main_image = request.FILES.get('main_image')
+                    main_image = form.cleaned_data.get('main_image_upload')
                     if main_image:
                         result = upload_property_image_to_cloudinary(
                             main_image, 
@@ -312,7 +312,7 @@ def property_create(request):
                     property_obj.features = features if features else []
                     
                     # Handle main image
-                    main_image = request.FILES.get('main_image')
+                    main_image = form.cleaned_data.get('main_image_upload')
                     if main_image:
                         result = upload_property_image_to_cloudinary(
                             main_image, 
@@ -638,6 +638,16 @@ def property_edit(request, pk):
         
         if form.is_valid():
             property_obj = form.save(commit=False)
+
+            main_image = form.cleaned_data.get('main_image_upload')
+            if main_image:
+                result = upload_property_image_to_cloudinary(
+                    main_image,
+                    property_obj.id,
+                    'main',
+                )
+                if result:
+                    property_obj.main_image = result['url']
             
             # Handle amenities and features from checkboxes
             amenities = request.POST.getlist('amenities')
@@ -1229,4 +1239,3 @@ def delete_document(request, doc_id):
     
     doc.delete()
     return JsonResponse({'status': 'success'})
-

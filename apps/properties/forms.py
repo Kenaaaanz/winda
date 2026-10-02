@@ -6,6 +6,14 @@ from apps.accounts.models import OwnerProfile
 
 class PropertyBaseForm(forms.ModelForm):
     """Base property form (single unit)"""
+
+    main_image_upload = forms.ImageField(
+        required=False,
+        label='Main image',
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+        }),
+    )
     
     amenities = forms.MultipleChoiceField(
         required=False,
@@ -31,7 +39,7 @@ class PropertyBaseForm(forms.ModelForm):
             'rental_price', 'service_charge', 'security_deposit', 'negotiation_allowed',
             'bedrooms', 'bathrooms', 'parking_spaces', 'square_feet',
             'floor_number', 'total_floors', 'year_built',
-            'main_image', 'video_url', 'virtual_tour_url'
+            'video_url', 'virtual_tour_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
@@ -51,7 +59,6 @@ class PropertyBaseForm(forms.ModelForm):
             'floor_number': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'total_floors': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'year_built': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 1900, 'max': 2100}),
-            'main_image': forms.FileInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'video_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://www.youtube.com/watch?v=...'}),
             'virtual_tour_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://...'}),
         }
@@ -81,6 +88,14 @@ class PropertyBaseForm(forms.ModelForm):
 
 class PropertyMultiUnitForm(forms.ModelForm):
     """Multi-unit property form (without unit-specific fields)"""
+
+    main_image_upload = forms.ImageField(
+        required=False,
+        label='Main image',
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+        }),
+    )
     
     amenities = forms.MultipleChoiceField(
         required=False,
@@ -111,7 +126,7 @@ class PropertyMultiUnitForm(forms.ModelForm):
             'title', 'description', 'property_type', 'furnishing_status',
             'address', 'city', 'state', 'postal_code', 'land_reference_number',
             'parking_spaces', 'square_feet', 'total_floors', 'year_built',
-            'main_image', 'video_url', 'virtual_tour_url'
+            'video_url', 'virtual_tour_url'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
@@ -125,7 +140,6 @@ class PropertyMultiUnitForm(forms.ModelForm):
             'square_feet': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'total_floors': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 0}),
             'year_built': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 1900, 'max': 2100}),
-            'main_image': forms.FileInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
             'video_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://www.youtube.com/watch?v=...'}),
             'virtual_tour_url': forms.URLInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'placeholder': 'https://...'}),
         }
@@ -335,6 +349,14 @@ UnitFormSet = modelformset_factory(
 
 class PropertyWithUnitsForm(forms.ModelForm):
     """Enhanced property form with multi-unit support"""
+
+    main_image_upload = forms.ImageField(
+        required=False,
+        label='Main image',
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500',
+        }),
+    )
     
     class Meta:
         model = Property
@@ -344,7 +366,7 @@ class PropertyWithUnitsForm(forms.ModelForm):
             'rental_price', 'service_charge', 'security_deposit', 'negotiation_allowed',
             'bedrooms', 'bathrooms', 'parking_spaces', 'square_feet',
             'floor_number', 'total_floors', 'year_built',
-            'main_image', 'is_multi_unit', 'total_units'
+            'is_multi_unit', 'total_units'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 5, 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
@@ -366,7 +388,6 @@ class PropertyWithUnitsForm(forms.ModelForm):
             'total_units': forms.NumberInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500', 'min': 1}),
             'is_multi_unit': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'}),
             'negotiation_allowed': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded'}),
-            'main_image': forms.FileInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500'}),
         }
         
     
