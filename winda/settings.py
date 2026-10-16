@@ -17,6 +17,9 @@ ALLOWED_HOSTS = [ 'localhost', '127.0.0.1', '.onrender.com', 'www.winda.africa',
 
 # Application definition
 INSTALLED_APPS = [
+    'unfold',
+    'unfold.contrib.filters',
+    'unfold.contrib.forms',
     'django.contrib.admin',
     'apps.admin_extended',
     'django.contrib.auth',
@@ -58,6 +61,46 @@ INSTALLED_APPS = [
     'apps.seo',
     'apps.legal',
 ]
+
+UNFOLD = {
+    'SITE_TITLE': 'Winda Super Admin',
+    'SITE_HEADER': 'Winda Super Admin',
+    'SITE_URL': '/',
+    'SHOW_HISTORY': True,
+    'SHOW_VIEW_ON_SITE': True,
+    'COLORS': {
+        'base': {
+            '50': '#faf7f0',
+            '100': '#f3eee3',
+            '200': '#e8ddc8',
+            '300': '#d7c7a9',
+            '400': '#bda985',
+            '500': '#98845f',
+            '600': '#76664a',
+            '700': '#594d39',
+            '800': '#3f382c',
+            '900': '#2b271f',
+            '950': '#1a1712',
+        },
+        'primary': {
+            '50': '#effaf3',
+            '100': '#dff4e8',
+            '200': '#bfe8d0',
+            '300': '#8fd4ae',
+            '400': '#54b982',
+            '500': '#278f5a',
+            '600': '#167348',
+            '700': '#125c3c',
+            '800': '#104a33',
+            '900': '#0d3d2c',
+            '950': '#062319',
+        },
+    },
+    'SIDEBAR': {
+        'show_search': True,
+        'show_all_applications': True,
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -314,5 +357,4 @@ SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya pr
 
 # custom admin site
 ADMIN_SITE_CLASS = 'apps.admin_extended.admin.admin_site'
-
 

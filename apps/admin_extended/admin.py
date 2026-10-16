@@ -1,16 +1,19 @@
-from django.contrib.admin import AdminSite
 from django.contrib import admin
+from django.contrib.auth.admin import GroupAdmin as DjangoGroupAdmin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
-from django.contrib.auth.admin import GroupAdmin
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
+from unfold.admin import ModelAdmin as UnfoldModelAdmin
+from unfold.sites import UnfoldAdminSite
 from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Import all models from all apps
 from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
+from apps.accounts.forms import AdminUserCreationForm
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
 from apps.payments.models import Payment, Invoice, SubscriptionPlan, OwnerSubscription
@@ -24,7 +27,7 @@ from apps.seo.models import SeoMeta, SeoRobots, SeoSitemap, SeoRedirect
 User = get_user_model()
 
 
-class WindaAdminSite(AdminSite):
+class WindaAdminSite(UnfoldAdminSite):
     """
     Custom admin site that preserves ALL Django admin functionality.
     Only the dashboard index page is customized with stats cards.
@@ -342,7 +345,8 @@ admin_site = WindaAdminSite(name='admin')
 # In the UserAdmin class, update fieldsets and add actions:
 
 @admin.register(User, site=admin_site)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
+    add_form = AdminUserCreationForm
     list_display = ('email', 'first_name', 'last_name', 'user_type', 'verification_status', 'is_active', 'date_joined')
     list_filter = ('user_type', 'verification_status', 'is_active', 'is_email_verified')
     search_fields = ('email', 'first_name', 'last_name', 'phone')
@@ -350,6 +354,13 @@ class UserAdmin(admin.ModelAdmin):
     
     # Add custom actions
     actions = ['mark_email_verified', 'mark_owner_verified', 'send_verification_email']
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'first_name', 'last_name', 'phone', 'user_type', 'password1', 'password2'),
+        }),
+    )
     
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
@@ -417,7 +428,7 @@ class UserAdmin(admin.ModelAdmin):
     send_verification_email.short_description = 'Send verification email'
 
 @admin.register(OwnerProfile, site=admin_site)
-class OwnerProfileAdmin(admin.ModelAdmin):
+class OwnerProfileAdmin(UnfoldModelAdmin):
     list_display = ('user', 'company_name', 'total_properties', 'total_revenue', 'created_at')
     search_fields = ('user__email', 'company_name')
     readonly_fields = ('total_properties', 'total_revenue')
@@ -443,13 +454,13 @@ class OwnerProfileAdmin(admin.ModelAdmin):
 
 
 @admin.register(TenantProfile, site=admin_site)
-class TenantProfileAdmin(admin.ModelAdmin):
+class TenantProfileAdmin(UnfoldModelAdmin):
     list_display = ('user', 'employer_name', 'monthly_income', 'is_approved')
     search_fields = ('user__email', 'employer_name')
 
 
 @admin.register(CaretakerProfile, site=admin_site)
-class CaretakerProfileAdmin(admin.ModelAdmin):
+class CaretakerProfileAdmin(UnfoldModelAdmin):
     list_display = ('user', 'owner', 'permission_level', 'is_active')
     list_filter = ('permission_level', 'is_active')
     search_fields = ('user__email', 'owner__user__email')
@@ -457,7 +468,7 @@ class CaretakerProfileAdmin(admin.ModelAdmin):
 
 # PROPERTIES APP
 @admin.register(Property, site=admin_site)
-class PropertyAdmin(admin.ModelAdmin):
+class PropertyAdmin(UnfoldModelAdmin):
     list_display = ('title', 'owner', 'city', 'rental_price', 'verification_status', 'availability_status', 'created_at')
     list_filter = ('verification_status', 'availability_status', 'property_type', 'is_multi_unit')
     search_fields = ('title', 'address', 'city', 'owner__user__email')
@@ -465,27 +476,27 @@ class PropertyAdmin(admin.ModelAdmin):
 
 
 @admin.register(Unit, site=admin_site)
-class UnitAdmin(admin.ModelAdmin):
+class UnitAdmin(UnfoldModelAdmin):
     list_display = ('unit_number', 'property_obj', 'bedrooms', 'bathrooms', 'status', 'is_available')
     list_filter = ('status', 'is_available')
     search_fields = ('unit_number', 'property_obj__title')
 
 
 @admin.register(PropertyImage, site=admin_site)
-class PropertyImageAdmin(admin.ModelAdmin):
+class PropertyImageAdmin(UnfoldModelAdmin):
     list_display = ('property', 'is_main', 'order', 'uploaded_at')
     list_filter = ('is_main',)
 
 
 @admin.register(PropertyDocument, site=admin_site)
-class PropertyDocumentAdmin(admin.ModelAdmin):
+class PropertyDocumentAdmin(UnfoldModelAdmin):
     list_display = ('property', 'document_type', 'is_verified', 'uploaded_at')
     list_filter = ('document_type', 'is_verified')
 
 
 # TENANTS APP
 @admin.register(TenantApplication, site=admin_site)
-class TenantApplicationAdmin(admin.ModelAdmin):
+class TenantApplicationAdmin(UnfoldModelAdmin):
     list_display = ('tenant', 'property', 'unit', 'status', 'created_at')
     list_filter = ('status', 'property__owner')
     search_fields = ('tenant__email', 'property__title')
@@ -493,7 +504,7 @@ class TenantApplicationAdmin(admin.ModelAdmin):
 
 
 @admin.register(Lease, site=admin_site)
-class LeaseAdmin(admin.ModelAdmin):
+class LeaseAdmin(UnfoldModelAdmin):
     list_display = ('tenant', 'property', 'unit', 'monthly_rent', 'status', 'start_date', 'end_date')
     list_filter = ('status',)
     search_fields = ('tenant__email', 'property__title')
@@ -501,7 +512,7 @@ class LeaseAdmin(admin.ModelAdmin):
 
 # PAYMENTS APP
 @admin.register(Payment, site=admin_site)
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(UnfoldModelAdmin):
     list_display = ('payment_reference', 'payer', 'amount', 'payment_type', 'status', 'created_at')
     list_filter = ('status', 'payment_type', 'payment_method')
     search_fields = ('payment_reference', 'payer__email')
@@ -509,14 +520,14 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 @admin.register(Invoice, site=admin_site)
-class InvoiceAdmin(admin.ModelAdmin):
+class InvoiceAdmin(UnfoldModelAdmin):
     list_display = ('invoice_number', 'user', 'amount', 'status', 'due_date')
     list_filter = ('status',)
     search_fields = ('invoice_number', 'user__email')
 
 
 @admin.register(SubscriptionPlan, site=admin_site)
-class SubscriptionPlanAdmin(admin.ModelAdmin):
+class SubscriptionPlanAdmin(UnfoldModelAdmin):
     list_display = (
         'name', 'plan_type', 'fee_mode', 'monthly_charge', 'minimum_units',
         'minimum_tenants', 'building_threshold', 'per_building_charge', 'is_active',
@@ -526,7 +537,7 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
 
 
 @admin.register(OwnerSubscription, site=admin_site)
-class OwnerSubscriptionAdmin(admin.ModelAdmin):
+class OwnerSubscriptionAdmin(UnfoldModelAdmin):
     list_display = ('owner', 'plan', 'is_active', 'discounted_months_remaining', 'free_months_remaining', 'flat_fee_balance', 'last_flat_fee_month')
     list_filter = ('is_active', 'plan__fee_mode')
     search_fields = ('owner__user__email', 'owner__company_name', 'plan__name')
@@ -534,7 +545,7 @@ class OwnerSubscriptionAdmin(admin.ModelAdmin):
 
 # MAINTENANCE APP
 @admin.register(MaintenanceRequest, site=admin_site)
-class MaintenanceRequestAdmin(admin.ModelAdmin):
+class MaintenanceRequestAdmin(UnfoldModelAdmin):
     list_display = ('title', 'property', 'tenant', 'priority', 'status', 'created_at')
     list_filter = ('status', 'priority', 'category')
     search_fields = ('title', 'tenant__email', 'property__title')
@@ -542,14 +553,14 @@ class MaintenanceRequestAdmin(admin.ModelAdmin):
 
 
 @admin.register(MaintenanceTask, site=admin_site)
-class MaintenanceTaskAdmin(admin.ModelAdmin):
+class MaintenanceTaskAdmin(UnfoldModelAdmin):
     list_display = ('title', 'request', 'assigned_to', 'status', 'due_date')
     list_filter = ('status',)
 
 
 # COMMUNICATIONS APP
 @admin.register(ChatRoom, site=admin_site)
-class ChatRoomAdmin(admin.ModelAdmin):
+class ChatRoomAdmin(UnfoldModelAdmin):
     list_display = ('id', 'name', 'room_type', 'participant_count', 'created_at')
     filter_horizontal = ('participants',)
     
@@ -559,7 +570,7 @@ class ChatRoomAdmin(admin.ModelAdmin):
 
 
 @admin.register(Message, site=admin_site)
-class MessageAdmin(admin.ModelAdmin):
+class MessageAdmin(UnfoldModelAdmin):
     list_display = ('sender', 'room', 'content_preview', 'created_at')
     list_filter = ('message_type',)
     search_fields = ('content', 'sender__email')
@@ -570,14 +581,14 @@ class MessageAdmin(admin.ModelAdmin):
 
 
 @admin.register(MessageTemplate, site=admin_site)
-class MessageTemplateAdmin(admin.ModelAdmin):
+class MessageTemplateAdmin(UnfoldModelAdmin):
     list_display = ('name', 'template_type', 'is_active')
     list_filter = ('template_type', 'is_active')
 
 
 # ANALYTICS APP
 @admin.register(AnalyticsEvent, site=admin_site)
-class AnalyticsEventAdmin(admin.ModelAdmin):
+class AnalyticsEventAdmin(UnfoldModelAdmin):
     list_display = ('user', 'event_type', 'property', 'created_at')
     list_filter = ('event_type',)
     search_fields = ('user__email',)
@@ -585,21 +596,21 @@ class AnalyticsEventAdmin(admin.ModelAdmin):
 
 
 @admin.register(AnalyticsMetric, site=admin_site)
-class AnalyticsMetricAdmin(admin.ModelAdmin):
+class AnalyticsMetricAdmin(UnfoldModelAdmin):
     list_display = ('metric_type', 'owner', 'property', 'value', 'date')
     list_filter = ('metric_type', 'date')
     search_fields = ('owner__user__email',)
 
 
 @admin.register(SavedReport, site=admin_site)
-class SavedReportAdmin(admin.ModelAdmin):
+class SavedReportAdmin(UnfoldModelAdmin):
     list_display = ('title', 'owner', 'report_type', 'is_scheduled', 'created_at')
     list_filter = ('report_type', 'is_scheduled')
 
 
 # NOTIFICATIONS APP
 @admin.register(Notification, site=admin_site)
-class NotificationAdmin(admin.ModelAdmin):
+class NotificationAdmin(UnfoldModelAdmin):
     list_display = ('user', 'notification_type', 'title', 'is_read', 'created_at')
     list_filter = ('notification_type', 'is_read')
     search_fields = ('user__email', 'title')
@@ -607,34 +618,38 @@ class NotificationAdmin(admin.ModelAdmin):
 
 
 @admin.register(NotificationPreference, site=admin_site)
-class NotificationPreferenceAdmin(admin.ModelAdmin):
+class NotificationPreferenceAdmin(UnfoldModelAdmin):
     list_display = ('user',)
     search_fields = ('user__email',)
 
 
 # SEO APP
 @admin.register(SeoMeta, site=admin_site)
-class SeoMetaAdmin(admin.ModelAdmin):
+class SeoMetaAdmin(UnfoldModelAdmin):
     list_display = ('url_path', 'meta_title', 'meta_description')
     search_fields = ('url_path', 'meta_title')
     list_filter = ('created_at',)
 
 
 @admin.register(SeoRobots, site=admin_site)
-class SeoRobotsAdmin(admin.ModelAdmin):
+class SeoRobotsAdmin(UnfoldModelAdmin):
     list_display = ('user_agent', 'is_active', 'created_at')
 
 
 @admin.register(SeoSitemap, site=admin_site)
-class SeoSitemapAdmin(admin.ModelAdmin):
+class SeoSitemapAdmin(UnfoldModelAdmin):
     list_display = ('name', 'url', 'priority', 'is_active')
 
 
 @admin.register(SeoRedirect, site=admin_site)
-class SeoRedirectAdmin(admin.ModelAdmin):
+class SeoRedirectAdmin(UnfoldModelAdmin):
     list_display = ('old_path', 'new_path', 'redirect_type', 'is_active')
     search_fields = ('old_path', 'new_path')
 
 
 # REGISTER DJANGO'S DEFAULT GROUP MODEL
-admin_site.register(Group, GroupAdmin)
+class WindaGroupAdmin(DjangoGroupAdmin, UnfoldModelAdmin):
+    pass
+
+
+admin_site.register(Group, WindaGroupAdmin)

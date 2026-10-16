@@ -1,6 +1,7 @@
 # requirements-windows.txt - Without GDAL
 
 Django==5.2
+django-unfold>=0.50,<1.0
 djangorestframework
 django-cors-headers
 django-allauth

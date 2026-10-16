@@ -56,3 +56,30 @@ class AccountsTestCase(TestCase):
         self.assertEqual(response.url, reverse('accounts:scout_pending'))
         self.assertEqual(self.client.session['_auth_user_id'], str(scout.pk))
 
+    def test_admin_can_create_multiple_property_scouts(self):
+        admin = User.objects.create_superuser(
+            username='admin@example.com',
+            email='admin@example.com',
+            password='adminpassword123',
+        )
+        self.client.force_login(admin)
+
+        dashboard = self.client.get(reverse('admin:index'), secure=True)
+        self.assertEqual(dashboard.status_code, 200)
+
+        for email in ('first.scout@example.com', 'second.scout@example.com'):
+            response = self.client.post(reverse('admin:accounts_user_add'), {
+                'email': email,
+                'first_name': 'Property',
+                'last_name': 'Scout',
+                'phone': '+254712345678',
+                'user_type': 'PROPERTY_SCOUT',
+                'password1': 'scoutpassword123',
+                'password2': 'scoutpassword123',
+            }, secure=True)
+
+            self.assertEqual(response.status_code, 302, response.content.decode())
+            scout = User.objects.get(email=email)
+            self.assertEqual(scout.username, email)
+            self.assertEqual(scout.user_type, 'PROPERTY_SCOUT')
+            self.assertTrue(scout.check_password('scoutpassword123'))

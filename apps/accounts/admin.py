@@ -1,9 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+from django.contrib.auth.forms import UserChangeForm
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from django.urls import reverse
+from .forms import AdminUserCreationForm
 from .models import (
     User, UserProfile, OwnerProfile, TenantProfile, 
     CaretakerProfile, LoginHistory, PaystackSubaccount,
@@ -18,17 +19,10 @@ class CustomUserChangeForm(UserChangeForm):
         fields = '__all__'
 
 
-class CustomUserCreationForm(UserCreationForm):
-    """Custom form for creating user in admin"""
-    class Meta:
-        model = User
-        fields = ('email', 'first_name', 'last_name', 'phone', 'user_type')
-
-
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     form = CustomUserChangeForm
-    add_form = CustomUserCreationForm
+    add_form = AdminUserCreationForm
     
     list_display = (
         'email', 

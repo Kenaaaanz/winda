@@ -10,6 +10,29 @@ from apps.payments.models import SubscriptionPlan
 
 User = get_user_model()
 
+
+class AdminUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ('email', 'first_name', 'last_name', 'phone', 'user_type')
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if (
+            User.objects.filter(email__iexact=email).exists()
+            or User.objects.filter(username__iexact=email).exists()
+        ):
+            raise forms.ValidationError('This email is already in use.')
+        return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.username = self.cleaned_data['email']
+        if commit:
+            user.save()
+        return user
+
+
 # ==================== REGISTRATION WIZARD FORMS ====================
 
 class RegistrationStep1Form(forms.ModelForm):
