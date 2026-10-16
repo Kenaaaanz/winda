@@ -66,6 +66,7 @@ class AccountsTestCase(TestCase):
 
         dashboard = self.client.get(reverse('admin:index'), secure=True)
         self.assertEqual(dashboard.status_code, 200)
+        self.assertNotContains(dashboard, 'winda-dashboard')
 
         for email in ('first.scout@example.com', 'second.scout@example.com'):
             response = self.client.post(reverse('admin:accounts_user_add'), {

@@ -28,17 +28,11 @@ User = get_user_model()
 
 
 class WindaAdminSite(UnfoldAdminSite):
-    """
-    Custom admin site that preserves ALL Django admin functionality.
-    Only the dashboard index page is customized with stats cards.
-    """
+    """Winda-branded Unfold admin site."""
     
     site_header = 'Winda Super Admin'
     site_title = 'Winda Admin'
-    index_title = 'Platform Dashboard'
     site_url = '/'
-    
-    index_template = 'admin/custom_index.html'
     
     def get_app_list(self, request, app_label=None):
         """
@@ -48,26 +42,6 @@ class WindaAdminSite(UnfoldAdminSite):
         if app_label:
             return super().get_app_list(request, app_label)
         return super().get_app_list(request)
-    
-    def index(self, request, extra_context=None):
-        """Custom dashboard with stats cards."""
-        if not request.user.is_superuser:
-            return super().index(request, extra_context)
-        
-        context = {
-            'app_list': self.get_app_list(request),
-            'title': self.index_title,
-            'subtitle': 'Platform Overview & Analytics',
-        }
-        
-        context['stats'] = self.get_platform_stats()
-        context['recent_activities'] = self.get_recent_activities()
-        context['quick_actions'] = self.get_quick_actions()
-        
-        if extra_context:
-            context.update(extra_context)
-        
-        return super().index(request, context)
     
     def get_platform_stats(self):
         """Get platform-wide statistics for superadmin dashboard."""
