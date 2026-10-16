@@ -1,0 +1,194 @@
+{% extends "admin/base.html" %}
+{% load humanize %}
+
+{% block content %}
+    {% if dashboard %}
+        <style>
+            .winda-analytics { display: grid; gap: 1.25rem; margin-bottom: 2rem; }
+            .winda-dashboard-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin: .5rem 0 0; }
+            .winda-dashboard-heading h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+            .winda-dashboard-heading p { margin: .35rem 0 0; color: #76664a; }
+            .winda-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+            .winda-card, .winda-panel { min-width: 0; overflow: hidden; border: 1px solid #e8ddc8; border-radius: .85rem; background: #fffdfa; box-shadow: 0 1px 3px rgb(43 39 31 / 5%); }
+            .winda-card { padding: 1.15rem; border-top: 3px solid #167348; }
+            .winda-card.blue { border-top-color: #278f5a; }
+            .winda-card.amber { border-top-color: #b38b2e; }
+            .winda-card.violet { border-top-color: #76664a; }
+            .winda-card-label { color: #76664a; font-size: .76rem; font-weight: 650; letter-spacing: .055em; text-transform: uppercase; }
+            .winda-card-value { margin-top: .55rem; color: #18352b; font-size: clamp(1.35rem, 2vw, 1.9rem); font-weight: 750; line-height: 1.15; }
+            .winda-card-detail { margin-top: .45rem; color: #76664a; font-size: .82rem; }
+            .winda-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+            .winda-panel { padding: 1.2rem; }
+            .winda-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; margin-bottom: .75rem; }
+            .winda-panel-heading h2 { margin: 0; color: #18352b; font-size: 1rem; font-weight: 700; }
+            .winda-panel-heading p { margin: .3rem 0 0; color: #76664a; font-size: .8rem; }
+            .winda-chart { display: block; width: 100%; height: 14rem; overflow: visible; }
+            .winda-chart-grid { stroke: #eee7da; stroke-width: 1; }
+            .winda-chart-area { fill: rgb(39 143 90 / 11%); }
+            .winda-chart-line { fill: none; stroke: #167348; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
+            .winda-chart-line.revenue { stroke: #b38b2e; }
+            .winda-chart-dot { fill: #167348; stroke: #fffdfa; stroke-width: 2; }
+            .winda-chart-dot.revenue { fill: #b38b2e; }
+            .winda-chart-labels { display: flex; justify-content: space-between; color: #76664a; font-size: .72rem; }
+            .winda-lower { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 1rem; }
+            .winda-event-row { display: grid; grid-template-columns: minmax(8rem, 1fr) minmax(6rem, 2fr) 3rem; align-items: center; gap: .75rem; margin-top: .9rem; color: #3f382c; font-size: .82rem; }
+            .winda-event-track { height: .55rem; overflow: hidden; border-radius: 99px; background: #f3eee3; }
+            .winda-event-bar { height: 100%; border-radius: inherit; background: #278f5a; }
+            .winda-event-count { text-align: right; font-variant-numeric: tabular-nums; }
+            .winda-engagement { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+            .winda-engagement-item { padding: .8rem; border-radius: .65rem; background: #faf7f0; }
+            .winda-engagement-item strong { display: block; color: #18352b; font-size: 1.25rem; }
+            .winda-engagement-item span { color: #76664a; font-size: .78rem; }
+            .winda-health { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+            .winda-health-item { display: flex; justify-content: space-between; gap: .5rem; padding: .8rem; border-radius: .65rem; background: #faf7f0; color: #594d39; font-size: .82rem; }
+            .winda-health-item strong { color: #18352b; }
+            .winda-activity { width: 100%; border-collapse: collapse; font-size: .82rem; }
+            .winda-activity th, .winda-activity td { padding: .7rem .5rem; border-bottom: 1px solid #eee7da; text-align: left; }
+            .winda-activity th { color: #76664a; font-size: .72rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+            .winda-activity tr:last-child td { border-bottom: 0; }
+            .winda-activity .muted { color: #76664a; }
+            @media (max-width: 1050px) {
+                .winda-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .winda-health { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            }
+            @media (max-width: 720px) {
+                .winda-charts, .winda-lower { grid-template-columns: 1fr; }
+                .winda-dashboard-heading { align-items: flex-start; flex-direction: column; }
+            }
+        </style>
+
+        <main class="winda-analytics" aria-label="Winda platform analytics">
+            <header class="winda-dashboard-heading">
+                <div>
+                    <h1>Platform overview</h1>
+                    <p>Live business performance and user engagement · {{ dashboard.period_label }}</p>
+                </div>
+                <a class="font-medium text-primary-600 hover:text-primary-700" href="{% url 'admin:analytics_analyticsevent_changelist' %}">Explore analytics events <span aria-hidden="true">→</span></a>
+            </header>
+
+            <section class="winda-kpis" aria-label="Key performance indicators">
+                {% for card in dashboard.cards %}
+                    <article class="winda-card {{ card.tone }}">
+                        <div class="winda-card-label">{{ card.label }}</div>
+                        <div class="winda-card-value">
+                            {% if card.currency %}KES {{ card.value|floatformat:0|intcomma }}{% else %}{{ card.value|intcomma }}{% endif %}
+                        </div>
+                        <div class="winda-card-detail">{{ card.detail }}</div>
+                    </article>
+                {% endfor %}
+            </section>
+
+            <section class="winda-charts" aria-label="Performance trends">
+                <article class="winda-panel">
+                    <div class="winda-panel-heading">
+                        <div><h2>Platform activity</h2><p>Tracked events per day</p></div>
+                        <span class="winda-card-label">30 days</span>
+                    </div>
+                    <svg class="winda-chart" viewBox="0 0 720 210" role="img" aria-label="Daily platform events during the last 30 days">
+                        <line class="winda-chart-grid" x1="0" y1="24" x2="720" y2="24" />
+                        <line class="winda-chart-grid" x1="0" y1="79" x2="720" y2="79" />
+                        <line class="winda-chart-grid" x1="0" y1="135" x2="720" y2="135" />
+                        <line class="winda-chart-grid" x1="0" y1="190" x2="720" y2="190" />
+                        <polygon class="winda-chart-area" points="{{ dashboard.events_chart.area }}" />
+                        <polyline class="winda-chart-line" points="{{ dashboard.events_chart.line }}" />
+                        {% for point in dashboard.events_chart.points %}
+                            <circle class="winda-chart-dot" cx="{{ point.x }}" cy="{{ point.y }}" r="3"><title>{{ point.label }}: {{ point.value }} events</title></circle>
+                        {% endfor %}
+                    </svg>
+                    <div class="winda-chart-labels">{% for label in dashboard.chart_labels %}<span>{{ label }}</span>{% endfor %}</div>
+                </article>
+
+                <article class="winda-panel">
+                    <div class="winda-panel-heading">
+                        <div><h2>Payment volume</h2><p>Completed payments per day · KES</p></div>
+                        <span class="winda-card-label">30 days</span>
+                    </div>
+                    <svg class="winda-chart" viewBox="0 0 720 210" role="img" aria-label="Daily completed payment value during the last 30 days">
+                        <line class="winda-chart-grid" x1="0" y1="24" x2="720" y2="24" />
+                        <line class="winda-chart-grid" x1="0" y1="79" x2="720" y2="79" />
+                        <line class="winda-chart-grid" x1="0" y1="135" x2="720" y2="135" />
+                        <line class="winda-chart-grid" x1="0" y1="190" x2="720" y2="190" />
+                        <polygon class="winda-chart-area" points="{{ dashboard.revenue_chart.area }}" />
+                        <polyline class="winda-chart-line revenue" points="{{ dashboard.revenue_chart.line }}" />
+                        {% for point in dashboard.revenue_chart.points %}
+                            <circle class="winda-chart-dot revenue" cx="{{ point.x }}" cy="{{ point.y }}" r="3"><title>{{ point.label }}: {{ point.value }}</title></circle>
+                        {% endfor %}
+                    </svg>
+                    <div class="winda-chart-labels">{% for label in dashboard.chart_labels %}<span>{{ label }}</span>{% endfor %}</div>
+                </article>
+            </section>
+
+            <section class="winda-lower" aria-label="Engagement and event breakdown">
+                <article class="winda-panel">
+                    <div class="winda-panel-heading">
+                        <div><h2>Top platform events</h2><p>What people are doing across Winda</p></div>
+                    </div>
+                    {% for item in dashboard.top_events %}
+                        <div class="winda-event-row">
+                            <span>{{ item.label }}</span>
+                            <div class="winda-event-track"><div class="winda-event-bar" style="width: {{ item.percentage }}%"></div></div>
+                            <span class="winda-event-count">{{ item.count|intcomma }}</span>
+                        </div>
+                    {% empty %}
+                        <p class="winda-card-detail">No analytics events have been recorded in this period.</p>
+                    {% endfor %}
+                </article>
+
+                <article class="winda-panel">
+                    <div class="winda-panel-heading">
+                        <div><h2>User engagement</h2><p>Tracked interactions during the last 30 days</p></div>
+                    </div>
+                    <div class="winda-engagement">
+                        <div class="winda-engagement-item"><strong>{{ dashboard.engagement.property_views|intcomma }}</strong><span>Property views</span></div>
+                        <div class="winda-engagement-item"><strong>{{ dashboard.engagement.searches|intcomma }}</strong><span>Searches</span></div>
+                        <div class="winda-engagement-item"><strong>{{ dashboard.engagement.messages|intcomma }}</strong><span>Messages sent</span></div>
+                        <div class="winda-engagement-item"><strong>{{ dashboard.engagement.registrations|intcomma }}</strong><span>Registrations</span></div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="winda-panel" aria-label="Platform health">
+                <div class="winda-panel-heading">
+                    <div><h2>Platform health</h2><p>Items that may need administrator attention</p></div>
+                </div>
+                <div class="winda-health">
+                    <div class="winda-health-item"><span>Properties awaiting review</span><strong>{{ dashboard.health.pending_properties|intcomma }}</strong></div>
+                    <div class="winda-health-item"><span>Applications pending</span><strong>{{ dashboard.health.pending_applications|intcomma }}</strong></div>
+                    <div class="winda-health-item"><span>Failed payments · 30 days</span><strong>{{ dashboard.health.failed_payments|intcomma }}</strong></div>
+                    <div class="winda-health-item"><span>Active accounts</span><strong>{{ dashboard.health.active_users|intcomma }}</strong></div>
+                </div>
+            </section>
+
+            <section class="winda-panel" aria-label="Recent platform events">
+                <div class="winda-panel-heading">
+                    <div><h2>Recent platform events</h2><p>Latest tracked user and system activity</p></div>
+                    <a class="font-medium text-primary-600 hover:text-primary-700" href="{% url 'admin:analytics_analyticsevent_changelist' %}">View all</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="winda-activity">
+                        <thead><tr><th>Event</th><th>User</th><th>Property</th><th>Time</th></tr></thead>
+                        <tbody>
+                            {% for event in dashboard.recent_events %}
+                                <tr>
+                                    <td>{{ event.get_event_type_display }}</td>
+                                    <td>{% if event.user %}{{ event.user.get_full_name|default:event.user.email }}{% else %}<span class="muted">Anonymous</span>{% endif %}</td>
+                                    <td>{% if event.property %}{{ event.property.title }}{% else %}<span class="muted">—</span>{% endif %}</td>
+                                    <td class="muted">{{ event.created_at|date:"d M, H:i" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td class="muted" colspan="4">No events recorded in the last 30 days.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    {% endif %}
+
+    <div class="flex flex-col lg:flex-row lg:gap-8">
+        <div class="grow">
+            {% include "unfold/helpers/app_list_default.html" %}
+        </div>
+        {% include "unfold/helpers/history.html" %}
+    </div>
+{% endblock %}

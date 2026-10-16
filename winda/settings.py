@@ -66,6 +66,7 @@ UNFOLD = {
     'SITE_TITLE': 'Winda Super Admin',
     'SITE_HEADER': 'Winda Super Admin',
     'SITE_URL': '/',
+    'DASHBOARD_CALLBACK': 'apps.admin_extended.dashboard.dashboard_callback',
     'SHOW_HISTORY': True,
     'SHOW_VIEW_ON_SITE': True,
     'COLORS': {
@@ -357,4 +358,3 @@ SEO_DEFAULT_KEYWORDS = 'property rental, house hunting, direct renting, Kenya pr
 
 # custom admin site
 ADMIN_SITE_CLASS = 'apps.admin_extended.admin.admin_site'
-

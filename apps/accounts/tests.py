@@ -1,6 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from apps.analytics.models import AnalyticsEvent
 from apps.accounts.forms import ScoutCreationForm
 
 User = get_user_model()
@@ -63,10 +64,14 @@ class AccountsTestCase(TestCase):
             password='adminpassword123',
         )
         self.client.force_login(admin)
+        AnalyticsEvent.objects.create(user=admin, event_type='USER_LOGIN')
 
         dashboard = self.client.get(reverse('admin:index'), secure=True)
         self.assertEqual(dashboard.status_code, 200)
-        self.assertNotContains(dashboard, 'winda-dashboard')
+        self.assertContains(dashboard, 'Platform overview')
+        self.assertContains(dashboard, 'Platform activity')
+        self.assertContains(dashboard, 'User Login')
+        self.assertContains(dashboard, reverse('admin:accounts_user_changelist'))
 
         for email in ('first.scout@example.com', 'second.scout@example.com'):
             response = self.client.post(reverse('admin:accounts_user_add'), {

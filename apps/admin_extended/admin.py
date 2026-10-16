@@ -33,6 +33,7 @@ class WindaAdminSite(UnfoldAdminSite):
     site_header = 'Winda Super Admin'
     site_title = 'Winda Admin'
     site_url = '/'
+    index_template = 'admin/winda_dashboard.html'
     
     def get_app_list(self, request, app_label=None):
         """
