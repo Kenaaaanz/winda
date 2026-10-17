@@ -1,10 +1,11 @@
+import logging
+
 from django.db.models.aggregates import Sum
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import models
-from decimal import Decimal
 
 from apps.properties.models import Property, PropertyImage, Unit
 from apps.tenants.models import TenantApplication, Lease
@@ -16,6 +17,7 @@ from apps.accounts.models import OwnerProfile
 from .models import AnalyticsEvent, DailyAnalyticsReport
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 # ========================================
@@ -222,9 +224,23 @@ def log_lease_event(sender, instance, created, **kwargs):
         pass
 
 
+@receiver(pre_save, sender=Payment)
+def remember_payment_status(sender, instance, using, **kwargs):
+    if instance._state.adding:
+        instance._analytics_previous_status = None
+        return
+
+    instance._analytics_previous_status = (
+        sender.objects.using(using)
+        .filter(pk=instance.pk)
+        .values_list('status', flat=True)
+        .first()
+    )
+
+
 @receiver(post_save, sender=Payment)
 def log_payment_event(sender, instance, created, **kwargs):
-    """Log when a payment is created or updated"""
+    """Record payment creation and status transitions once as they happen."""
     try:
         if created:
             AnalyticsEvent.objects.create(
@@ -243,53 +259,56 @@ def log_payment_event(sender, instance, created, **kwargs):
                     'due_date': instance.due_date.isoformat() if instance.due_date else None,
                 }
             )
-        else:
-            # Log status changes (e.g., from PENDING to COMPLETED)
-            if instance.status == 'COMPLETED':
+
+        previous_status = getattr(instance, '_analytics_previous_status', None)
+        status_changed = created or previous_status != instance.status
+        if not status_changed:
+            return
+
+        if instance.status == 'COMPLETED':
+            AnalyticsEvent.objects.create(
+                user=instance.payer,
+                event_type='PAYMENT_COMPLETE',
+                property=instance.property,
+                unit=instance.unit if hasattr(instance, 'unit') else None,
+                data={
+                    'amount': float(instance.amount),
+                    'payment_type': instance.payment_type,
+                    'payment_reference': instance.payment_reference,
+                    'paid_at': instance.paid_at.isoformat() if instance.paid_at else None,
+                    'payment_method': instance.payment_method,
+                }
+            )
+            platform_fee = instance.platform_fee + instance.building_subscription_fee
+            if platform_fee and instance.property and instance.property.owner:
                 AnalyticsEvent.objects.create(
-                    user=instance.payer,
+                    user=instance.property.owner.user,
                     event_type='PAYMENT_COMPLETE',
                     property=instance.property,
-                    unit=instance.unit if hasattr(instance, 'unit') else None,
                     data={
-                        'amount': float(instance.amount),
-                        'payment_type': instance.payment_type,
+                        'amount': float(platform_fee),
+                        'payment_type': 'PLATFORM_FEE',
                         'payment_reference': instance.payment_reference,
                         'paid_at': instance.paid_at.isoformat() if instance.paid_at else None,
-                        'payment_method': instance.payment_method,
+                        'original_payment_id': str(instance.id),
+                        'original_amount': float(instance.amount),
                     }
                 )
-                # Also log platform fee
-                if instance.property and instance.property.owner:
-                    platform_fee = instance.amount * Decimal('0.03')
-                    AnalyticsEvent.objects.create(
-                        user=instance.property.owner.user,
-                        event_type='PAYMENT_COMPLETE',
-                        property=instance.property,
-                        data={
-                            'amount': float(platform_fee),
-                            'payment_type': 'PLATFORM_FEE',
-                            'payment_reference': instance.payment_reference,
-                            'paid_at': instance.paid_at.isoformat() if instance.paid_at else None,
-                            'original_payment_id': str(instance.id),
-                            'original_amount': float(instance.amount),
-                        }
-                    )
-            elif instance.status == 'FAILED':
-                AnalyticsEvent.objects.create(
-                    user=instance.payer,
-                    event_type='PAYMENT_FAIL',
-                    property=instance.property,
-                    unit=instance.unit if hasattr(instance, 'unit') else None,
-                    data={
-                        'amount': float(instance.amount),
-                        'payment_type': instance.payment_type,
-                        'failure_reason': instance.failure_reason,
-                        'payment_reference': instance.payment_reference,
-                    }
-                )
-    except Exception as e:
-        pass
+        elif instance.status == 'FAILED':
+            AnalyticsEvent.objects.create(
+                user=instance.payer,
+                event_type='PAYMENT_FAIL',
+                property=instance.property,
+                unit=instance.unit if hasattr(instance, 'unit') else None,
+                data={
+                    'amount': float(instance.amount),
+                    'payment_type': instance.payment_type,
+                    'failure_reason': instance.failure_reason,
+                    'payment_reference': instance.payment_reference,
+                }
+            )
+    except Exception:
+        logger.exception('Unable to record analytics for payment %s', instance.pk)
 
 
 @receiver(post_save, sender=MaintenanceRequest)

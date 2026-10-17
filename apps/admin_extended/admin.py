@@ -14,6 +14,7 @@ from decimal import Decimal
 # Import all models from all apps
 from apps.accounts.models import User, OwnerProfile, TenantProfile, CaretakerProfile
 from apps.accounts.forms import AdminUserCreationForm
+from apps.admin_extended.dashboard import event_analytics_context
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
 from apps.payments.models import Payment, Invoice, SubscriptionPlan, OwnerSubscription
@@ -564,10 +565,24 @@ class MessageTemplateAdmin(UnfoldModelAdmin):
 # ANALYTICS APP
 @admin.register(AnalyticsEvent, site=admin_site)
 class AnalyticsEventAdmin(UnfoldModelAdmin):
-    list_display = ('user', 'event_type', 'property', 'created_at')
-    list_filter = ('event_type',)
-    search_fields = ('user__email',)
+    change_list_template = 'admin/analytics/analyticsevent/change_list.html'
+    list_display = ('event_type', 'user', 'property', 'session_id', 'created_at')
+    list_filter = ('event_type', 'created_at')
+    search_fields = ('user__email', 'property__title', 'session_id', 'referer')
+    date_hierarchy = 'created_at'
+    list_select_related = ('user', 'property')
     readonly_fields = ('created_at',)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        period = request.GET.get('period', '30d')
+        if 'period' in request.GET:
+            request.GET = request.GET.copy()
+            request.GET.pop('period')
+        extra_context['event_analytics'] = event_analytics_context(
+            period
+        )
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(AnalyticsMetric, site=admin_site)

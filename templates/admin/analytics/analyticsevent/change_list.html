@@ -1,0 +1,186 @@
+{% extends "admin/change_list.html" %}
+{% load humanize %}
+
+{% block content %}
+    {% if event_analytics %}
+        <style>
+            .event-report { display: grid; gap: 1rem; margin: 0 0 1.5rem; }
+            .event-report-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem; }
+            .event-report-head h1 { margin: 0; color: #18352b; font-size: 1.5rem; font-weight: 750; }
+            .event-report-head p { margin: .35rem 0 0; color: #76664a; font-size: .85rem; }
+            .event-period { display: flex; align-items: center; gap: .5rem; color: #594d39; font-size: .82rem; }
+            .event-period select, .event-period button { min-height: 2.35rem; border: 1px solid #d7c7a9; border-radius: .5rem; background: #fffdfa; padding: .4rem .65rem; }
+            .event-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; }
+            .event-kpi, .event-panel { min-width: 0; border: 1px solid #e8ddc8; border-radius: .75rem; background: #fffdfa; box-shadow: 0 1px 3px rgb(43 39 31 / 5%); }
+            .event-kpi { padding: .95rem; border-top: 3px solid #167348; }
+            .event-kpi:nth-child(2) { border-top-color: #b38b2e; }
+            .event-kpi:nth-child(3) { border-top-color: #278f5a; }
+            .event-kpi:nth-child(4) { border-top-color: #76664a; }
+            .event-kpi:nth-child(5) { border-top-color: #54b982; }
+            .event-kpi span { display: block; color: #76664a; font-size: .72rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+            .event-kpi strong { display: block; margin-top: .4rem; color: #18352b; font-size: 1.55rem; font-weight: 750; }
+            .event-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+            .event-panel { padding: 1.1rem; }
+            .event-panel h2 { margin: 0; color: #18352b; font-size: 1rem; font-weight: 700; }
+            .event-panel > p { margin: .3rem 0 .8rem; color: #76664a; font-size: .78rem; }
+            .event-pie-layout { display: grid; grid-template-columns: minmax(120px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 1rem; }
+            .event-pie { width: min(100%, 12rem); aspect-ratio: 1; justify-self: center; border-radius: 50%; background: {{ event_analytics.pie_style }}; position: relative; }
+            .event-pie::after { position: absolute; inset: 25%; border-radius: 50%; background: #fffdfa; content: ""; }
+            .event-pie-legend { display: grid; gap: .45rem; max-height: 15rem; overflow: auto; }
+            .event-legend-row { display: grid; grid-template-columns: .65rem minmax(0, 1fr) auto; align-items: center; gap: .5rem; color: #594d39; font-size: .76rem; }
+            .event-legend-dot { width: .6rem; height: .6rem; border-radius: 50%; }
+            .event-legend-row strong { color: #18352b; font-variant-numeric: tabular-nums; }
+            .event-chart { display: block; width: 100%; height: 14rem; overflow: visible; }
+            .event-chart-grid { stroke: #eee7da; stroke-width: 1; }
+            .event-chart-labels { display: flex; justify-content: space-between; gap: .4rem; color: #76664a; font-size: .68rem; }
+            .event-series-legend { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: .65rem; }
+            .event-series-legend span { display: inline-flex; align-items: center; gap: .35rem; color: #594d39; font-size: .72rem; }
+            .event-series-legend i { width: .75rem; height: .18rem; border-radius: 1rem; }
+            .event-bars { display: grid; gap: .6rem; }
+            .event-bar-row { display: grid; grid-template-columns: minmax(8rem, 1.1fr) minmax(6rem, 2fr) 3rem; align-items: center; gap: .65rem; color: #594d39; font-size: .76rem; }
+            .event-bar-track { height: .7rem; overflow: hidden; border-radius: 99px; background: #f3eee3; }
+            .event-bar-fill { height: 100%; border-radius: inherit; background: #278f5a; }
+            .event-bar-count { text-align: right; color: #18352b; font-variant-numeric: tabular-nums; }
+            .event-activity { width: 100%; border-collapse: collapse; font-size: .78rem; }
+            .event-activity th, .event-activity td { padding: .65rem .45rem; border-bottom: 1px solid #eee7da; text-align: left; }
+            .event-activity th { color: #76664a; font-size: .68rem; font-weight: 650; text-transform: uppercase; }
+            .event-activity tr:last-child td { border-bottom: 0; }
+            @media (max-width: 1050px) {
+                .event-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            }
+            @media (max-width: 720px) {
+                .event-report-head { align-items: flex-start; flex-direction: column; }
+                .event-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .event-panels { grid-template-columns: 1fr; }
+                .event-pie-layout { grid-template-columns: 1fr; }
+                .event-pie-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .event-bar-row { grid-template-columns: minmax(6.5rem, 1fr) minmax(4rem, 1.4fr) 2.5rem; }
+            }
+        </style>
+
+        <section class="event-report" aria-label="Analytics event reports">
+            <header class="event-report-head">
+                <div>
+                    <h1>Event intelligence</h1>
+                    <p>{{ event_analytics.period_label }} · refreshed on each page load</p>
+                </div>
+                <form class="event-period" method="get">
+                    <label for="event-period">Reporting period</label>
+                    <select id="event-period" name="period">
+                        {% for option in event_analytics.period_options %}
+                            <option value="{{ option.value }}" {% if option.value == event_analytics.period %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Apply</button>
+                </form>
+            </header>
+
+            <section class="event-kpis" aria-label="Analytics event metrics">
+                <article class="event-kpi"><span>Events in period</span><strong>{{ event_analytics.total|intcomma }}</strong></article>
+                <article class="event-kpi"><span>Events today</span><strong>{{ event_analytics.events_today|intcomma }}</strong></article>
+                <article class="event-kpi"><span>Last 15 minutes</span><strong>{{ event_analytics.events_last_15_minutes|intcomma }}</strong></article>
+                <article class="event-kpi"><span>Unique users</span><strong>{{ event_analytics.unique_users|intcomma }}</strong></article>
+                <article class="event-kpi"><span>Unique sessions</span><strong>{{ event_analytics.unique_sessions|intcomma }}</strong></article>
+            </section>
+
+            <section class="event-panels" aria-label="Analytics charts">
+                <article class="event-panel">
+                    <h2>Event mix</h2>
+                    <p>Share of tracked event types in the selected period</p>
+                    <div class="event-pie-layout">
+                        <div class="event-pie" role="img" aria-label="Pie chart showing event type proportions"></div>
+                        <div class="event-pie-legend">
+                            {% for item in event_analytics.event_mix %}
+                                <div class="event-legend-row">
+                                    <i class="event-legend-dot" style="background: {{ item.color }}"></i>
+                                    <span>{{ item.label }} · {{ item.percentage }}%</span>
+                                    <strong>{{ item.count|intcomma }}</strong>
+                                </div>
+                            {% empty %}
+                                <p>No events found for this period.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+
+                <article class="event-panel">
+                    <h2>Event volume by type</h2>
+                    <p>Ranked event counts for the selected period</p>
+                    <div class="event-bars">
+                        {% for item in event_analytics.event_bars %}
+                            <div class="event-bar-row">
+                                <span>{{ item.label }}</span>
+                                <div class="event-bar-track"><div class="event-bar-fill" style="width: {{ item.width }}%"></div></div>
+                                <strong class="event-bar-count">{{ item.count|intcomma }}</strong>
+                            </div>
+                        {% empty %}
+                            <p>No event data to chart.</p>
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="event-panel">
+                    <h2>Nested event trends</h2>
+                    <p>Daily or monthly activity for the five leading event types</p>
+                    <svg class="event-chart" viewBox="0 0 720 210" role="img" aria-label="Multi-series line chart of event types">
+                        <line class="event-chart-grid" x1="0" y1="24" x2="720" y2="24" />
+                        <line class="event-chart-grid" x1="0" y1="79" x2="720" y2="79" />
+                        <line class="event-chart-grid" x1="0" y1="135" x2="720" y2="135" />
+                        <line class="event-chart-grid" x1="0" y1="190" x2="720" y2="190" />
+                        {% for series in event_analytics.trend_series %}
+                            <polyline fill="none" stroke="{{ series.color }}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="{{ series.line }}">
+                                <title>{{ series.label }}</title>
+                            </polyline>
+                            {% for point in series.points %}
+                                <circle cx="{{ point.x }}" cy="{{ point.y }}" r="2.5" fill="{{ series.color }}"><title>{{ point.label }} · {{ series.label }}: {{ point.count }}</title></circle>
+                            {% endfor %}
+                        {% endfor %}
+                    </svg>
+                    <div class="event-chart-labels">{% for label in event_analytics.chart_labels %}<span>{{ label }}</span>{% endfor %}</div>
+                    <div class="event-series-legend">{% for series in event_analytics.trend_series %}<span><i style="background: {{ series.color }}"></i>{{ series.label }}</span>{% endfor %}</div>
+                </article>
+
+                <article class="event-panel">
+                    <h2>Total event trend</h2>
+                    <p>All tracked activity per day or month</p>
+                    <svg class="event-chart" viewBox="0 0 720 210" role="img" aria-label="Line chart showing total event volume over time">
+                        <line class="event-chart-grid" x1="0" y1="24" x2="720" y2="24" />
+                        <line class="event-chart-grid" x1="0" y1="79" x2="720" y2="79" />
+                        <line class="event-chart-grid" x1="0" y1="135" x2="720" y2="135" />
+                        <line class="event-chart-grid" x1="0" y1="190" x2="720" y2="190" />
+                        {% for series in event_analytics.overall_trend %}
+                            <polyline fill="none" stroke="#167348" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="{{ series.line }}" />
+                            {% for point in series.points %}
+                                <circle cx="{{ point.x }}" cy="{{ point.y }}" r="2.5" fill="#167348"><title>{{ point.label }}: {{ point.count }} events</title></circle>
+                            {% endfor %}
+                        {% endfor %}
+                    </svg>
+                    <div class="event-chart-labels">{% for label in event_analytics.chart_labels %}<span>{{ label }}</span>{% endfor %}</div>
+                </article>
+            </section>
+
+            <article class="event-panel">
+                <h2>Latest platform events</h2>
+                <p>Most recent 12 event records, independent of the selected chart period</p>
+                <div class="overflow-x-auto">
+                    <table class="event-activity">
+                        <thead><tr><th>Event</th><th>User</th><th>Property</th><th>Occurred</th></tr></thead>
+                        <tbody>
+                            {% for event in event_analytics.recent_activity %}
+                                <tr>
+                                    <td>{{ event.get_event_type_display }}</td>
+                                    <td>{% if event.user %}{{ event.user.get_full_name|default:event.user.email }}{% else %}Anonymous{% endif %}</td>
+                                    <td>{% if event.property %}{{ event.property.title }}{% else %}—{% endif %}</td>
+                                    <td>{{ event.created_at|date:"d M Y, H:i" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="4">No events have been recorded yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}
