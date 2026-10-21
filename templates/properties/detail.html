@@ -181,12 +181,12 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="text-center p-3 bg-gray-50 rounded-lg">
                             <i class="fas fa-bed text-2xl text-blue-500 mb-1"></i>
-                            <p class="font-semibold">{{ property.bedrooms }}</p>
+                            <p class="font-semibold">{{ property.get_bedroom_range }}</p>
                             <p class="text-sm text-gray-600">Bedrooms</p>
                         </div>
                         <div class="text-center p-3 bg-gray-50 rounded-lg">
                             <i class="fas fa-bath text-2xl text-blue-500 mb-1"></i>
-                            <p class="font-semibold">{{ property.bathrooms }}</p>
+                            <p class="font-semibold">{{ property.get_bathroom_range }}</p>
                             <p class="text-sm text-gray-600">Bathrooms</p>
                         </div>
                         <div class="text-center p-3 bg-gray-50 rounded-lg">

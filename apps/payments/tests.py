@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.models import OwnerProfile, ScoutProfile, User
+from apps.admin_extended.admin import admin_site
 from apps.payments.models import OwnerSubscription, Payment, ScoutCommission, ScoutPayout, SubscriptionPlan
 from apps.payments.services import PaymentService, PaystackService
 from apps.properties.models import Property
@@ -412,3 +413,22 @@ class ScoutPayoutTests(TestCase):
         commission.refresh_from_db()
         self.assertEqual(payout.status, 'PAID')
         self.assertEqual(commission.status, 'PAID')
+
+
+class ScoutPaymentAdminTests(TestCase):
+    def test_superadmin_can_review_commissions_and_payouts(self):
+        admin = User.objects.create_superuser(
+            username='admin@example.com',
+            email='admin@example.com',
+            password='adminpassword123',
+        )
+        self.client.force_login(admin)
+
+        self.assertIn(ScoutCommission, admin_site._registry)
+        self.assertIn(ScoutPayout, admin_site._registry)
+        for model_name in ('scoutcommission', 'scoutpayout'):
+            response = self.client.get(
+                reverse(f'admin:payments_{model_name}_changelist'),
+                secure=True,
+            )
+            self.assertEqual(response.status_code, 200)

@@ -46,6 +46,9 @@
             .winda-activity th, .winda-activity td { padding: .7rem .5rem; border-bottom: 1px solid #eee7da; text-align: left; }
             .winda-activity th { color: #76664a; font-size: .72rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
             .winda-activity tr:last-child td { border-bottom: 0; }
+            .winda-admin-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: .25rem 0 0; }
+            .winda-admin-actions a { display: inline-flex; align-items: center; gap: .55rem; border: 1px solid #d7c7a9; border-radius: .65rem; background: #fffdfa; color: #064e3b; font-weight: 650; padding: .7rem .9rem; text-decoration: none; }
+            .winda-admin-actions a:hover, .winda-admin-actions a:focus { border-color: #064e3b; background: #dff4e8; color: #022c22; }
             .winda-activity .muted { color: #76664a; }
             @media (max-width: 1050px) {
                 .winda-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -65,6 +68,15 @@
                 </div>
                 <a class="font-medium text-primary-600 hover:text-primary-700" href="{% url 'admin:analytics_analyticsevent_changelist' %}">Explore analytics events <span aria-hidden="true">→</span></a>
             </header>
+
+            <nav class="winda-admin-actions" aria-label="Superadmin payment tools">
+                <a href="{% url 'admin:payments_scoutcommission_changelist' %}">
+                    <span aria-hidden="true">◉</span> Scout Commissions
+                </a>
+                <a href="{% url 'admin:payments_scoutpayout_changelist' %}">
+                    <span aria-hidden="true">↗</span> Scout Payouts
+                </a>
+            </nav>
 
             <section class="winda-kpis" aria-label="Key performance indicators">
                 {% for card in dashboard.cards %}

@@ -265,6 +265,9 @@ def create_tenant_account(request):
         
         # Create tenant profile if it doesn't exist
         TenantProfile.objects.get_or_create(user=user)
+        transaction.on_commit(
+            lambda: EmailService.send_user_guide_email(user, account_status='approved')
+        )
         
         # Clear session
         request.session.pop('registration_data', None)
@@ -400,6 +403,9 @@ def create_owner_account(request):
         
         # Notify admins
         notify_admins_new_owner(user)
+        transaction.on_commit(
+            lambda: EmailService.send_user_guide_email(user, account_status='pending')
+        )
         
         # Clear session
         request.session.pop('registration_data', None)
@@ -490,6 +496,7 @@ def admin_verify_owners(request):
                 related_object_type='user',
                 related_object_id=str(user.id)
             )
+            EmailService.send_user_guide_email(user, account_status='approved')
             
             messages.success(request, f'{user.get_full_name()} has been approved.')
             
@@ -644,6 +651,7 @@ def admin_create_scout(request):
     form = ScoutCreationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         scout = form.save()
+        EmailService.send_user_guide_email(scout, account_status='pending')
         Notification.objects.create(
             user=scout,
             notification_type='SYSTEM',
@@ -683,6 +691,8 @@ def admin_verify_scouts(request):
             message = 'Your Property Scout account application was rejected.'
         scout.save(update_fields=['verification_status', 'is_email_verified', 'admin_notes', 'verified_by', 'verified_at', 'is_active'])
         Notification.objects.create(user=scout, notification_type='SYSTEM', title='Scout verification update', message=message, related_object_type='user', related_object_id=str(scout.id))
+        if action == 'approve':
+            EmailService.send_user_guide_email(scout, account_status='approved')
         messages.success(request, f'{scout.get_full_name()} was updated.')
         return redirect('accounts:admin_verify_scouts')
     return render(request, 'accounts/admin_verify_scouts.html', {'pending_scouts': pending_scouts})
@@ -1524,6 +1534,7 @@ def caretaker_invite(request):
             email = form.cleaned_data['email']
             permission_level = form.cleaned_data['permission_level']
             assigned_properties = form.cleaned_data.get('assigned_properties', [])
+            temporary_password = None
             
             # Check if user exists
             try:
@@ -1538,12 +1549,12 @@ def caretaker_invite(request):
             except User.DoesNotExist:
                 import random
                 import string
-                temp_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+                temporary_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
                 
                 user = User.objects.create_user(
                     email=email,
                     username=email,
-                    password=temp_password,
+                    password=temporary_password,
                     first_name=email.split('@')[0].title(),
                     user_type='CARETAKER',
                     is_active=True,
@@ -1551,18 +1562,6 @@ def caretaker_invite(request):
                     verification_status='VERIFIED'
                 )
                 
-                # Send welcome email
-                from django.core.mail import send_mail
-                send_mail(
-                    'You have been invited as a Caretaker on Winda',
-                    f'You have been invited as a caretaker on Winda.\n\n'
-                    f'Your temporary password is: {temp_password}\n'
-                    f'Please login and change your password.\n\n'
-                    f'Login at: https://winda.co.ke/accounts/login/',
-                    'noreply@winda.co.ke',
-                    [email],
-                    fail_silently=True
-                )
             
             # Check if caretaker profile already exists
             caretaker_profile, created = CaretakerProfile.objects.get_or_create(
@@ -1603,6 +1602,11 @@ def caretaker_invite(request):
                     'owner_id': str(owner.id),
                     'permission_level': permission_level
                 }
+            )
+            EmailService.send_user_guide_email(
+                user,
+                account_status='approved',
+                temporary_password=temporary_password,
             )
             
             messages.success(request, f'Caretaker {user.get_full_name()} added successfully!')

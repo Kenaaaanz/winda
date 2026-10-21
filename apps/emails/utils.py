@@ -101,6 +101,41 @@ class EmailService:
             'login_url': f'{settings.SITE_URL}/accounts/login/',
         }
         return EmailService.send_email(subject, user.email, template_name, context)
+
+    @staticmethod
+    def send_user_guide_email(user, account_status='approved', temporary_password=None):
+        """Send the role-specific Winda user guide to a newly registered user."""
+        if account_status not in {'pending', 'approved'}:
+            raise ValueError('account_status must be pending or approved.')
+
+        role_names = dict(user.USER_TYPES)
+        role_name = role_names.get(user.user_type)
+        if user.user_type not in {
+            'TENANT', 'HOUSE_OWNER', 'PROPERTY_SCOUT', 'CARETAKER',
+        } or not role_name:
+            logger.error(
+                'Cannot send Winda user guide to unsupported user type %s (%s).',
+                user.user_type,
+                user.email,
+            )
+            return False
+
+        context = {
+            'user': user,
+            'full_name': user.get_full_name() or user.email,
+            'role': user.user_type,
+            'role_name': role_name,
+            'account_status': account_status,
+            'temporary_password': temporary_password,
+            'login_url': f"{settings.SITE_URL.rstrip('/')}/accounts/login/",
+            'support_email': 'support@winda.co.ke',
+        }
+        return EmailService.send_email(
+            f'Your Winda {role_name} guide',
+            user.email,
+            'emails/user_guide.html',
+            context,
+        )
     
     @staticmethod
     def send_password_reset_email(user, reset_link):

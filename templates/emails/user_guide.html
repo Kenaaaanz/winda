@@ -1,0 +1,64 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Your Winda {{ role_name }} Guide{% endblock %}
+{% block header %}Your Winda guide{% endblock %}
+{% block header_sub %}A practical guide for your {{ role_name|lower }} account{% endblock %}
+
+{% block content %}
+<p>Hello {{ full_name }},</p>
+
+{% if account_status == 'pending' %}
+    <p>Your {{ role_name|lower }} account has been registered and is waiting for approval. You can sign in after approval; we will email you when your account is ready.</p>
+{% else %}
+    <p>Your account is ready. Use this guide to get started with Winda.</p>
+{% endif %}
+
+{% if role == 'TENANT' %}
+    <h2>Tenant quick start</h2>
+    <ol>
+        <li>Open <strong>Find Properties</strong> to browse available homes and review each listing's details.</li>
+        <li>Submit an application from a property listing, then follow its status under <strong>Applications</strong>.</li>
+        <li>Review lease documents under <strong>My Leases</strong> and complete any requested signing steps.</li>
+        <li>Use <strong>Payments</strong> to review rent and other payment records. Check the due date and amount before paying.</li>
+        <li>Use <strong>Messages</strong> to contact the property owner and <strong>Notifications</strong> to see account updates.</li>
+    </ol>
+{% elif role == 'HOUSE_OWNER' %}
+    <h2>Property owner quick start</h2>
+    <ol>
+        <li>Open <strong>My Properties</strong> to manage listings, or choose <strong>List Property</strong> to add one. Keep property and unit details up to date.</li>
+        <li>Review tenant requests under <strong>Pending Applications</strong>, then manage accepted tenants and lease documents from the tenant and lease sections.</li>
+        <li>Use <strong>Payments</strong> to review transactions and <strong>Analytics</strong> to monitor property activity.</li>
+        <li>Review maintenance requests and coordinate with tenants or caretakers through <strong>Messages</strong>.</li>
+        <li>Complete your profile and payout/bank setup to receive property payments.</li>
+    </ol>
+{% elif role == 'PROPERTY_SCOUT' %}
+    <h2>Property scout quick start</h2>
+    <ol>
+        <li>Use <strong>Submit Listing</strong> to send a property for review. Follow its verification status from your dashboard.</li>
+        <li>Your dashboard shows listing activity and recent commissions. A commission is recorded when an eligible platform fee is collected.</li>
+        <li>Complete your payout account details in <strong>Profile</strong> before requesting an available payout.</li>
+        <li>Review payout progress and payment status in the payout section of your profile. A transfer may remain processing until confirmed.</li>
+        <li>Use <strong>Notifications</strong> for verification and payout updates.</li>
+    </ol>
+{% elif role == 'CARETAKER' %}
+    <h2>Caretaker quick start</h2>
+    <ol>
+        <li>Open your dashboard to review assigned properties, units, and the owner responsible for them.</li>
+        <li>Use <strong>Maintenance</strong> to follow requests for your assigned properties and check their current status.</li>
+        <li>Use <strong>Messages</strong> to contact the owner or tenants and <strong>Notifications</strong> to review updates.</li>
+        <li>Your available actions depend on the permission level set by the property owner. Contact the owner if you need access changed.</li>
+    </ol>
+{% endif %}
+
+{% if temporary_password %}
+    <p><strong>Temporary password:</strong> {{ temporary_password }}<br>
+    Sign in and change this password as soon as possible.</p>
+{% endif %}
+
+<p style="text-align:center;">
+    <a href="{{ login_url }}" class="button">Sign in to Winda</a>
+</p>
+
+<p>For help, contact <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+<p>Best regards,<br><strong>The Winda Team</strong></p>
+{% endblock %}

@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from PIL import Image
 from apps.accounts.models import OwnerProfile
-from .models import Property
+from .models import Property, Unit
 
 User = get_user_model()
 
@@ -42,6 +42,42 @@ class PropertiesTestCase(TestCase):
         response = self.client.post(reverse('properties:create'), self.property_data, secure=True)
         self.assertEqual(response.status_code, 302)  # Redirect on success
         self.assertTrue(Property.objects.filter(title='Test Property').exists())
+
+    def test_multi_unit_property_detail_displays_available_bedroom_and_bathroom_ranges(self):
+        property_obj = Property.objects.create(
+            owner=self.user.owner_profile,
+            title='Multi-Unit Test Property',
+            description='A building with different unit layouts',
+            property_type='APARTMENT',
+            address='123 Test Street',
+            city='Nairobi',
+            state='Nairobi',
+            is_multi_unit=True,
+            bedrooms=0,
+            bathrooms=0,
+            verification_status='VERIFIED',
+        )
+        Unit.objects.create(
+            property_obj=property_obj,
+            unit_number='A1',
+            bedrooms=1,
+            bathrooms=1,
+        )
+        Unit.objects.create(
+            property_obj=property_obj,
+            unit_number='A2',
+            bedrooms=3,
+            bathrooms=2,
+        )
+
+        response = self.client.get(
+            reverse('properties:detail', kwargs={'pk': property_obj.pk}),
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '1 - 3')
+        self.assertContains(response, '1 - 2')
 
     @patch('apps.common.utils.image_utils.upload_property_image_to_cloudinary')
     def test_scout_can_create_listing_with_uploaded_main_image(self, upload_image):

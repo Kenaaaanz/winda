@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.db import transaction
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from unfold.admin import ModelAdmin as UnfoldModelAdmin
@@ -17,7 +18,10 @@ from apps.accounts.forms import AdminUserCreationForm
 from apps.admin_extended.dashboard import event_analytics_context
 from apps.properties.models import Property, Unit, PropertyImage, PropertyDocument
 from apps.tenants.models import TenantApplication, Lease
-from apps.payments.models import Payment, Invoice, SubscriptionPlan, OwnerSubscription
+from apps.payments.models import (
+    Payment, Invoice, SubscriptionPlan, OwnerSubscription,
+    ScoutCommission, ScoutPayout,
+)
 from apps.maintenance.models import MaintenanceRequest, MaintenanceTask
 from apps.communications.models import ChatRoom, Message, MessageTemplate
 from apps.analytics.models import AnalyticsEvent, AnalyticsMetric, SavedReport
@@ -355,6 +359,26 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
         if not request.user.is_superuser:
             readonly.extend(['is_superuser', 'user_type'])
         return readonly
+
+    def save_model(self, request, obj, form, change):
+        was_verified = (
+            change
+            and User.objects.filter(pk=obj.pk, verification_status='VERIFIED').exists()
+        )
+        super().save_model(request, obj, form, change)
+        if (
+            change
+            and not was_verified
+            and obj.verification_status == 'VERIFIED'
+            and obj.user_type in ('HOUSE_OWNER', 'PROPERTY_SCOUT')
+        ):
+            from apps.emails.utils import EmailService
+            transaction.on_commit(
+                lambda user=obj: EmailService.send_user_guide_email(
+                    user,
+                    account_status='approved',
+                )
+            )
     
     def mark_email_verified(self, request, queryset):
         """Admin action to mark selected users' email as verified"""
@@ -364,10 +388,20 @@ class UserAdmin(DjangoUserAdmin, UnfoldModelAdmin):
     
     def mark_owner_verified(self, request, queryset):
         """Admin action to mark selected owners as verified"""
-        updated = queryset.filter(user_type='HOUSE_OWNER').update(
-            verification_status='VERIFIED',
-            is_email_verified=True
-        )
+        owners = queryset.filter(user_type='HOUSE_OWNER')
+        updated = 0
+        for owner in owners:
+            owner.verification_status = 'VERIFIED'
+            owner.is_email_verified = True
+            owner.save(update_fields=['verification_status', 'is_email_verified'])
+            from apps.emails.utils import EmailService
+            transaction.on_commit(
+                lambda user=owner: EmailService.send_user_guide_email(
+                    user,
+                    account_status='approved',
+                )
+            )
+            updated += 1
         self.message_user(request, f'{updated} owner(s) marked as verified.')
     mark_owner_verified.short_description = 'Mark owners as verified'
     
@@ -417,6 +451,13 @@ class OwnerProfileAdmin(UnfoldModelAdmin):
             owner.user.verification_status = 'VERIFIED'
             owner.user.is_email_verified = True
             owner.user.save()
+            from apps.emails.utils import EmailService
+            transaction.on_commit(
+                lambda user=owner.user: EmailService.send_user_guide_email(
+                    user,
+                    account_status='approved',
+                )
+            )
         self.message_user(request, f'{queryset.count()} owner(s) approved.')
     approve_owners.short_description = '✅ Approve selected owners'
     
@@ -427,6 +468,50 @@ class OwnerProfileAdmin(UnfoldModelAdmin):
             owner.user.save()
         self.message_user(request, f'{queryset.count()} owner(s) rejected.')
     reject_owners.short_description = '❌ Reject selected owners'
+
+
+@admin.register(ScoutCommission, site=admin_site)
+class ScoutCommissionAdmin(UnfoldModelAdmin):
+    list_display = (
+        'scout', 'property', 'payment', 'company_fee', 'commission_rate',
+        'commission_amount', 'status', 'created_at', 'paid_at',
+    )
+    list_filter = ('status', 'created_at', 'paid_at')
+    search_fields = (
+        'scout__email', 'scout__first_name', 'scout__last_name',
+        'property__title', 'payment__payment_reference',
+    )
+    readonly_fields = (
+        'scout', 'property', 'payment', 'company_fee', 'commission_rate',
+        'commission_amount', 'status', 'paid_at', 'created_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ScoutPayout, site=admin_site)
+class ScoutPayoutAdmin(UnfoldModelAdmin):
+    list_display = (
+        'scout', 'amount', 'currency', 'status', 'reference',
+        'transfer_code', 'created_at', 'paid_at',
+    )
+    list_filter = ('status', 'created_at', 'paid_at')
+    search_fields = ('scout__email', 'scout__first_name', 'scout__last_name', 'reference', 'transfer_code')
+    readonly_fields = (
+        'scout', 'commissions', 'amount', 'currency', 'reference',
+        'transfer_code', 'status', 'paystack_response', 'created_at',
+        'updated_at', 'paid_at',
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(TenantProfile, site=admin_site)

@@ -218,16 +218,16 @@
             --tw-ring-color: rgba(6, 78, 59, 0.3) !important;
         }
         body .dashboard-sidebar {
-            background: var(--platform-emerald-deep);
-            color: #e8f5e9;
+            background: var(--platform-emerald);
+            color: #fffef0;
         }
         body .dashboard-sidebar a {
-            color: #d4eadb;
+            color: #fffef0;
         }
         body .dashboard-sidebar a:hover,
         body .dashboard-sidebar a.is-active {
             color: #fffef0;
-            background: rgba(223, 244, 232, 0.14);
+            background: rgba(223, 244, 232, 0.2);
         }
         body.dashboard-shell {
             background: var(--platform-beige);
@@ -239,12 +239,16 @@
             margin-left: 254px;
             padding-top: 0;
         }
+        body.dashboard-shell footer {
+            margin-left: 254px;
+        }
         .dashboard-sidebar {
             position: fixed;
             inset: 0 auto 0 0;
             width: 254px;
             z-index: 60;
             padding: 22px 14px;
+            overflow-y: auto;
             transition: transform 0.25s ease;
         }
         .dashboard-sidebar-brand {
@@ -294,6 +298,7 @@
         @media (max-width: 800px) {
             body.dashboard-shell .dashboard-top-nav { display: none; }
             body.dashboard-shell main { margin-left: 0; padding-top: 0; }
+            body.dashboard-shell footer { margin-left: 0; }
             .dashboard-sidebar { transform: translateX(-105%); box-shadow: 12px 0 30px rgba(2,44,34,0.2); }
             body.dashboard-shell.sidebar-open .dashboard-sidebar { transform: translateX(0); }
             .dashboard-sidebar-toggle { display: flex; align-items: center; justify-content: center; }
@@ -319,8 +324,8 @@
         }
     </style>
 </head>
-<body class="tenant-experience {% if request.path == '/dashboard/' or request.path == '/accounts/dashboard/' %}{% if user.user_type == 'HOUSE_OWNER' or user.user_type == 'TENANT' %}dashboard-shell{% endif %}{% endif %}">
-    {% if request.path == '/dashboard/' or request.path == '/accounts/dashboard/' %}{% if user.user_type == 'HOUSE_OWNER' or user.user_type == 'TENANT' %}
+<body class="tenant-experience {% if user.is_authenticated and not user.is_superuser and user.user_type != 'GUEST' %}dashboard-shell{% endif %}">
+    {% if user.is_authenticated and not user.is_superuser and user.user_type != 'GUEST' %}
         <button class="dashboard-sidebar-toggle" type="button" aria-label="Open dashboard menu" onclick="toggleDashboardSidebar()">
             <i class="fas fa-bars"></i>
         </button>
@@ -330,30 +335,39 @@
                 <div>Winda <span>Workspace</span></div>
             </a>
             <nav class="dashboard-sidebar-links">
-                <a href="{% url 'dashboard' %}" class="is-active"><i class="fas fa-compass"></i><span>Overview</span></a>
+                <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.view_name == 'dashboard' or request.resolver_match.view_name == 'accounts:dashboard' or request.resolver_match.view_name == 'accounts:caretaker_dashboard' or request.resolver_match.view_name == 'accounts:scout_dashboard' %}is-active{% endif %}"><i class="fas fa-compass"></i><span>Overview</span></a>
                 {% if user.user_type == 'HOUSE_OWNER' %}
-                    <a href="{% url 'properties:owner_properties' %}"><i class="fas fa-building"></i><span>My Properties</span></a>
-                    <a href="{% url 'properties:create' %}"><i class="fas fa-plus-circle"></i><span>List Property</span></a>
-                    <a href="{% url 'tenants:tenant_list' %}"><i class="fas fa-users"></i><span>Tenants</span></a>
-                    <a href="{% url 'tenants:pending_tenants' %}"><i class="fas fa-clock"></i><span>Pending Applications</span>{% if pending_count > 0 %}<b class="ml-auto rounded-full bg-amber-300 text-emerald-950 px-2 py-0.5 text-xs">{{ pending_count }}</b>{% endif %}</a>
-                    <a href="{% url 'tenants:lease_list' %}"><i class="fas fa-file-contract"></i><span>Lease Management</span></a>
-                    <a href="{% url 'analytics:dashboard' %}"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
-                {% else %}
-                    <a href="{% url 'properties:list' %}"><i class="fas fa-search"></i><span>Find Properties</span></a>
-                    <a href="{% url 'tenants:applications' %}"><i class="fas fa-file-signature"></i><span>Applications</span></a>
-                    <a href="{% url 'tenants:lease_list' %}"><i class="fas fa-file-contract"></i><span>My Leases</span></a>
-                    <a href="{% url 'payments:list' %}"><i class="fas fa-credit-card"></i><span>Payments</span></a>
+                    <a href="{% url 'properties:owner_properties' %}" class="{% if request.resolver_match.view_name == 'properties:owner_properties' %}is-active{% endif %}"><i class="fas fa-building"></i><span>My Properties</span></a>
+                    <a href="{% url 'properties:create' %}" class="{% if request.resolver_match.view_name == 'properties:create' %}is-active{% endif %}"><i class="fas fa-plus-circle"></i><span>List Property</span></a>
+                    <a href="{% url 'tenants:tenant_list' %}" class="{% if request.resolver_match.view_name == 'tenants:tenant_list' %}is-active{% endif %}"><i class="fas fa-users"></i><span>Tenants</span></a>
+                    <a href="{% url 'tenants:pending_tenants' %}" class="{% if request.resolver_match.view_name == 'tenants:pending_tenants' %}is-active{% endif %}"><i class="fas fa-clock"></i><span>Pending Applications</span>{% if pending_count > 0 %}<b class="ml-auto rounded-full bg-amber-300 text-emerald-950 px-2 py-0.5 text-xs">{{ pending_count }}</b>{% endif %}</a>
+                    <a href="{% url 'tenants:lease_list' %}" class="{% if request.resolver_match.view_name == 'tenants:lease_list' %}is-active{% endif %}"><i class="fas fa-file-contract"></i><span>Lease Management</span></a>
+                    <a href="{% url 'payments:list' %}" class="{% if request.resolver_match.view_name == 'payments:list' %}is-active{% endif %}"><i class="fas fa-credit-card"></i><span>Payments</span></a>
+                    <a href="{% url 'maintenance:list' %}" class="{% if request.resolver_match.view_name == 'maintenance:list' %}is-active{% endif %}"><i class="fas fa-screwdriver-wrench"></i><span>Maintenance</span></a>
+                    <a href="{% url 'analytics:dashboard' %}" class="{% if request.resolver_match.view_name == 'analytics:dashboard' %}is-active{% endif %}"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                    <a href="{% url 'accounts:caretaker_list' %}" class="{% if request.resolver_match.view_name == 'accounts:caretaker_list' %}is-active{% endif %}"><i class="fas fa-user-shield"></i><span>Caretakers</span></a>
+                {% elif user.user_type == 'TENANT' %}
+                    <a href="{% url 'properties:list' %}" class="{% if request.resolver_match.view_name == 'properties:list' %}is-active{% endif %}"><i class="fas fa-search"></i><span>Find Properties</span></a>
+                    <a href="{% url 'properties:favorites' %}" class="{% if request.resolver_match.view_name == 'properties:favorites' %}is-active{% endif %}"><i class="fas fa-heart"></i><span>Saved Properties</span></a>
+                    <a href="{% url 'tenants:applications' %}" class="{% if request.resolver_match.view_name == 'tenants:applications' %}is-active{% endif %}"><i class="fas fa-file-signature"></i><span>Applications</span></a>
+                    <a href="{% url 'tenants:lease_list' %}" class="{% if request.resolver_match.view_name == 'tenants:lease_list' %}is-active{% endif %}"><i class="fas fa-file-contract"></i><span>My Leases</span></a>
+                    <a href="{% url 'payments:list' %}" class="{% if request.resolver_match.view_name == 'payments:list' %}is-active{% endif %}"><i class="fas fa-credit-card"></i><span>Payments</span></a>
+                {% elif user.user_type == 'PROPERTY_SCOUT' %}
+                    <a href="{% url 'properties:create' %}" class="{% if request.resolver_match.view_name == 'properties:create' %}is-active{% endif %}"><i class="fas fa-plus-circle"></i><span>Submit Listing</span></a>
+                    <a href="{% url 'accounts:profile' %}#scout-payout" class="{% if request.resolver_match.view_name == 'accounts:profile' %}is-active{% endif %}"><i class="fas fa-coins"></i><span>Earnings &amp; Payouts</span></a>
+                {% elif user.user_type == 'CARETAKER' %}
+                    <a href="{% url 'maintenance:list' %}" class="{% if request.resolver_match.view_name == 'maintenance:list' %}is-active{% endif %}"><i class="fas fa-screwdriver-wrench"></i><span>Maintenance</span></a>
                 {% endif %}
             </nav>
             <div class="dashboard-sidebar-divider"></div>
             <nav class="dashboard-sidebar-links">
-                <a href="{% url 'notifications:list' %}"><i class="fas fa-bell"></i><span>Notifications</span></a>
-                <a href="{% url 'communications:chat_list' %}"><i class="fas fa-comments"></i><span>Messages</span></a>
-                <a href="{% url 'accounts:profile' %}"><i class="fas fa-user"></i><span>Profile</span></a>
+                <a href="{% url 'notifications:list' %}" class="{% if request.resolver_match.app_name == 'notifications' %}is-active{% endif %}"><i class="fas fa-bell"></i><span>Notifications</span></a>
+                <a href="{% url 'communications:chat_list' %}" class="{% if request.resolver_match.app_name == 'communications' %}is-active{% endif %}"><i class="fas fa-comments"></i><span>Messages</span></a>
+                <a href="{% url 'accounts:profile' %}" class="{% if request.resolver_match.view_name == 'accounts:profile' %}is-active{% endif %}"><i class="fas fa-user"></i><span>Profile</span></a>
                 <a href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i><span>Sign out</span></a>
             </nav>
         </aside>
-    {% endif %}{% endif %}
+    {% endif %}
     <!-- Navigation -->
     <nav class="nav-glass dashboard-top-nav shadow-sm border-b border-gray-200/80 fixed w-full z-50 top-0">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
