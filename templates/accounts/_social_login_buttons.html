@@ -1,0 +1,28 @@
+{% load socialaccount %}
+{% if social_sso_providers %}
+    <div class="mt-6">
+        <div class="relative">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-300"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+                <span class="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+            </div>
+        </div>
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {% for provider in social_sso_providers %}
+                <a href="{% provider_login_url provider process='login' %}" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    {% if provider == 'google' %}
+                        <i class="fab fa-google text-red-500 mr-2"></i>
+                    {% elif provider == 'apple' %}
+                        <i class="fab fa-apple text-gray-900 mr-2"></i>
+                    {% else %}
+                        <i class="fab fa-microsoft text-blue-600 mr-2"></i>
+                    {% endif %}
+                    <p class="mt-4 text-center text-xs text-gray-500">eCitizen sign-in is not available until its official integration details are configured.</p>
+                    {{ provider|title }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}

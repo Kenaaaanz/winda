@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Finish Social Sign Up - Winda{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+    <div class="max-w-lg w-full rounded-xl bg-white p-8 shadow-sm">
+        <h1 class="text-2xl font-bold text-gray-900">Finish creating your Winda account</h1>
+        <p class="mt-2 text-sm text-gray-600">Choose how you will use Winda. Property owner accounts require verification before listings can be managed.</p>
+        {% if form.errors %}
+            <div class="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-800">{{ form.errors }}</div>
+        {% endif %}
+        <form method="post" class="mt-6 space-y-4">
+            {% csrf_token %}
+            {% for field in form %}
+                <div>
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<p class="mt-1 text-sm text-red-600">{{ field.errors|join:", " }}</p>{% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700">Create account</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Utilities - Winda{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Utilities</h1>
+                <p class="text-gray-600 mt-1">Meter readings and estimated usage costs across your properties.</p>
+            </div>
+            {% if can_add_device %}
+                <a href="{% url 'utilities:register_device' %}" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700">
+                    Register a meter
+                </a>
+            {% endif %}
+        </div>
+
+        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 mb-6 text-sm text-amber-900">
+            Estimates use the effective per-unit tariff configured by an administrator. They do not include separate fixed fees, tiered pricing, or other charges unless those are reflected in the configured rate.
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Meter</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Property / unit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utility</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Usage to date</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estimated cost</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Latest reading</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for summary in summaries %}
+                        <tr>
+                            <td class="px-6 py-4 font-medium text-gray-900">{{ summary.device.name }}</td>
+                            <td class="px-6 py-4 text-gray-600">
+                                {{ summary.device.property.title }}
+                                {% if summary.device.unit %}<span class="block text-sm">Unit {{ summary.device.unit.unit_number }}</span>{% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-gray-600">{{ summary.device.get_utility_display }}<span class="block text-sm">{{ summary.device.provider }}</span></td>
+                            <td class="px-6 py-4 text-right text-gray-900">{{ summary.total_usage|floatformat:3|intcomma }} {{ summary.device.unit_of_measure }}</td>
+                            <td class="px-6 py-4 text-right text-gray-900">
+                                KES {{ summary.estimated_cost|floatformat:2|intcomma }}
+                                {% if summary.unpriced_usage %}<span class="block text-xs text-amber-700">Some usage has no active tariff</span>{% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-gray-600">
+                                {% if summary.latest_reading %}
+                                    {{ summary.latest_reading.meter_value|floatformat:3 }} {{ summary.device.unit_of_measure }}
+                                    <span class="block text-sm">{{ summary.latest_reading.recorded_at|date:"M d, Y H:i" }}</span>
+                                {% else %}
+                                    No readings yet
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No utility meters registered yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

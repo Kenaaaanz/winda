@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.apple',
+    'allauth.socialaccount.providers.microsoft',
     'crispy_forms',
     'crispy_bootstrap5',
     'channels',
@@ -60,6 +63,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.seo',
     'apps.legal',
+    'apps.utilities',
 ]
 
 UNFOLD = {
@@ -135,6 +139,7 @@ TEMPLATES = [
                 'apps.accounts.context_processors.unread_chat_count',
                 'apps.accounts.context_processors.pending_applications_count',
                 'apps.seo.context_processors.seo_settings',
+                'apps.accounts.context_processors.social_sso_providers',
 
             ],
         },
@@ -278,9 +283,61 @@ ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_SESSION_REMEMBER = True
 
 # Social account
-SOCIALACCOUNT_PROVIDERS = {}
+SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
 SOCIALACCOUNT_EMAIL_REQUIRED = False
+SOCIALACCOUNT_FORMS = {
+    'signup': 'apps.accounts.forms.SocialSignupForm',
+}
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SOCIALACCOUNT_PROVIDERS = {}
+UTILITY_DEVICE_CLOCK_SKEW_SECONDS = int(
+    os.getenv('UTILITY_DEVICE_CLOCK_SKEW_SECONDS', '300')
+)
+
+google_client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+google_client_secret = os.getenv('GOOGLE_CLIENT_SECRET', '')
+if google_client_id and google_client_secret:
+    SOCIALACCOUNT_PROVIDERS['google'] = {
+        'APPS': [{
+            'client_id': google_client_id,
+            'secret': google_client_secret,
+            'key': '',
+        }],
+    }
+
+apple_client_id = os.getenv('APPLE_CLIENT_ID', '')
+apple_team_id = os.getenv('APPLE_TEAM_ID', '')
+apple_key_id = os.getenv('APPLE_KEY_ID', '')
+apple_private_key = os.getenv('APPLE_PRIVATE_KEY', '').replace('\\n', '\n')
+if apple_client_id and apple_team_id and apple_key_id and apple_private_key:
+    SOCIALACCOUNT_PROVIDERS['apple'] = {
+        'APPS': [{
+            'client_id': apple_client_id,
+            'secret': apple_key_id,
+            'key': apple_team_id,
+            'certificate_key': apple_private_key,
+        }],
+    }
+
+microsoft_client_id = os.getenv('MICROSOFT_CLIENT_ID', '')
+microsoft_client_secret = os.getenv('MICROSOFT_CLIENT_SECRET', '')
+if microsoft_client_id and microsoft_client_secret:
+    SOCIALACCOUNT_PROVIDERS['microsoft'] = {
+        'APPS': [{
+            'client_id': microsoft_client_id,
+            'secret': microsoft_client_secret,
+            'key': '',
+            'settings': {
+                'tenant': os.getenv('MICROSOFT_TENANT', 'common'),
+            },
+        }],
+    }
 
 # ========================================
 # REST Framework

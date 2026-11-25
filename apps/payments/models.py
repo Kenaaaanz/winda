@@ -122,9 +122,27 @@ class ScoutCommission(models.Model):
         ('PAID', 'Paid'),
         ('VOID', 'Void'),
     )
-    scout = models.ForeignKey('accounts.User', on_delete=models.PROTECT, related_name='scout_commissions')
-    property = models.ForeignKey('properties.Property', on_delete=models.PROTECT, related_name='scout_commissions')
-    payment = models.OneToOneField(Payment, on_delete=models.PROTECT, related_name='scout_commission')
+    scout = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scout_commissions',
+    )
+    property = models.ForeignKey(
+        'properties.Property',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scout_commissions',
+    )
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scout_commission',
+    )
     company_fee = models.DecimalField(max_digits=12, decimal_places=2)
     commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('10.00'))
     commission_amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -148,7 +166,13 @@ class ScoutPayout(models.Model):
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    scout = models.ForeignKey('accounts.User', on_delete=models.PROTECT, related_name='scout_payouts')
+    scout = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scout_payouts',
+    )
     commissions = models.ManyToManyField(ScoutCommission, related_name='payouts')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, default='KES')

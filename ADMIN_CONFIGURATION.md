@@ -250,3 +250,42 @@ OwnerProfile.objects.aggregate(total_fees=Sum('platform_fees_paid'))
 # Owners without bank setup
 OwnerProfile.objects.filter(bank_account_set_up=False)
 ```
+
+## Utilities and smart meter setup
+
+Manage utility rates in **Admin > Utilities > Utility tariffs**. Add one non-overlapping effective period per provider and utility. Water and sewerage rates use `m3`; electricity rates use `kWh`. Enter the per-unit rate in KES and include applicable variable charges in that rate. Fixed charges and tiered/block billing are not modeled in this release, so displayed totals are estimates rather than utility-issued bills.
+
+Verified owners can register a meter at `/utilities/devices/register/`. The page displays the device key once; the database stores only its SHA-256 hash. Keep the key on the device and never put it in source control or request logs. Disable compromised devices in the admin.
+
+Devices submit a cumulative reading with `POST /utilities/api/devices/<device-uuid>/readings/` over HTTPS. The request body is UTF-8 JSON with an `external_id` (unique per device), `meter_value` (non-negative cumulative decimal, up to three decimal places), and timezone-aware ISO 8601 `recorded_at`. Supply these headers:
+
+```text
+X-Device-Key: <one-time device key>
+X-Device-Timestamp: <Unix timestamp in seconds>
+X-Device-Signature: <lowercase hex HMAC-SHA256>
+```
+
+Sign the exact request bytes with HMAC-SHA256 using the device key and this message:
+
+```text
+<X-Device-Timestamp>
+<raw UTF-8 JSON request body>
+```
+
+The line break between the timestamp and body is a single LF (`\n`). Timestamps must be within 300 seconds of platform time. Readings are accepted in increasing timestamp order; repeated external IDs, invalid signatures, and decreasing cumulative values are rejected. The initial reading entered during device registration is the baseline.
+
+## Social SSO configuration
+
+OAuth buttons appear only when that provider has credentials configured. Set these environment variables outside source control:
+
+- Google: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- Apple: `APPLE_CLIENT_ID` (Services ID), `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` (ES256 private key; encode newlines as `\n`)
+- Microsoft: `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`; optionally set `MICROSOFT_TENANT` (defaults to `common`)
+
+Register the allauth callback URLs with each identity provider, for example `https://<host>/accounts/google/login/callback/`, `https://<host>/accounts/apple/login/callback/`, and `https://<host>/accounts/microsoft/login/callback/`. New social accounts must choose Tenant or Property Owner; owners remain pending verification. eCitizen is not enabled until its official OIDC/SAML specification, claims, and client registration are supplied.
+
+Smart-lock control or access-event ingestion is not included in the meter API. It needs a specific lock vendor and an approved access-control/security protocol.
+
+## Rejected-account erasure
+
+Rejecting an owner or scout application deletes the account and its associated database profiles immediately. Scout payout and commission records are retained without their scout foreign key; payout response and transfer metadata are cleared. Cloudinary account/property assets are removed after the database transaction commits. The same erasure routine is used for self-service account deletion. Review statutory retention and backup-deletion timelines with Kenyan counsel before production rollout.

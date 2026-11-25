@@ -13,6 +13,12 @@ class CustomAccountAdapter(DefaultAccountAdapter):
     
     def get_signup_redirect_url(self, request):
         """Override signup redirect"""
+        if (
+            request.user.is_authenticated
+            and request.user.user_type == 'HOUSE_OWNER'
+            and request.user.verification_status != 'VERIFIED'
+        ):
+            return reverse('accounts:owner_pending_approval')
         return reverse('dashboard')
     
     def save_user(self, request, user, form, commit=True):

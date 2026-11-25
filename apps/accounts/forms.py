@@ -3,12 +3,95 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, Pass
 from django.core.validators import RegexValidator
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
+from allauth.socialaccount.forms import SignupForm as SocialSignupFormBase
 
 from apps.properties.models import Property
 from .models import CaretakerProfile, User, UserProfile, OwnerProfile, TenantProfile, ScoutProfile, PaystackSubaccount
 from apps.payments.models import SubscriptionPlan
 
 User = get_user_model()
+
+
+class SocialSignupForm(SocialSignupFormBase):
+    user_type = forms.ChoiceField(
+        choices=(
+            ('TENANT', 'Tenant'),
+            ('HOUSE_OWNER', 'Property owner'),
+        ),
+        widget=forms.Select(attrs={
+            'class': 'w-full rounded-lg border border-gray-300 px-3 py-2',
+        }),
+    )
+    company_name = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full rounded-lg border border-gray-300 px-3 py-2',
+            'placeholder': 'Company or business name (property owners)',
+        }),
+    )
+
+    def custom_signup(self, request, user):
+        user_type = self.cleaned_data['user_type']
+        if user.user_type != user_type:
+            user.user_type = user_type
+            user.save(update_fields=['user_type'])
+
+        for email_address in self.sociallogin.email_addresses:
+            if (
+                email_address.email.lower() == user.email.lower()
+                and email_address.verified
+            ):
+                user.is_email_verified = True
+                user.save(update_fields=['is_email_verified'])
+                break
+
+        if user_type != 'HOUSE_OWNER':
+            return
+
+        owner_profile = OwnerProfile.objects.get(user=user)
+        owner_profile.company_name = (
+            self.cleaned_data['company_name'].strip()
+            or user.get_full_name()
+            or user.email
+        )
+        owner_profile.save(update_fields=['company_name'])
+
+        from apps.payments.models import OwnerSubscription, SubscriptionPlan
+
+        plan, _ = SubscriptionPlan.objects.get_or_create(
+            plan_type='BASIC',
+            defaults={
+                'name': 'Base',
+                'description': 'Base platform package',
+                'price_monthly': 0,
+                'price_yearly': 0,
+                'platform_fee_percent': 3,
+                'fee_mode': 'PERCENTAGE',
+            },
+        )
+        OwnerSubscription.objects.get_or_create(
+            owner=owner_profile,
+            defaults={
+                'plan': plan,
+                'discounted_months_remaining': plan.discounted_months,
+                'free_months_remaining': plan.free_months,
+                'is_active': True,
+            },
+        )
+
+        from apps.notifications.models import Notification
+
+        for admin_user in User.objects.filter(is_superuser=True):
+            Notification.objects.create(
+                user=admin_user,
+                notification_type='SYSTEM',
+                title='New Owner Registration Pending',
+                message=f'{user.get_full_name() or user.email} registered as a property owner and is awaiting approval.',
+                related_object_type='user',
+                related_object_id=str(user.id),
+                data={'user_id': str(user.id)},
+            )
 
 
 class AdminUserCreationForm(UserCreationForm):

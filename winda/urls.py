@@ -114,9 +114,11 @@ urlpatterns = [
     # APP URLS
     # ========================================
     path('accounts/', include('apps.accounts.urls')),
+    path('accounts/', include('allauth.urls')),
     path('properties/', include('apps.properties.urls')),
     path('tenants/', include('apps.tenants.urls')),
     path('payments/', include('apps.payments.urls')),
+    path('utilities/', include('apps.utilities.urls')),
     path('communications/', include('apps.communications.urls')),
     path('maintenance/', include('apps.maintenance.urls')),
     path('analytics/', include('apps.analytics.urls')),

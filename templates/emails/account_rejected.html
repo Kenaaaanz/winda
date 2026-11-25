@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Winda application update</title></head>
+<body>
+    <p>Hello {{ full_name }},</p>
+    <p>Your Winda account application was rejected. Any rejection reason provided by the reviewer is below:</p>
+    {% if reason %}<p>{{ reason }}</p>{% endif %}
+    <p>As part of this rejection, your account and associated personal data have been erased. If you have questions, contact <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>
+    <p>Winda Support</p>
+</body>
+</html>

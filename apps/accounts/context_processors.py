@@ -29,6 +29,9 @@ def pending_applications_count(request):
 
 from apps.communications.models import ChatRoom
 
+from django.conf import settings
+
+
 def unread_chat_count(request):
     """Add unread chat count to all templates"""
     context = {'unread_total': 0}
@@ -67,3 +70,14 @@ def owner_stats(request):
         }
     
     return context
+
+
+def social_sso_providers(request):
+    providers = settings.SOCIALACCOUNT_PROVIDERS
+    return {
+        'social_sso_providers': [
+            provider
+            for provider in ('google', 'apple', 'microsoft')
+            if providers.get(provider, {}).get('APPS')
+        ],
+    }

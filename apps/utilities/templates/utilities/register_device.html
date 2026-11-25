@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Utility Meter - Winda{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h1 class="text-2xl font-bold text-gray-900">Register a utility meter</h1>
+        <p class="text-gray-600 mt-2">Create a device key for a smart water, sewerage, or non-token electricity meter.</p>
+
+        {% if device %}
+            <div class="mt-6 rounded-lg border border-green-200 bg-green-50 p-5">
+                <h2 class="font-semibold text-green-900">Meter registered</h2>
+                {% if device_token %}
+                    <p class="mt-2 text-sm text-green-800">Copy this device key now. It is shown only once and cannot be recovered.</p>
+                    <code class="mt-3 block break-all rounded bg-white p-3 text-sm">{{ device_token }}</code>
+                {% else %}
+                    <p class="mt-2 text-sm text-green-800">The one-time key has already been viewed and cannot be recovered. Register another meter to issue a new key.</p>
+                {% endif %}
+                <p class="mt-3 text-sm text-green-800">Device ID: <code>{{ device.id }}</code></p>
+            </div>
+            <a href="{% url 'utilities:dashboard' %}" class="mt-6 inline-block text-blue-700 hover:underline">Return to Utilities</a>
+        {% else %}
+            {% if form.errors %}
+                <div class="mt-4 rounded-lg bg-red-50 p-4 text-sm text-red-800">{{ form.errors }}</div>
+            {% endif %}
+            <form method="post" class="mt-6 space-y-4">
+                {% csrf_token %}
+                {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p>{% endif %}
+                    </div>
+                {% endfor %}
+                <button type="submit" class="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700">Register meter</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

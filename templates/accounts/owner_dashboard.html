@@ -20,6 +20,9 @@
                     <a href="{% url 'analytics:dashboard' %}" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors">
                         <i class="fas fa-chart-line mr-2"></i> Analytics
                     </a>
+                    <a href="{% url 'utilities:dashboard' %}" class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="fas fa-gauge-high mr-2"></i> Utilities
+                    </a>
                 </div>
             </div>
         </div>
@@ -148,6 +151,13 @@
                             <div>
                                 <p class="font-medium">My Properties</p>
                                 <p class="text-sm text-gray-500">Manage all properties</p>
+                            </div>
+                        </a>
+                        <a href="{% url 'utilities:dashboard' %}" class="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-gauge-high text-cyan-600 mr-3 text-xl"></i>
+                            <div>
+                                <p class="font-medium">Utilities & Meters</p>
+                                <p class="text-sm text-gray-500">Readings and estimated costs</p>
                             </div>
                         </a>
                     </div>

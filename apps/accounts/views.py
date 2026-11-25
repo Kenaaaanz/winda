@@ -23,6 +23,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -43,6 +44,7 @@ from .forms import (
 from .tokens import account_activation_token
 from .decorators import user_type_required, owner_required, tenant_required, superadmin_required
 from apps.emails.utils import EmailService
+from .erasure import erase_user_account
 
 
 # ==================== NEW REGISTRATION WIZARD ====================
@@ -501,22 +503,35 @@ def admin_verify_owners(request):
             messages.success(request, f'{user.get_full_name()} has been approved.')
             
         elif action == 'reject':
-            user.verification_status = 'REJECTED'
-            user.admin_notes = notes
-            user.verified_at = timezone.now()
-            user.verified_by = request.user
-            user.save()
-            
-            Notification.objects.create(
-                user=user,
-                notification_type='SYSTEM',
-                title='Account Rejected',
-                message=f'Your account application has been rejected. Reason: {notes}',
-                related_object_type='user',
-                related_object_id=str(user.id)
-            )
-            
-            messages.success(request, f'{user.get_full_name()} has been rejected.')
+            try:
+                rejected_account = erase_user_account(user)
+            except ProtectedError:
+                messages.error(
+                    request,
+                    'The account was not rejected because related records prevent its erasure.',
+                )
+            else:
+                email_sent = EmailService.send_email(
+                    'Your Winda application was rejected',
+                    rejected_account['email'],
+                    'emails/account_rejected.html',
+                    {
+                        'full_name': rejected_account['full_name'],
+                        'reason': notes,
+                        'support_email': settings.DEFAULT_FROM_EMAIL,
+                    },
+                    async_mode=False,
+                )
+                if email_sent:
+                    messages.success(
+                        request,
+                        f'{rejected_account["full_name"]} was rejected and their account data was erased.',
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        'The account was rejected and erased, but the notification email could not be sent.',
+                    )
         
         return redirect('accounts:admin_verify_owners')
     
@@ -686,9 +701,36 @@ def admin_verify_scouts(request):
             scout.is_active = True
             message = 'Your Property Scout account has been verified. You can now submit listings.'
         else:
-            scout.verification_status = 'REJECTED'
-            scout.is_active = False
-            message = 'Your Property Scout account application was rejected.'
+            try:
+                rejected_account = erase_user_account(scout)
+            except ProtectedError:
+                messages.error(
+                    request,
+                    'The scout account was not rejected because related records prevent its erasure.',
+                )
+                return redirect('accounts:admin_verify_scouts')
+            email_sent = EmailService.send_email(
+                'Your Winda application was rejected',
+                rejected_account['email'],
+                'emails/account_rejected.html',
+                {
+                    'full_name': rejected_account['full_name'],
+                    'reason': scout.admin_notes,
+                    'support_email': settings.DEFAULT_FROM_EMAIL,
+                },
+                async_mode=False,
+            )
+            if email_sent:
+                messages.success(
+                    request,
+                    f'{rejected_account["full_name"]} was rejected and their account data was erased.',
+                )
+            else:
+                messages.warning(
+                    request,
+                    'The scout account was rejected and erased, but the notification email could not be sent.',
+                )
+            return redirect('accounts:admin_verify_scouts')
         scout.save(update_fields=['verification_status', 'is_email_verified', 'admin_notes', 'verified_by', 'verified_at', 'is_active'])
         Notification.objects.create(user=scout, notification_type='SYSTEM', title='Scout verification update', message=message, related_object_type='user', related_object_id=str(scout.id))
         if action == 'approve':
@@ -1067,8 +1109,15 @@ def delete_account(request):
     """Delete user account"""
     if request.method == 'POST':
         user = request.user
-        user.delete()
-        messages.success(request, 'Account deleted successfully.')
+        try:
+            erase_user_account(user)
+        except ProtectedError:
+            messages.error(
+                request,
+                'Your account could not be erased because related records require review.',
+            )
+            return redirect('accounts:profile')
+        messages.success(request, 'Account and associated personal data deleted successfully.')
         return redirect('home')
     return redirect('accounts:profile')
 
